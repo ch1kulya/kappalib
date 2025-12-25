@@ -17,7 +17,7 @@ import (
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/web"
 
-	logger "github.com/ch1kulya/simple-logger"
+	"github.com/ch1kulya/logger"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	esbuild "github.com/evanw/esbuild/pkg/api"

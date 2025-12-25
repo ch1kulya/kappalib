@@ -11,7 +11,7 @@ import (
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/models"
 
-	logger "github.com/ch1kulya/simple-logger"
+	"github.com/ch1kulya/logger"
 )
 
 //go:embed sql/novels_sitemap.sql

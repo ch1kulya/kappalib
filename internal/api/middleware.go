@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	logger "github.com/ch1kulya/simple-logger"
+	"github.com/ch1kulya/logger"
 	"golang.org/x/time/rate"
 )
 

@@ -16,7 +16,7 @@ import (
 	"github.com/ch1kulya/kappalib/internal/web/views"
 
 	"github.com/a-h/templ"
-	logger "github.com/ch1kulya/simple-logger"
+	"github.com/ch1kulya/logger"
 	"github.com/go-chi/chi/v5"
 )
 

@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	logger "github.com/ch1kulya/simple-logger"
+	"github.com/ch1kulya/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
