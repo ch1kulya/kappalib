@@ -963,6 +963,7 @@ a:hover {
 /* Scroll bar */
 html {
     scrollbar-width: thin;
+    scrollbar-gutter: stable;
     scrollbar-color: var(--outline) var(--bg-primary);
 }
 
