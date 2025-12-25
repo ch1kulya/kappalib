@@ -4,7 +4,6 @@
   "@graph": [
     {
       "@type": "BreadcrumbList",
-      "@id": "{{.Canonical}}#breadcrumb",
       "itemListElement": [
         {
           "@type": "ListItem",
@@ -22,7 +21,6 @@
     },
     {
       "@type": "Book",
-      "@id": "{{.Canonical}}#book",
       "url": "{{.Canonical}}",
       "name": "{{.Novel.Title}}",
       {{- if .Novel.TitleEn}}
@@ -46,12 +44,7 @@
         "bookFormat": "https://schema.org/EBook"
       },
       {{- end}}
-      "isAccessibleForFree": true,
-      "publisher": {
-        "@type": "Organization",
-        "@id": "{{.Domain}}/#organization"
-      },
-      "breadcrumb": {"@id": "{{.Canonical}}#breadcrumb"}
+      "isAccessibleForFree": true
     }
   ]
 }

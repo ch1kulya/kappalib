@@ -4,7 +4,6 @@
   "@graph": [
     {
       "@type": "BreadcrumbList",
-      "@id": "{{.Canonical}}#breadcrumb",
       "itemListElement": [
         {
           "@type": "ListItem",
@@ -28,19 +27,16 @@
     },
     {
       "@type": "Chapter",
-      "@id": "{{.Canonical}}#chapter",
       "url": "{{.Canonical}}",
       "name": "{{.ChapterTitle}}",
       "description": "{{.Description}}",
       "position": {{.ChapterNum}},
       "isPartOf": {
         "@type": "Book",
-        "@id": "{{.Domain}}/{{.Novel.ID}}#book",
         "name": "{{.Novel.Title}}"
       },
       "inLanguage": "ru-RU",
-      "isAccessibleForFree": true,
-      "breadcrumb": {"@id": "{{.Canonical}}#breadcrumb"}
+      "isAccessibleForFree": true
     }
   ]
 }
