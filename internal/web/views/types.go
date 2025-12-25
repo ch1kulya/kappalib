@@ -6,7 +6,6 @@ type BaseProps struct {
 	Title         string
 	Description   string
 	Canonical     string
-	Favicon       string
 	Version       int64
 	Schema        string
 	OGImage       string

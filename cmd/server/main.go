@@ -142,7 +142,7 @@ func main() {
 	h := web.NewHandler()
 	r.NotFound(h.NotFound)
 
-	fileServer := http.FileServer(http.Dir("./assets/static/dist"))
+	fileServer := http.FileServer(http.Dir("./assets/static"))
 	r.Handle("/assets/*", http.StripPrefix("/assets", web.StaticCacheMiddleware(fileServer)))
 
 	r.Get("/robots.txt", h.RobotsTxt)
