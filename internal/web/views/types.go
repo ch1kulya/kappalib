@@ -1,6 +1,6 @@
 package views
 
-import "kappalib/internal/models"
+import "github.com/ch1kulya/kappalib/internal/models"
 
 type BaseProps struct {
 	Title         string

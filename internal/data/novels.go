@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"kappalib/internal/cache"
-	"kappalib/internal/database"
-	"kappalib/internal/models"
+	"github.com/ch1kulya/kappalib/internal/cache"
+	"github.com/ch1kulya/kappalib/internal/database"
+	"github.com/ch1kulya/kappalib/internal/models"
 
 	logger "github.com/ch1kulya/simple-logger"
 )

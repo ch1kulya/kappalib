@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 
-	"kappalib/internal/data"
-	"kappalib/internal/database"
-	"kappalib/internal/models"
+	"github.com/ch1kulya/kappalib/internal/data"
+	"github.com/ch1kulya/kappalib/internal/database"
+	"github.com/ch1kulya/kappalib/internal/models"
 
 	"github.com/danielgtaylor/huma/v2"
 )

@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"kappalib/internal/cache"
+	"github.com/ch1kulya/kappalib/internal/cache"
 )
 
 var betterStackToken = os.Getenv("BETTERSTACK_TOKEN")

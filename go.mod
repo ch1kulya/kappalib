@@ -1,4 +1,4 @@
-module kappalib
+module github.com/ch1kulya/kappalib
 
 go 1.25.3
 

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"kappalib/assets/templates"
-	"kappalib/internal/data"
-	"kappalib/internal/models"
-	"kappalib/internal/web/views"
+	"github.com/ch1kulya/kappalib/assets/templates"
+	"github.com/ch1kulya/kappalib/internal/data"
+	"github.com/ch1kulya/kappalib/internal/models"
+	"github.com/ch1kulya/kappalib/internal/web/views"
 
 	"github.com/a-h/templ"
 	logger "github.com/ch1kulya/simple-logger"
