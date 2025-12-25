@@ -1,7 +1,6 @@
 package web
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"kappalib/assets/templates"
 	"kappalib/internal/data"
 	"kappalib/internal/models"
 	"kappalib/internal/web/views"
@@ -56,16 +56,18 @@ func (h *Handler) NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RobotsTxt(w http.ResponseWriter, r *http.Request) {
-	robots := `User-agent: Googlebot
-Disallow: /*/chapter/*
 
-User-agent: *
-Allow: /
-
-Sitemap: https://kappalib.ru/sitemap.xml`
+	content, err := templates.RenderRobots(templates.RobotsData{
+		Domain: "https://kappalib.ru",
+	})
+	if err != nil {
+		logger.Error("Failed to render robots.txt: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(robots))
+	w.Write([]byte(content))
 }
 
 func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
@@ -76,45 +78,33 @@ func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var buf bytes.Buffer
-	buf.WriteString(`<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-	<url>
-		<loc>https://kappalib.ru/</loc>
-		<changefreq>daily</changefreq>
-		<priority>1.0</priority>
-	</url>
-	<url>
-		<loc>https://kappalib.ru/dmca</loc>
-		<changefreq>monthly</changefreq>
-		<priority>0.3</priority>
-	</url>
-	<url>
-		<loc>https://kappalib.ru/privacy</loc>
-		<changefreq>monthly</changefreq>
-		<priority>0.3</priority>
-	</url>
-	<url>
-		<loc>https://kappalib.ru/copyright</loc>
-		<changefreq>monthly</changefreq>
-		<priority>0.3</priority>
-	</url>`)
-
-	for _, item := range items {
-		dateStr := item.CreatedAt.Format("2006-01-02")
-		buf.WriteString(fmt.Sprintf(`
-	<url>
-		<loc>https://kappalib.ru/%s</loc>
-		<lastmod>%s</lastmod>
-		<changefreq>weekly</changefreq>
-		<priority>0.8</priority>
-	</url>`, item.ID, dateStr))
+	novels := make([]templates.SitemapNovel, len(items))
+	for i, item := range items {
+		novels[i] = templates.SitemapNovel{
+			ID:        item.ID,
+			CreatedAt: item.CreatedAt,
+		}
 	}
 
-	buf.WriteString("\n</urlset>")
+	staticPages := []templates.StaticPage{
+		{Path: "dmca"},
+		{Path: "privacy"},
+		{Path: "copyright"},
+	}
+
+	content, err := templates.RenderSitemap(templates.SitemapData{
+		Domain:      "https://kappalib.ru",
+		StaticPages: staticPages,
+		Novels:      novels,
+	})
+	if err != nil {
+		logger.Error("Failed to render sitemap: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/xml")
-	w.Write(buf.Bytes())
+	w.Write([]byte(content))
 }
 
 func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
@@ -349,7 +339,6 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 	var prevID, nextID string
 
 	if allChapters != nil && len(allChapters.Chapters) > 0 {
-		// Sort by chapter number ascending
 		sort.Slice(allChapters.Chapters, func(i, j int) bool {
 			return allChapters.Chapters[i].ChapterNum < allChapters.Chapters[j].ChapterNum
 		})
