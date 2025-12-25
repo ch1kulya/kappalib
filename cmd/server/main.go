@@ -11,12 +11,13 @@ import (
 	"syscall"
 	"time"
 
-	"kappalib/internal/api"
-	"kappalib/internal/data"
-	"kappalib/internal/database"
-	"kappalib/internal/web"
+	"github.com/ch1kulya/kappalib/assets/templates"
+	"github.com/ch1kulya/kappalib/internal/api"
+	"github.com/ch1kulya/kappalib/internal/data"
+	"github.com/ch1kulya/kappalib/internal/database"
+	"github.com/ch1kulya/kappalib/internal/web"
 
-	logger "github.com/ch1kulya/simple-logger"
+	"github.com/ch1kulya/logger"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	esbuild "github.com/evanw/esbuild/pkg/api"
@@ -108,6 +109,12 @@ func buildAssets() {
 
 func main() {
 	logger.Info("Initializing application...")
+
+	if err := templates.Init(); err != nil {
+		logger.Error("Failed to initialize templates: %v", err)
+		os.Exit(1)
+	}
+	logger.Info("Templates initialized")
 
 	runMigrations()
 
