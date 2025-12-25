@@ -1,0 +1,153 @@
+package views
+
+import "fmt"
+
+templ Novel(props NovelProps) {
+	@Base(props.BaseProps) {
+		<div class="novel-detail">
+			<div class="novel-header" id="novel-header-area">
+				<div class="novel-cover-container">
+					<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(props.Novel.CoverURL)) }>
+						<img src={ ResolveCover(props.Novel.CoverURL) } alt={ props.Novel.TitleEn }/>
+					</div>
+						if len(props.Chapters) > 0 {
+							<div class="desktop-actions">
+								if props.LastChapterID != "" {
+									<div class="reading-progress-container">
+										<div class="progress-labels">
+											<span class="progress-text">Глава <strong>{ fmt.Sprintf("%d", props.NextChapterNum) }</strong> из { fmt.Sprintf("%d", props.TotalChapters) }</span>
+											<span class="progress-percent">{ fmt.Sprintf("%d%%", props.ProgressPercent) }</span>
+										</div>
+										<div class="progress-bar-bg">
+											<div class="progress-bar-fill" style={ fmt.Sprintf("width: %d%%", props.ProgressPercent) }></div>
+										</div>
+									</div>
+									<a
+										href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.LastChapterID)) }
+										class="action-btn btn-continue js-reading-btn"
+										data-novel-id={ props.Novel.ID }
+									>
+										Продолжить
+									</a>
+								} else {
+									<a
+										href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.FirstChapterID)) }
+										class="action-btn btn-start js-reading-btn"
+										data-novel-id={ props.Novel.ID }
+										data-first-chapter={ props.FirstChapterID }
+									>
+										Начать читать
+									</a>
+								}
+							</div>
+						}
+					</div>
+				<div class="novel-info">
+					<h1>{ props.Novel.Title }</h1>
+					<div class="meta">
+						<span class="badge">{ props.Novel.Author }</span>
+						<span class="badge">{ fmt.Sprintf("%d", props.Novel.YearStart) }</span>
+						<span class="badge">{ MapStatus(props.Novel.Status) }</span>
+					</div>
+					if props.Novel.Description != "" {
+						<div class="description-wrapper">
+						    <div class="description" id="novel-description">
+							    { props.Novel.Description }
+						    </div>
+						</div>
+					}
+					if len(props.Chapters) > 0 {
+						<div class="mobile-actions">
+							if props.LastChapterID != "" {
+								<div class="reading-progress-container">
+									<div class="progress-labels">
+										<span class="progress-text">Глава <strong>{ fmt.Sprintf("%d", props.NextChapterNum) }</strong> из { fmt.Sprintf("%d", props.TotalChapters) }</span>
+										<span class="progress-percent">{ fmt.Sprintf("%d%%", props.ProgressPercent) }</span>
+									</div>
+									<div class="progress-bar-bg">
+										<div class="progress-bar-fill" style={ fmt.Sprintf("width: %d%%", props.ProgressPercent) }></div>
+									</div>
+								</div>
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.LastChapterID)) }
+									class="action-btn btn-continue js-reading-btn"
+									data-novel-id={ props.Novel.ID }
+								>
+									Продолжить
+								</a>
+							} else {
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.FirstChapterID)) }
+									class="action-btn btn-start js-reading-btn"
+									data-novel-id={ props.Novel.ID }
+									data-first-chapter={ props.FirstChapterID }
+								>
+									Начать читать
+								</a>
+							}
+						</div>
+					}
+				</div>
+			</div>
+
+			<div class="chapters-section">
+				<div class="chapters-header">
+					<h2>Главы</h2>
+					<div class="dropdown" id="chapter-sort">
+						<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+							<span class="js-dropdown-label">
+								if props.SortOrder == "desc" {
+									Сначала новые
+								} else {
+									Сначала старые
+								}
+							</span>
+							<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+						</button>
+						<div class="dropdown-menu" role="listbox">
+							<button
+								class={ "dropdown-item", templ.KV("selected", props.SortOrder != "desc") }
+								data-value="asc"
+								role="option"
+								aria-selected={ fmt.Sprintf("%t", props.SortOrder != "desc") }
+							>
+								<span>Сначала старые</span>
+								<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							</button>
+							<button
+								class={ "dropdown-item", templ.KV("selected", props.SortOrder == "desc") }
+								data-value="desc"
+								role="option"
+								aria-selected={ fmt.Sprintf("%t", props.SortOrder == "desc") }
+							>
+								<span>Сначала новые</span>
+								<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							</button>
+						</div>
+					</div>
+				</div>
+				<div class="chapters-list" id="chapters-list">
+					if len(props.Chapters) == 0 {
+						<div class="no-results">Глав пока нет.</div>
+					} else {
+						for _, ch := range props.Chapters {
+							<a
+								href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, ch.ID)) }
+								class="chapter-item"
+								data-chapter-id={ ch.ID }
+								data-sort-value={ fmt.Sprintf("%d", ch.ChapterNum) }
+							>
+								<span class="chapter-num">Глава { fmt.Sprintf("%d", ch.ChapterNum) }.</span>
+								<span class="chapter-title">
+									if ch.Title != "Без названия" {
+										{ ch.Title }
+									}
+								</span>
+							</a>
+						}
+					}
+				</div>
+			</div>
+		</div>
+	}
+}

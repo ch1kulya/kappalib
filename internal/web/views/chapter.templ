@@ -1,0 +1,65 @@
+package views
+
+import "fmt"
+
+templ Chapter(props ChapterProps) {
+	@Base(props.BaseProps) {
+		<div class="chapter-reader">
+			<div id="reading-tracker"
+				data-novel-id={ props.Novel.ID }
+				data-chapter-id={ props.Chapter.ID }
+				data-chapter-num={ fmt.Sprintf("%d", props.Chapter.ChapterNum) }
+				style="display: none;">
+			</div>
+			<h1>
+				if props.Chapter.Title != "Без названия" {
+					Глава { fmt.Sprintf("%d", props.Chapter.ChapterNum) }: { props.Chapter.Title }
+				} else {
+					Глава { fmt.Sprintf("%d", props.Chapter.ChapterNum) }
+				}
+			</h1>
+			<div class="chapter-content">
+				@templ.Raw(props.Chapter.Content)
+			</div>
+
+			if props.Chapter.Source != nil {
+				<div class="source-card">
+					if props.Chapter.Source.LogoURL != nil {
+						<img src={ *props.Chapter.Source.LogoURL } alt={ props.Chapter.Source.Name } class="source-logo"/>
+					} else {
+						<div class="source-logo-placeholder">
+                            { string([]rune(props.Chapter.Source.Name)[0]) }
+                        </div>
+					}
+					<div class="source-info">
+						<span class="source-label">Источник перевода</span>
+						<span class="source-name">{ props.Chapter.Source.Name }</span>
+					</div>
+					<div class="source-date">
+						{ FormatRelativeTime(props.Chapter.CreatedAt) }
+					</div>
+				</div>
+			}
+
+			<div class="chapter-navigation">
+				if props.PrevID != "" {
+					<a href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.PrevID)) }><button>&lt;-- Назад</button></a>
+				} else {
+					<button disabled>&lt;-- Назад</button>
+				}
+				if props.NextID != "" {
+					<a
+						class="nav-btn js-next-chapter"
+						href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.NextID)) }
+						data-chapter-id={ props.NextID }
+           				data-chapter-num={ fmt.Sprintf("%d", props.Chapter.ChapterNum + 1) }
+					>
+						<button>Вперед --&gt;</button>
+					</a>
+				} else {
+					<button disabled>Вперед --&gt;</button>
+				}
+			</div>
+		</div>
+	}
+}

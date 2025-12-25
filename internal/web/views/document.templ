@@ -1,0 +1,13 @@
+package views
+
+templ Document(props DocumentProps) {
+	@Base(props.BaseProps) {
+		<div class="document-page">
+			if props.Content != "" {
+				@templ.Raw(props.Content)
+			} else {
+				<div class="loading">Загрузка...</div>
+			}
+		</div>
+	}
+}

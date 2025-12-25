@@ -1,0 +1,144 @@
+package views
+
+import "fmt"
+
+templ Base(props BaseProps) {
+	<!DOCTYPE html>
+	<html lang="ru">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+			<title>{ props.Title }</title>
+			<meta name="description" content={ props.Description }/>
+			<link rel="canonical" href={ props.Canonical }/>
+			if props.Schema != "" {
+				@templ.Raw(props.Schema)
+			}
+			<link rel="preconnect" href="https://s3.kappalib.ru/"/>
+			<link rel="preconnect" href="https://status.kappalib.ru/"/>
+			<link rel="preconnect" href="https://stats.kappalib.ru/"/>
+			<link rel="preconnect" href="https://rsms.me/"/>
+			<link rel="icon" href={ props.Favicon } type="image/x-icon"/>
+			<link rel="shortcut icon" href={ props.Favicon } type="image/x-icon"/>
+			<meta property="og:type" content="website"/>
+			<meta property="og:site_name" content="kappalib"/>
+			<meta property="og:locale" content="ru_RU"/>
+			<meta property="og:title" content={ props.Title }/>
+			<meta property="og:description" content={ props.Description }/>
+			<meta property="og:url" content={ props.Canonical }/>
+			if props.OGImage != "" {
+				<meta property="og:image" content={ props.OGImage }/>
+				<meta name="twitter:card" content="summary"/>
+				<meta name="twitter:image" content={ props.OGImage }/>
+			} else {
+				<meta name="twitter:card" content="summary"/>
+			}
+			<link rel="stylesheet" href="https://rsms.me/inter/inter.css"/>
+			<link rel="stylesheet" href={ fmt.Sprintf("/assets/styles/main.css?v=%d", props.Version) }/>
+			<script defer src="https://stats.ch1kulya.ru/script.js" data-website-id="d7ede2e9-37bc-4a66-b905-188a87d88fd8"></script>
+		</head>
+		<body>
+			<div id="app">
+				@Header(props)
+				@AgeModal(props)
+				@ProfileModal()
+				<div class="container">
+					{ children... }
+				</div>
+				@Footer(props)
+			</div>
+			<script type="module" src={ fmt.Sprintf("/assets/app.js?v=%d", props.Version) }></script>
+		</body>
+	</html>
+}
+
+templ Header(props BaseProps) {
+	<header class={ "header", templ.KV("static", props.IsChapterPage) } id="main-header">
+		<div class="header-content">
+			if props.IsChapterPage && props.Novel != nil {
+				<a href={ templ.SafeURL("/" + props.Novel.ID) } class="header-left">{ props.Novel.Title }</a>
+			} else {
+				<h1 style="margin:0; font-size: inherit;">
+					<a href="/" class="header-left">kappalib</a>
+				</h1>
+				<div class="search-bar" id="search-component">
+					<div class="search-input-wrapper">
+						<img class="search-icon" src="https://api.iconify.design/lucide/search.svg?color=currentColor" width="16" height="16" alt="Поиск"/>
+						<input type="text" placeholder="Поиск" id="search-input" autocomplete="off"/>
+					</div>
+					<div class="search-results" id="search-results" style="display: none;"></div>
+				</div>
+				<button class="header-right" id="header-profile-btn" aria-label="Профиль">
+					<img src="https://api.iconify.design/lucide/user.svg?color=currentColor" width="24" height="24" alt="Профиль"/>
+				</button>
+			}
+		</div>
+	</header>
+}
+
+templ ProfileModal() {
+	<div class="modal-overlay" id="profile-modal-overlay" style="display: none;">
+		<div class="profile-modal" id="profile-modal-content"></div>
+	</div>
+}
+
+templ Footer(props BaseProps) {
+	<footer class="footer">
+		<div class="footer-content">
+			<div class="footer-section">
+				<h4>Документы</h4>
+				<nav class="footer-nav">
+					<a href="/dmca">DMCA</a>
+					<a href="/copyright">Правообладателям</a>
+					<a href="/privacy">Политика конфиденциальности</a>
+				</nav>
+			</div>
+			<div class="footer-section">
+				<h4>Информация</h4>
+				<p class="footer-disclaimer">
+					Если материал в сервисе kappalib нарушает ваши авторские права — направьте уведомление на
+					<a href="mailto:support@kappalib.ru">support@kappalib.ru</a>
+				</p>
+			</div>
+		</div>
+		<div class="footer-bottom">
+			<div class="copyright">&copy; kappalib.ru 2025</div>
+			<a href="https://status.kappalib.ru" target="_blank" rel="noopener noreferrer" class="status-widget" id="status-widget">
+				<span class="status-dot"></span>
+				<span class="status-text">Загрузка статуса...</span>
+			</a>
+		</div>
+	</footer>
+}
+
+templ AgeModal(props BaseProps) {
+	<div class="modal-overlay" id="age-modal" style="display: none;">
+		<div class="modal-content">
+			<h3>Предупреждение</h3>
+			<p>Эта страница содержит материал с возрастным ограничением <span class="age-rating-red">18+</span></p>
+			<label class="age-checkbox-label">
+				<input type="checkbox" id="age-remember"/> Больше не показывать
+			</label>
+			<div class="modal-actions">
+				<button class="btn-back" id="age-back">На главную</button>
+				<button class="btn-confirm" id="age-confirm">Мне есть 18</button>
+			</div>
+		</div>
+	</div>
+	if props.IsAdult {
+		<script>
+			window.isAdultContent = true;
+			(function() {
+				try {
+					var isConfirmed = localStorage.getItem("ageConfirmed") === "true" ||
+									sessionStorage.getItem("ageConfirmed") === "true";
+					if (!isConfirmed) {
+						var modal = document.getElementById("age-modal");
+						if (modal) modal.style.display = "flex";
+						document.body.style.overflow = "hidden";
+					}
+				} catch(e) {}
+			})();
+		</script>
+	}
+}

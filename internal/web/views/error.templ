@@ -1,0 +1,20 @@
+package views
+
+import "fmt"
+
+templ Error(props ErrorProps) {
+	@Base(props.BaseProps) {
+		<div class="error-page">
+			<div class="error-code">{ fmt.Sprintf("%d", props.ErrorCode) }</div>
+			<h1 class="error-title">{ props.ErrorTitle }</h1>
+			<p class="error-message">{ props.ErrorMessage }</p>
+			if props.ErrorCode == 503 {
+				<button onclick="window.location.reload()" class="btn-home">Попробовать снова</button>
+			} else {
+				<form>
+				<button formaction="/" class="btn-home">Вернуться на главную</button>
+				</form>
+			}
+		</div>
+	}
+}

@@ -1,0 +1,121 @@
+package views
+
+import "fmt"
+
+templ Home(props HomeProps) {
+	@Base(props.BaseProps) {
+		if props.LastRead != nil {
+			<div class="cr-wrapper">
+				<div class="chapters-header" style="margin-bottom: 1.5rem;">
+					<h2 style="margin: 0;">Вы читали</h2>
+				</div>
+				<div class="cr-card">
+					<a href={ templ.SafeURL("/" + props.LastRead.Novel.ID) } class="cr-poster-link">
+						<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(props.LastRead.Novel.CoverURL)) }>
+							<img src={ ResolveCover(props.LastRead.Novel.CoverURL) } alt={ props.LastRead.Novel.Title } loading="lazy"/>
+						</div>
+					</a>
+					<div class="cr-content">
+						<div class="cr-head-row">
+							<div class="cr-info">
+								<a href={ templ.SafeURL("/" + props.LastRead.Novel.ID) } class="cr-title">
+									<h3>{ props.LastRead.Novel.Title }</h3>
+								</a>
+								<div class="cr-meta">
+									<span>{ props.LastRead.Novel.Author }</span>
+								</div>
+							</div>
+							<a
+								href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.LastRead.Novel.ID, props.LastRead.LastChapterID)) }
+								class="action-btn"
+							>
+								Продолжить
+							</a>
+						</div>
+						<div class="cr-progress-wrapper">
+							<div class="reading-progress-container">
+								<div class="progress-labels">
+									<span class="progress-text">Глава <strong>{ fmt.Sprintf("%d", props.LastRead.NextChapterNum) }</strong> из { fmt.Sprintf("%d", props.LastRead.TotalChapters) }</span>
+									<span class="progress-percent">{ fmt.Sprintf("%d%%", props.LastRead.ProgressPercent) }</span>
+								</div>
+								<div class="progress-bar-bg">
+									<div class="progress-bar-fill" style={ fmt.Sprintf("width: %d%%", props.LastRead.ProgressPercent) }></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		}
+
+		<div class="chapters-header" style="margin-bottom: 1.5rem;">
+			<h2 id="catalog-title" style="margin-bottom: 0;">Каталог</h2>
+			<div class="dropdown" id="catalog-sort">
+				<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+					<span class="js-dropdown-label">{ GetSortLabel(props.SortOrder) }</span>
+					<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+				</button>
+				<div class="dropdown-menu" role="listbox">
+					for _, opt := range []struct{Val, Label string}{
+						{"oldest", "Сначала старые"},
+						{"newest", "Сначала новые"},
+						{"created", "Недавно добавленные"},
+						{"large", "Сначала большие"},
+						{"small", "Сначала маленькие"},
+						{"alphabet", "По алфавиту"},
+					} {
+						<button
+							class={ "dropdown-item", templ.KV("selected", props.SortOrder == opt.Val) }
+							data-value={ opt.Val }
+							role="option"
+							aria-selected={ fmt.Sprintf("%t", props.SortOrder == opt.Val) }
+						>
+							<span>{ opt.Label }</span>
+							<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+						</button>
+					}
+				</div>
+			</div>
+		</div>
+		<div id="catalog-content">
+			<div class="novels-grid">
+				for _, novel := range props.Novels {
+					<a href={ templ.SafeURL("/" + novel.ID) } class="novel-card">
+						<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(novel.CoverURL)) }>
+							<img src={ ResolveCover(novel.CoverURL) } alt={ novel.Title } loading="lazy"/>
+						</div>
+						<div class="novel-card-info">
+							<h3>{ novel.Title }</h3>
+							<p class="author">{ novel.Author }</p>
+						</div>
+					</a>
+				}
+			</div>
+			if props.TotalPages > 1 {
+				<div class="pagination">
+					if props.Page > 1 {
+						<a href={ templ.SafeURL(fmt.Sprintf("/?page=%d", props.Page-1)) } class="page-link prev-next">←</a>
+					} else {
+						<span class="page-link prev-next disabled">←</span>
+					}
+					for _, p := range CalculatePagination(props.Page, props.TotalPages) {
+						if p == -1 {
+							<span class="page-ellipsis">...</span>
+						} else {
+							if p == props.Page {
+								<span class={ "page-link active", templ.KV("mobile-hide", props.TotalPages > 7 && Abs(p - props.Page) == 2) }>{ fmt.Sprintf("%d", p) }</span>
+							} else {
+								<a href={ templ.SafeURL(fmt.Sprintf("/?page=%d", p)) } class={ "page-link", templ.KV("mobile-hide", props.TotalPages > 7 && Abs(p - props.Page) == 2) }>{ fmt.Sprintf("%d", p) }</a>
+							}
+						}
+					}
+					if props.Page < props.TotalPages {
+						<a href={ templ.SafeURL(fmt.Sprintf("/?page=%d", props.Page+1)) } class="page-link prev-next">→</a>
+					} else {
+						<span class="page-link prev-next disabled">→</span>
+					}
+				</div>
+			}
+		</div>
+	}
+}

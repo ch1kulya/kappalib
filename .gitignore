@@ -1,0 +1,7 @@
+*.log
+*.exe
+*.exe~
+.env
+*_templ.go
+tmp
+dist
