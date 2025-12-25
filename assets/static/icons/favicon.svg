@@ -1,0 +1,18 @@
+<svg
+    version="1.2"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 1080 1080"
+    width="1080"
+    height="1080"
+>
+    <style>
+        .a { fill: #f1f1f1; }
+        @media (prefers-color-scheme: light) {
+            .a { fill: #1b1b1b; }
+        }
+    </style>
+    <path
+        class="a"
+        d="m548.3 659l-129.5 145.9v-228.9h28.9l232.1-272.9h220l-306.5 355.9zm-111.9 353.8h-190.4v-945.8h190.4zm477 0h-224.4l-212.8-311.2 127.2-135.1z"
+    />
+</svg>
