@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"kappalib/assets/templates"
 	"kappalib/internal/api"
 	"kappalib/internal/data"
 	"kappalib/internal/database"
@@ -108,6 +109,12 @@ func buildAssets() {
 
 func main() {
 	logger.Info("Initializing application...")
+
+	if err := templates.Init(); err != nil {
+		logger.Error("Failed to initialize templates: %v", err)
+		os.Exit(1)
+	}
+	logger.Info("Templates initialized")
 
 	runMigrations()
 

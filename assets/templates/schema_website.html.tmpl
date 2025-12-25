@@ -1,0 +1,36 @@
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "url": "{{.Domain}}",
+      "name": "kappalib",
+      "description": "{{.Description}}",
+      "inLanguage": "ru-RU"
+    },
+    {
+      "@type": "Organization",
+      "name": "kappalib",
+      "url": "{{.Domain}}",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://s3.kappalib.ru/favicon.ico"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "support@kappalib.ru",
+        "contactType": "customer service"
+      }
+    },
+    {
+      "@type": "CollectionPage",
+      "@id": "{{.Canonical}}",
+      "url": "{{.Canonical}}",
+      "name": "{{.Title}}",
+      "description": "{{.Description}}",
+      "inLanguage": "ru-RU"
+    }
+  ]
+}
+</script>

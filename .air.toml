@@ -8,7 +8,7 @@ tmp_dir = "tmp"
   stop_on_error = true
   exclude_dir = ["tmp", "assets\\static\\dist"]
   exclude_regex = ["_templ\\.go"]
-  include_ext = ["go", "templ", "css", "ts", "json", "sql", "html"]
+  include_ext = ["go", "templ", "css", "ts", "json", "sql", "html", "tmpl"]
 
 [log]
   time = true
