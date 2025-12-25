@@ -1,0 +1,6 @@
+.env
+.env.example
+.git
+.gitignore
+.air.toml
+.github/workflows
