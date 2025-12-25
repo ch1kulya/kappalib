@@ -56,7 +56,6 @@ func (h *Handler) NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RobotsTxt(w http.ResponseWriter, r *http.Request) {
-
 	content, err := templates.RenderRobots(templates.RobotsData{
 		Domain: "https://kappalib.ru",
 	})
@@ -132,6 +131,18 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	description := "Бесплатная библиотека веб-новелл и ранобэ. Читайте популярные веб-новеллы онлайн в хорошем переводе."
+	title := "Свободная библиотека веб-новелл — kappalib"
+
+	schema, err := templates.RenderSchemaWebsite(templates.SchemaWebsiteData{
+		Domain:      "https://kappalib.ru",
+		Canonical:   canonical,
+		Title:       title,
+		Description: description,
+	})
+	if err != nil {
+		logger.Warn("Failed to render schema for home page: %v", err)
+		schema = ""
+	}
 
 	var lastReadWidget *views.LastReadWidgetData
 
@@ -183,11 +194,12 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 
 	props := views.HomeProps{
 		BaseProps: views.BaseProps{
-			Title:       "Свободная библиотека веб-новелл — kappalib",
+			Title:       title,
 			Description: description,
 			Canonical:   canonical,
 			Favicon:     "https://s3.kappalib.ru/favicon.ico",
 			Version:     h.assetVersion,
+			Schema:      schema,
 		},
 		Novels:     dataResp.Novels,
 		Page:       page,
@@ -296,15 +308,40 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		ogImage = *novel.CoverURL
 	}
 
+	canonical := fmt.Sprintf("https://kappalib.ru/%s", id)
+	title := fmt.Sprintf("%s / %s — kappalib", novel.Title, novel.TitleEn)
+
+	schemaNovel := templates.SchemaNovel{
+		ID:       novel.ID,
+		Title:    novel.Title,
+		TitleEn:  novel.TitleEn,
+		Author:   novel.Author,
+		Status:   novel.Status,
+		CoverURL: views.DerefStr(novel.CoverURL),
+	}
+
+	schema, err := templates.RenderSchemaNovel(templates.SchemaNovelData{
+		Domain:      "https://kappalib.ru",
+		Canonical:   canonical,
+		Title:       title,
+		Description: desc,
+		Novel:       schemaNovel,
+	})
+	if err != nil {
+		logger.Warn("Failed to render schema for novel page: %v", err)
+		schema = ""
+	}
+
 	props := views.NovelProps{
 		BaseProps: views.BaseProps{
-			Title:       fmt.Sprintf("%s / %s — kappalib", novel.Title, novel.TitleEn),
+			Title:       title,
 			Description: desc,
-			Canonical:   fmt.Sprintf("https://kappalib.ru/%s", id),
+			Canonical:   canonical,
 			Favicon:     "https://s3.kappalib.ru/favicon.ico",
 			OGImage:     ogImage,
 			Version:     h.assetVersion,
 			IsAdult:     isAdult,
+			Schema:      schema,
 		},
 		Novel:           novel,
 		Chapters:        chapters.Chapters,
@@ -356,9 +393,9 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	title := fmt.Sprintf("Глава %d", chapter.ChapterNum)
+	chapterTitle := fmt.Sprintf("Глава %d", chapter.ChapterNum)
 	if chapter.Title != "Без названия" {
-		title += ": " + chapter.Title
+		chapterTitle += ": " + chapter.Title
 	}
 
 	isAdult := false
@@ -366,16 +403,41 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 		isAdult = true
 	}
 
+	canonical := fmt.Sprintf("https://kappalib.ru/%s/chapter/%s", novelID, chapterID)
+	description := fmt.Sprintf("Читайте %s главу новеллы %s / %s бесплатно", strconv.Itoa(chapter.ChapterNum), novel.Title, novel.TitleEn)
+
+	schemaNovel := templates.SchemaNovel{
+		ID:       novel.ID,
+		Title:    novel.Title,
+		TitleEn:  novel.TitleEn,
+		Author:   novel.Author,
+		CoverURL: views.DerefStr(novel.CoverURL),
+	}
+
+	schema, err := templates.RenderSchemaChapter(templates.SchemaChapterData{
+		Domain:       "https://kappalib.ru",
+		Canonical:    canonical,
+		Description:  description,
+		ChapterTitle: chapterTitle,
+		ChapterNum:   chapter.ChapterNum,
+		Novel:        schemaNovel,
+	})
+	if err != nil {
+		logger.Warn("Failed to render schema for chapter page: %v", err)
+		schema = ""
+	}
+
 	props := views.ChapterProps{
 		BaseProps: views.BaseProps{
-			Title:         title,
-			Description:   fmt.Sprintf("Читайте %s главу новеллы %s / %s бесплатно", strconv.Itoa(chapter.ChapterNum), novel.Title, novel.TitleEn),
-			Canonical:     fmt.Sprintf("https://kappalib.ru/%s/chapter/%s", novelID, chapterID),
+			Title:         chapterTitle,
+			Description:   description,
+			Canonical:     canonical,
 			Favicon:       "https://s3.kappalib.ru/favicon.ico",
 			Version:       h.assetVersion,
 			IsChapterPage: true,
 			IsAdult:       isAdult,
 			Novel:         novel,
+			Schema:        schema,
 		},
 		Novel:   novel,
 		Chapter: chapter,

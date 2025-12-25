@@ -1,0 +1,47 @@
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "{{.Domain}}/#website",
+      "url": "{{.Domain}}",
+      "name": "kappalib",
+      "description": "{{.Description}}",
+      "inLanguage": "ru-RU",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "{{.Domain}}/search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "Organization",
+      "@id": "{{.Domain}}/#organization",
+      "name": "kappalib",
+      "url": "{{.Domain}}",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://s3.kappalib.ru/favicon.ico"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "support@kappalib.ru",
+        "contactType": "customer service"
+      }
+    },
+    {
+      "@type": "CollectionPage",
+      "@id": "{{.Canonical}}",
+      "url": "{{.Canonical}}",
+      "name": "{{.Title}}",
+      "isPartOf": {"@id": "{{.Domain}}/#website"},
+      "description": "{{.Description}}",
+      "inLanguage": "ru-RU"
+    }
+  ]
+}
+</script>

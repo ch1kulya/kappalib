@@ -10,8 +10,11 @@ import (
 var FS embed.FS
 
 var (
-	robotsTmpl  *template.Template
-	sitemapTmpl *template.Template
+	robotsTmpl        *template.Template
+	sitemapTmpl       *template.Template
+	schemaWebsiteTmpl *template.Template
+	schemaNovelTmpl   *template.Template
+	schemaChapterTmpl *template.Template
 )
 
 func Init() error {
@@ -23,6 +26,21 @@ func Init() error {
 	}
 
 	sitemapTmpl, err = template.ParseFS(FS, "sitemap.xml.tmpl")
+	if err != nil {
+		return err
+	}
+
+	schemaWebsiteTmpl, err = template.ParseFS(FS, "schema_website.html.tmpl")
+	if err != nil {
+		return err
+	}
+
+	schemaNovelTmpl, err = template.ParseFS(FS, "schema_novel.html.tmpl")
+	if err != nil {
+		return err
+	}
+
+	schemaChapterTmpl, err = template.ParseFS(FS, "schema_chapter.html.tmpl")
 	if err != nil {
 		return err
 	}
@@ -60,6 +78,63 @@ type SitemapData struct {
 func RenderSitemap(data SitemapData) (string, error) {
 	var buf bytes.Buffer
 	if err := sitemapTmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+type SchemaWebsiteData struct {
+	Domain      string
+	Canonical   string
+	Title       string
+	Description string
+}
+
+func RenderSchemaWebsite(data SchemaWebsiteData) (string, error) {
+	var buf bytes.Buffer
+	if err := schemaWebsiteTmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+type SchemaNovelData struct {
+	Domain      string
+	Canonical   string
+	Title       string
+	Description string
+	Novel       SchemaNovel
+}
+
+type SchemaNovel struct {
+	ID       string
+	Title    string
+	TitleEn  string
+	Author   string
+	Status   string
+	CoverURL string
+}
+
+func RenderSchemaNovel(data SchemaNovelData) (string, error) {
+	var buf bytes.Buffer
+	if err := schemaNovelTmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+type SchemaChapterData struct {
+	Domain       string
+	Canonical    string
+	Description  string
+	ChapterTitle string
+	ChapterNum   int
+	Novel        SchemaNovel
+}
+
+func RenderSchemaChapter(data SchemaChapterData) (string, error) {
+	var buf bytes.Buffer
+	if err := schemaChapterTmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil

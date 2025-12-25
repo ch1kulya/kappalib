@@ -1,0 +1,58 @@
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "@id": "{{.Canonical}}#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Главная",
+          "item": "{{.Domain}}"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "{{.Novel.Title}}",
+          "item": "{{.Canonical}}"
+        }
+      ]
+    },
+    {
+      "@type": "Book",
+      "@id": "{{.Canonical}}#book",
+      "url": "{{.Canonical}}",
+      "name": "{{.Novel.Title}}",
+      {{- if .Novel.TitleEn}}
+      "alternateName": "{{.Novel.TitleEn}}",
+      {{- end}}
+      "description": "{{.Description}}",
+      "inLanguage": "ru-RU",
+      {{- if .Novel.CoverURL}}
+      "image": "{{.Novel.CoverURL}}",
+      {{- end}}
+      {{- if .Novel.Author}}
+      "author": {
+        "@type": "Person",
+        "name": "{{.Novel.Author}}"
+      },
+      {{- end}}
+      {{- if .Novel.Status}}
+      "workExample": {
+        "@type": "Book",
+        "bookEdition": "Веб-новелла",
+        "bookFormat": "https://schema.org/EBook"
+      },
+      {{- end}}
+      "isAccessibleForFree": true,
+      "publisher": {
+        "@type": "Organization",
+        "@id": "{{.Domain}}/#organization"
+      },
+      "breadcrumb": {"@id": "{{.Canonical}}#breadcrumb"}
+    }
+  ]
+}
+</script>
