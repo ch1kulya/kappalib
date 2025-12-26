@@ -64,13 +64,13 @@ templ Header(props BaseProps) {
 				</h1>
 				<div class="search-bar" id="search-component">
 					<div class="search-input-wrapper">
-						<img class="search-icon" src="https://api.iconify.design/lucide/search.svg?color=currentColor" width="16" height="16" alt="Поиск"/>
+						@IconSearch("search-icon")
 						<input type="text" placeholder="Поиск" id="search-input" autocomplete="off"/>
 					</div>
 					<div class="search-results" id="search-results" style="display: none;"></div>
 				</div>
 				<button class="header-right" id="header-profile-btn" aria-label="Профиль">
-					<img src="https://api.iconify.design/lucide/user.svg?color=currentColor" width="24" height="24" alt="Профиль"/>
+					@IconUser("header-profile-icon")
 				</button>
 			}
 		</div>

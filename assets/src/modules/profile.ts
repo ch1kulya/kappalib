@@ -271,7 +271,12 @@ function renderGuestView(): void {
   content.innerHTML = `
     <div class="pm-header">
       <h3>Аккаунт</h3>
-      <button class="pm-close" id="pm-close">&times;</button>
+      <button class="pm-close" id="pm-close">
+          <svg class="pm-close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+          </svg>
+      </button>
     </div>
     <div class="pm-body">
       <div class="pm-section">
@@ -343,7 +348,12 @@ function renderLoggedInView(): void {
   content.innerHTML = `
     <div class="pm-header">
       <h3>Профиль</h3>
-      <button class="pm-close" id="pm-close">&times;</button>
+      <button class="pm-close" id="pm-close">
+          <svg class="pm-close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+          </svg>
+      </button>
     </div>
     <div class="pm-body pm-loading">
       <div class="pm-loader"></div>

@@ -132,6 +132,10 @@ a:hover {
     color: var(--primary);
 }
 
+svg[class*="icon"] {
+    flex-shrink: 0;
+}
+
 .container > *:first-child,
 .novel-info > *:first-child,
 .chapter-content > *:first-child {
@@ -187,15 +191,15 @@ a:hover {
     margin-left: 1rem;
     background: var(--bg-primary);
     border: none;
-    opacity: 0.5;
     &:hover {
         cursor: pointer;
     }
-    @media (prefers-color-scheme: dark) {
-        & img {
-            filter: invert(1);
-        }
-    }
+}
+
+.header-profile-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--secondary);
 }
 
 /* Search */
@@ -226,7 +230,7 @@ a:hover {
     width: 16px;
     height: 16px;
     pointer-events: none;
-    opacity: 0.5;
+    color: var(--tertiary);
     z-index: 10;
 }
 
@@ -1655,10 +1659,12 @@ html {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: var(--tertiary);
     cursor: pointer;
-    line-height: 1;
     padding: 0;
+}
+
+.pm-close-icon {
+    color: var(--tertiary);
 }
 
 .pm-body {
