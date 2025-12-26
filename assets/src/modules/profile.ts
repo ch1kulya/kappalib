@@ -217,6 +217,35 @@ export function setKappalibCookie(name: string, value: string): void {
   }
 }
 
+function cloneTemplate(id: string): DocumentFragment {
+  const template = document.getElementById(id) as HTMLTemplateElement | null;
+  if (!template) {
+    console.error(`Template #${id} not found`);
+    return document.createDocumentFragment();
+  }
+  return template.content.cloneNode(true) as DocumentFragment;
+}
+
+function fillTemplate(
+  id: string,
+  data: Record<string, string>,
+): DocumentFragment {
+  const fragment = cloneTemplate(id);
+
+  for (const [key, value] of Object.entries(data)) {
+    const el = fragment.querySelector(`[data-field="${key}"]`);
+    if (el) {
+      if (el.tagName === "IMG") {
+        (el as HTMLImageElement).src = value;
+      } else {
+        el.textContent = value;
+      }
+    }
+  }
+
+  return fragment;
+}
+
 export function initProfileModal(): void {
   const overlay = document.getElementById("profile-modal-overlay");
   const profileBtn = document.getElementById("header-profile-btn");
@@ -268,33 +297,8 @@ function renderGuestView(): void {
   const content = document.getElementById("profile-modal-content");
   if (!content) return;
 
-  content.innerHTML = `
-    <div class="pm-header">
-      <h3>Аккаунт</h3>
-      <button class="pm-close" id="pm-close">
-          <svg class="pm-close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 6 6 18"></path>
-              <path d="m6 6 12 12"></path>
-          </svg>
-      </button>
-    </div>
-    <div class="pm-body">
-      <div class="pm-section">
-        <p class="pm-desc">Создайте аккаунт для синхронизации прогресса между устройствами</p>
-        <div id="turnstile-container" class="turnstile-container"></div>
-        <button class="pm-btn pm-btn-primary" id="pm-create" disabled>Создать аккаунт</button>
-      </div>
-      <div class="pm-divider"><span>или</span></div>
-      <div class="pm-section">
-        <p class="pm-desc">Уже есть аккаунт?</p>
-        <div class="pm-input-row">
-          <input type="text" class="pm-input" id="pm-sync-input" placeholder="КОД" maxlength="8" />
-          <button class="pm-btn pm-btn-outline" id="pm-login">Войти</button>
-        </div>
-        <div id="pm-error" class="pm-error"></div>
-      </div>
-    </div>
-  `;
+  content.innerHTML = "";
+  content.appendChild(cloneTemplate("tpl-pm-guest"));
 
   document
     .getElementById("pm-close")
@@ -345,20 +349,8 @@ function renderLoggedInView(): void {
   const content = document.getElementById("profile-modal-content");
   if (!content) return;
 
-  content.innerHTML = `
-    <div class="pm-header">
-      <h3>Профиль</h3>
-      <button class="pm-close" id="pm-close">
-          <svg class="pm-close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 6 6 18"></path>
-              <path d="m6 6 12 12"></path>
-          </svg>
-      </button>
-    </div>
-    <div class="pm-body pm-loading">
-      <div class="pm-loader"></div>
-    </div>
-  `;
+  content.innerHTML = "";
+  content.appendChild(cloneTemplate("tpl-pm-loading"));
 
   document
     .getElementById("pm-close")
@@ -376,27 +368,15 @@ function renderLoggedInView(): void {
     const avatarUrl = `https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${profile.avatar_seed}&scale=110&backgroundColor=ffdfbf,d1d4f9,ffd5dc,c0aede,b6e3f4,ffffff&backgroundType=solid,gradientLinear`;
 
     body.classList.remove("pm-loading");
-    body.innerHTML = `
-      <div class="pm-profile">
-        <img src="${avatarUrl}" alt="" class="pm-avatar" />
-        <div class="pm-info">
-          <div class="pm-name">${profile.display_name}</div>
-          <div class="pm-meta">
-            <span class="pm-id">${profile.id}</span>
-            <span class="pm-date">${formatDate(profile.created_at)}</span>
-          </div>
-        </div>
-      </div>
-      <div class="pm-section">
-        <p class="pm-desc">Код для входа на другом устройстве</p>
-        <div id="pm-code-area"></div>
-        <button class="pm-btn pm-btn-primary" id="pm-get-code">Получить код</button>
-      </div>
-      <div class="pm-footer">
-        <button class="pm-btn pm-btn-text" id="pm-logout">Выйти</button>
-        <button class="pm-btn pm-btn-danger-text" id="pm-delete">Удалить аккаунт</button>
-      </div>
-    `;
+    body.innerHTML = "";
+    body.appendChild(
+      fillTemplate("tpl-pm-profile", {
+        avatarUrl,
+        displayName: profile.display_name,
+        profileId: profile.id,
+        createdAt: formatDate(profile.created_at),
+      }),
+    );
 
     document
       .getElementById("pm-get-code")
@@ -409,7 +389,10 @@ function renderLoggedInView(): void {
         if (result) {
           const area = document.getElementById("pm-code-area");
           if (area) {
-            area.innerHTML = `<div class="pm-code">${result.sync_code}</div>`;
+            const codeEl = document.createElement("div");
+            codeEl.className = "pm-code";
+            codeEl.textContent = result.sync_code;
+            area.appendChild(codeEl);
           }
           btn.style.display = "none";
         } else {
