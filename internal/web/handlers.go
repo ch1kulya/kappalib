@@ -24,6 +24,18 @@ type Handler struct {
 	assetVersion int64
 }
 
+type NovelCookieData struct {
+	SortOrder       string
+	LastChapterID   string
+	ProgressPercent int
+	NextChapterNum  int
+}
+
+type HomeCookieData struct {
+	SortOrder      string
+	LastReadWidget *views.LastReadWidgetData
+}
+
 func NewHandler() *Handler {
 	return &Handler{
 		assetVersion: time.Now().Unix(),
@@ -105,113 +117,122 @@ func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(content))
 }
 
-func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
-	pageStr := r.URL.Query().Get("page")
-	page := 1
-	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
-		page = p
+func (h *Handler) getNovelCookieData(r *http.Request, novelID string, chapters []models.ChapterSummary, totalChapters int) NovelCookieData {
+	data := NovelCookieData{
+		SortOrder:       "asc",
+		LastChapterID:   "",
+		ProgressPercent: 0,
+		NextChapterNum:  1,
 	}
 
-	sortOrder := "oldest"
-	if cookie, err := r.Cookie("kappalib_catalog_sort"); err == nil {
-		sortOrder = cookie.Value
-	}
-
-	dataResp, err := data.GetNovels(r.Context(), page, sortOrder)
-	if err != nil {
-		h.renderError(w, r, http.StatusServiceUnavailable, "Сервис временно недоступен", "Не удалось загрузить список новелл. Пожалуйста, попробуйте позже.")
-		logger.Error("Failed to fetch novels home page: %v", err)
-		return
-	}
-
-	canonical := "https://kappalib.ru"
-	if page > 1 {
-		canonical = fmt.Sprintf("https://kappalib.ru/?page=%d", page)
-	}
-
-	description := "Бесплатная библиотека веб-новелл и ранобэ. Читайте популярные веб-новеллы онлайн в хорошем переводе."
-	title := "Свободная библиотека веб-новелл — kappalib"
-
-	schema, err := templates.RenderSchemaWebsite(templates.SchemaWebsiteData{
-		Domain:      "https://kappalib.ru",
-		Canonical:   canonical,
-		Title:       title,
-		Description: description,
-	})
-	if err != nil {
-		logger.Warn("Failed to render schema for home page: %v", err)
-		schema = ""
-	}
-
-	var lastReadWidget *views.LastReadWidgetData
-
-	if cookie, err := r.Cookie("kappalib_last_read"); err == nil {
-		lastNovelID := cookie.Value
-		if novel, err := data.GetNovel(r.Context(), lastNovelID); err == nil {
-			progCookieName := fmt.Sprintf("kappalib_prog_%s", lastNovelID)
-			lastChapterID := ""
-			if progCookie, err := r.Cookie(progCookieName); err == nil {
-				lastChapterID = progCookie.Value
-			}
-
-			if lastChapterID != "" {
-				if chapters, err := data.GetChapters(r.Context(), lastNovelID); err == nil && len(chapters.Chapters) > 0 {
-					currentChapterNum := 0
-					totalChapters := chapters.Count
-					if totalChapters == 0 {
-						totalChapters = len(chapters.Chapters)
-					}
-
-					for _, ch := range chapters.Chapters {
-						if ch.ID == lastChapterID {
-							currentChapterNum = ch.ChapterNum
-							break
-						}
-					}
-
-					if currentChapterNum > 0 {
-						progressPercent := int((float64(currentChapterNum) / float64(totalChapters)) * 100)
-						if progressPercent == 0 {
-							progressPercent = 1
-						}
-						if progressPercent > 100 {
-							progressPercent = 100
-						}
-
-						lastReadWidget = &views.LastReadWidgetData{
-							Novel:           novel,
-							LastChapterID:   lastChapterID,
-							NextChapterNum:  currentChapterNum,
-							TotalChapters:   totalChapters,
-							ProgressPercent: progressPercent,
-						}
-					}
-				}
-			}
+	if cookie, err := r.Cookie("kappalib_chapter_sort"); err == nil {
+		if cookie.Value == "desc" {
+			data.SortOrder = "desc"
 		}
 	}
 
-	props := views.HomeProps{
-		BaseProps: views.BaseProps{
-			Title:       title,
-			Description: description,
-			Canonical:   canonical,
-			Version:     h.assetVersion,
-			Schema:      schema,
-		},
-		Novels:     dataResp.Novels,
-		Page:       page,
-		TotalPages: dataResp.TotalPages,
-		SortOrder:  sortOrder,
-		LastRead:   lastReadWidget,
+	cookieName := fmt.Sprintf("kappalib_prog_%s", novelID)
+	if cookie, err := r.Cookie(cookieName); err == nil {
+		data.LastChapterID = cookie.Value
 	}
 
-	h.render(w, r, views.Home(props))
+	if data.LastChapterID != "" && len(chapters) > 0 {
+		if totalChapters == 0 {
+			totalChapters = len(chapters)
+		}
+		currentChapterNum := 0
+		for _, ch := range chapters {
+			if ch.ID == data.LastChapterID {
+				currentChapterNum = ch.ChapterNum
+				break
+			}
+		}
+		if currentChapterNum > 0 && totalChapters > 0 {
+			rawPercent := (float64(currentChapterNum) / float64(totalChapters)) * 100
+			data.ProgressPercent = int(rawPercent)
+			if rawPercent > 0 && data.ProgressPercent == 0 {
+				data.ProgressPercent = 1
+			}
+			data.ProgressPercent = min(data.ProgressPercent, 100)
+			data.NextChapterNum = currentChapterNum
+		}
+	}
+
+	return data
+}
+
+func (h *Handler) getHomeCookieData(r *http.Request) HomeCookieData {
+	result := HomeCookieData{
+		SortOrder:      "oldest",
+		LastReadWidget: nil,
+	}
+
+	if cookie, err := r.Cookie("kappalib_catalog_sort"); err == nil {
+		result.SortOrder = cookie.Value
+	}
+
+	cookie, err := r.Cookie("kappalib_last_read")
+	if err != nil {
+		return result
+	}
+
+	lastNovelID := cookie.Value
+	novel, err := data.GetNovel(r.Context(), lastNovelID)
+	if err != nil {
+		return result
+	}
+
+	progCookieName := fmt.Sprintf("kappalib_prog_%s", lastNovelID)
+	progCookie, err := r.Cookie(progCookieName)
+	if err != nil {
+		return result
+	}
+
+	lastChapterID := progCookie.Value
+	if lastChapterID == "" {
+		return result
+	}
+
+	chapters, err := data.GetChapters(r.Context(), lastNovelID)
+	if err != nil || len(chapters.Chapters) == 0 {
+		return result
+	}
+
+	currentChapterNum := 0
+	totalChapters := chapters.Count
+	if totalChapters == 0 {
+		totalChapters = len(chapters.Chapters)
+	}
+
+	for _, ch := range chapters.Chapters {
+		if ch.ID == lastChapterID {
+			currentChapterNum = ch.ChapterNum
+			break
+		}
+	}
+
+	if currentChapterNum > 0 {
+		progressPercent := int((float64(currentChapterNum) / float64(totalChapters)) * 100)
+		if progressPercent == 0 {
+			progressPercent = 1
+		}
+		if progressPercent > 100 {
+			progressPercent = 100
+		}
+		result.LastReadWidget = &views.LastReadWidgetData{
+			Novel:           novel,
+			LastChapterID:   lastChapterID,
+			NextChapterNum:  currentChapterNum,
+			TotalChapters:   totalChapters,
+			ProgressPercent: progressPercent,
+		}
+	}
+
+	return result
 }
 
 func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-
 	novel, err := data.GetNovel(r.Context(), id)
 	if err != nil {
 		h.renderError(w, r, http.StatusNotFound, "Новелла не найдена", "Мы не смогли найти запрашиваемую новеллу.")
@@ -235,15 +256,10 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sortOrder := "asc"
-	if cookie, err := r.Cookie("kappalib_chapter_sort"); err == nil {
-		if cookie.Value == "desc" {
-			sortOrder = "desc"
-		}
-	}
+	cookieData := h.getNovelCookieData(r, id, chapters.Chapters, chapters.Count)
 
 	if len(chapters.Chapters) > 0 {
-		if sortOrder == "desc" {
+		if cookieData.SortOrder == "desc" {
 			sort.Slice(chapters.Chapters, func(i, j int) bool {
 				return chapters.Chapters[i].ChapterNum > chapters.Chapters[j].ChapterNum
 			})
@@ -251,40 +267,6 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 			sort.Slice(chapters.Chapters, func(i, j int) bool {
 				return chapters.Chapters[i].ChapterNum < chapters.Chapters[j].ChapterNum
 			})
-		}
-	}
-
-	lastChapterID := ""
-	progressPercent := 0
-	nextChapterNum := 1
-	totalChapters := chapters.Count
-
-	cookieName := fmt.Sprintf("kappalib_prog_%s", id)
-	if cookie, err := r.Cookie(cookieName); err == nil {
-		lastChapterID = cookie.Value
-	}
-
-	if lastChapterID != "" && len(chapters.Chapters) > 0 {
-		if totalChapters == 0 {
-			totalChapters = len(chapters.Chapters)
-		}
-
-		currentChapterNum := 0
-		for _, ch := range chapters.Chapters {
-			if ch.ID == lastChapterID {
-				currentChapterNum = ch.ChapterNum
-				break
-			}
-		}
-
-		if currentChapterNum > 0 && totalChapters > 0 {
-			rawPercent := (float64(currentChapterNum) / float64(totalChapters)) * 100
-			progressPercent = int(rawPercent)
-			if rawPercent > 0 && progressPercent == 0 {
-				progressPercent = 1
-			}
-			progressPercent = min(progressPercent, 100)
-			nextChapterNum = currentChapterNum
 		}
 	}
 
@@ -342,15 +324,68 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		},
 		Novel:           novel,
 		Chapters:        chapters.Chapters,
-		SortOrder:       sortOrder,
-		LastChapterID:   lastChapterID,
+		SortOrder:       cookieData.SortOrder,
+		LastChapterID:   cookieData.LastChapterID,
 		FirstChapterID:  firstChapterID,
-		ProgressPercent: progressPercent,
-		NextChapterNum:  nextChapterNum,
-		TotalChapters:   totalChapters,
+		ProgressPercent: cookieData.ProgressPercent,
+		NextChapterNum:  cookieData.NextChapterNum,
+		TotalChapters:   chapters.Count,
 	}
 
 	h.render(w, r, views.Novel(props))
+}
+
+func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
+	pageStr := r.URL.Query().Get("page")
+	page := 1
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
+	}
+
+	cookieData := h.getHomeCookieData(r)
+
+	dataResp, err := data.GetNovels(r.Context(), page, cookieData.SortOrder)
+	if err != nil {
+		h.renderError(w, r, http.StatusServiceUnavailable, "Сервис временно недоступен", "Не удалось загрузить список новелл. Пожалуйста, попробуйте позже.")
+		logger.Error("Failed to fetch novels home page: %v", err)
+		return
+	}
+
+	canonical := "https://kappalib.ru"
+	if page > 1 {
+		canonical = fmt.Sprintf("https://kappalib.ru/?page=%d", page)
+	}
+
+	description := "Бесплатная библиотека веб-новелл и ранобэ. Читайте популярные веб-новеллы онлайн в хорошем переводе."
+	title := "Свободная библиотека веб-новелл — kappalib"
+
+	schema, err := templates.RenderSchemaWebsite(templates.SchemaWebsiteData{
+		Domain:      "https://kappalib.ru",
+		Canonical:   canonical,
+		Title:       title,
+		Description: description,
+	})
+	if err != nil {
+		logger.Warn("Failed to render schema for home page: %v", err)
+		schema = ""
+	}
+
+	props := views.HomeProps{
+		BaseProps: views.BaseProps{
+			Title:       title,
+			Description: description,
+			Canonical:   canonical,
+			Version:     h.assetVersion,
+			Schema:      schema,
+		},
+		Novels:     dataResp.Novels,
+		Page:       page,
+		TotalPages: dataResp.TotalPages,
+		SortOrder:  cookieData.SortOrder,
+		LastRead:   cookieData.LastReadWidget,
+	}
+
+	h.render(w, r, views.Home(props))
 }
 
 func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
@@ -486,8 +521,8 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 	state, err := data.GetSystemStatus()
 
-	indicator := "none"
-	description := "Все системы в норме"
+	var indicator string
+	var description string
 
 	if err != nil {
 		logger.Warn("Failed to fetch system status: %v", err)
