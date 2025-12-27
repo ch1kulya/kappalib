@@ -15,4 +15,4 @@ WHERE
     (nq.q <% n.title_en_norm) OR
     (n.author_norm % nq.q)
 ORDER BY relevance DESC, n.created_at DESC
-LIMIT 20;
+LIMIT 5;
