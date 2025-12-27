@@ -18,6 +18,7 @@ templ Base(props BaseProps) {
 			<link rel="preconnect" href="https://status.kappalib.ru/"/>
 			<link rel="preconnect" href="https://stats.kappalib.ru/"/>
 			<link rel="preconnect" href="https://rsms.me/"/>
+			<link rel="preconnect" href="https://cdn.jsdelivr.net/"/>
 			<link rel="icon" href="/assets/icons/favicon.ico" type="image/x-icon"/>
 			<link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml"/>
 			<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png"/>
@@ -34,8 +35,10 @@ templ Base(props BaseProps) {
 			} else {
 				<meta name="twitter:card" content="summary"/>
 			}
-			<link rel="stylesheet" href="https://rsms.me/inter/inter.css"/>
-			<link rel="stylesheet" href={ fmt.Sprintf("/assets/dist/styles/main.css?v=%d", props.Version) }/>
+			<link rel="stylesheet" as="style" crossorigin href="https://rsms.me/inter/inter.css"/>
+			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/npm/noto-sans-cjk-jp@1.0.1/index.min.css"/>
+			<link rel="stylesheet" as="style" href={ fmt.Sprintf("/assets/dist/styles/main.css?v=%d", props.Version) }/>
 			<script defer src="https://stats.ch1kulya.ru/script.js" data-website-id="d7ede2e9-37bc-4a66-b905-188a87d88fd8"></script>
 		</head>
 		<body>
