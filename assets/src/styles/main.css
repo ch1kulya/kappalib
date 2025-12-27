@@ -1,6 +1,8 @@
 :root {
     font-family:
         InterVariable,
+        Pretendard,
+        Noto Sans CJK JP,
         -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
@@ -8,9 +10,9 @@
         sans-serif;
     font-feature-settings:
         "liga" 1,
-        "calt" 1;
-
-    /* Light Theme */
+        "calt" 1,
+        "ss01" 1,
+        "cv06" 1;
     --bg-primary: #f9f9f9;
     --primary: #1b1b1b;
     --secondary: #757575;
@@ -147,8 +149,6 @@ svg[class*="icon"] {
     padding: 1rem 0;
     border-bottom: 1px solid var(--border);
     background: var(--bg-primary);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     position: sticky;
     top: 0;
     z-index: 60;
@@ -159,8 +159,6 @@ svg[class*="icon"] {
     position: relative;
     top: auto;
     background: var(--bg-primary);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
 }
 
 .header-content {
@@ -1482,8 +1480,6 @@ html {
     padding: 0;
     border: none;
     background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
 }
 
 .cr-card {
