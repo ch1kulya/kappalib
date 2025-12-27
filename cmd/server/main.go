@@ -151,6 +151,7 @@ func main() {
 	r.Get("/dmca", h.StaticPage("dmca", "DMCA"))
 	r.Get("/privacy", h.StaticPage("privacy", "Политика конфиденциальности"))
 	r.Get("/copyright", h.StaticPage("copyright", "Правообладателям"))
+	r.Get("/license", h.StaticPage("license", "Лицензия MIT"))
 	r.Get("/{id}", h.Novel)
 	r.Get("/{id}/chapter/{chapterId}", h.Chapter)
 	r.Get("/status", h.GetStatus)
