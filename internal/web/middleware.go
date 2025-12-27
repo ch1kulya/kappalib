@@ -115,8 +115,8 @@ func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 			"script-src 'self' 'unsafe-inline' https://stats.ch1kulya.ru " +
 			"https://challenges.cloudflare.com https://cdn.jsdelivr.net; " +
 			"frame-src 'self' https://challenges.cloudflare.com; " +
-			"style-src 'self' 'unsafe-inline' https://rsms.me; " +
-			"font-src 'self' data: https://rsms.me https://fonts.scalar.com; "
+			"style-src 'self' 'unsafe-inline' https://rsms.me https://cdn.jsdelivr.net; " +
+			"font-src 'self' data: https://rsms.me https://fonts.scalar.com https://cdn.jsdelivr.net; "
 
 		w.Header().Set("Content-Security-Policy", csp)
 
