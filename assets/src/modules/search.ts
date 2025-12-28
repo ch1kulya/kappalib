@@ -33,12 +33,14 @@ export function initSearch(): void {
   const showBackdrop = () => {
     if (profileCard?.style.display !== "block") {
       backdrop?.classList.add("active");
+      document.body.style.overflow = "hidden";
     }
   };
 
   const hideBackdrop = () => {
     if (profileCard?.style.display !== "block") {
       backdrop?.classList.remove("active");
+      document.body.style.overflow = "";
     }
   };
 

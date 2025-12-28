@@ -291,6 +291,7 @@ function openProfileCard(): void {
 
   profileCard.style.display = "block";
   backdrop?.classList.add("active");
+  document.body.style.overflow = "hidden";
 
   if (profileManager.isLoggedIn()) {
     renderLoggedInView();
@@ -306,6 +307,7 @@ function closeProfileCard(): void {
 
   profileCard.style.display = "none";
   backdrop?.classList.remove("active");
+  document.body.style.overflow = "";
 
   const container = document.getElementById("turnstile-container");
   if (container) container.innerHTML = "";
@@ -315,8 +317,10 @@ export function setBackdropActive(active: boolean): void {
   const backdrop = document.getElementById("header-backdrop");
   if (active) {
     backdrop?.classList.add("active");
+    document.body.style.overflow = "hidden";
   } else {
     backdrop?.classList.remove("active");
+    document.body.style.overflow = "";
   }
 }
 
