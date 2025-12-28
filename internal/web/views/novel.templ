@@ -24,7 +24,7 @@ templ Novel(props NovelProps) {
 									</div>
 									<a
 										href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.LastChapterID)) }
-										class="action-btn btn-continue js-reading-btn"
+										class="action-btn btn-continue btn-primary js-reading-btn"
 										data-novel-id={ props.Novel.ID }
 									>
 										Продолжить
@@ -70,7 +70,7 @@ templ Novel(props NovelProps) {
 								</div>
 								<a
 									href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.LastChapterID)) }
-									class="action-btn btn-continue js-reading-btn"
+									class="action-btn btn-continue btn-primary js-reading-btn"
 									data-novel-id={ props.Novel.ID }
 								>
 									Продолжить

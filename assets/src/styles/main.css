@@ -21,7 +21,13 @@
     --outline: #f1f1f1;
     --accent-primary: #f97316;
     --accent-text: white;
-    --accent-shadow: rgba(249, 115, 22, 0.2);
+    --accent-border: #f97008;
+    --accent-shadow-primary:
+        inset 0 0 1.5px 1px rgba(249, 115, 22, 0.07),
+        0 1px 2px rgba(249, 115, 22, 0.12);
+    --accent-shadow-focus:
+        inset 0 0 1.5px 1px rgba(249, 115, 22, 0.07),
+        0 0 12px rgba(249, 115, 22, 0.1), 0 2px 4px rgba(249, 115, 22, 0.12);
     --gradient-input-primary: radial-gradient(
         80% 80% at 30% 20%,
         rgba(0, 0, 0, 0.04),
@@ -695,6 +701,7 @@ a:hover {
     }
     &.active {
         cursor: default;
+        color: var(--primary);
         border-color: var(--tertiary);
         box-shadow: var(--shadow-focus);
     }
@@ -1131,30 +1138,11 @@ a:hover {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
-    margin-top: 1.5rem;
 }
 
 .modal-actions button {
     font-size: 0.9rem;
     padding: 0.875rem;
-    border-radius: 10px;
-    font-weight: 600;
-    border: 1px solid var(--border);
-}
-
-.modal-actions button:hover {
-    cursor: pointer;
-}
-
-.btn-back {
-    background: var(--bg-primary);
-    color: var(--primary);
-}
-
-.btn-confirm {
-    background: #dc2626;
-    border-color: #dc2626;
-    color: white;
 }
 
 /* Age Checkbox */
@@ -1283,11 +1271,13 @@ html {
 
 /* Action Buttons (Start/Continue) */
 .action-btn,
-.action-btn:hover {
+.btn-continue,
+.btn-start {
+    position: relative;
     display: block;
     width: 100%;
     padding: 0.75rem 1rem;
-    border-radius: 8px;
+    border-radius: 10px;
     text-align: center;
     text-decoration: none;
     font-weight: 600;
@@ -1296,23 +1286,69 @@ html {
         transform 0.1s,
         opacity 0.2s;
     margin-top: 1rem;
-    color: var(--accent-text);
-}
-
-.action-btn:active {
-    transform: scale(0.98);
-}
-
-.btn-start,
-.btn-start:hover {
-    background-color: var(--accent-primary);
-    box-shadow: 0 4px 6px -1px var(--accent-shadow);
-}
-
-.btn-continue,
-.btn-continue:hover {
-    background-color: var(--primary);
-    color: var(--bg-primary);
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg-primary);
+    color: var(--primary);
+    box-shadow: var(--shadow-primary);
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 10px;
+        background: var(--gradient-primary);
+        opacity: 0.6;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        z-index: 1;
+    }
+    &:hover::before,
+    &:focus::before {
+        opacity: 0.9;
+        background: var(--gradient-focus);
+    }
+    &:hover,
+    &:focus {
+        box-shadow: var(--shadow-focus);
+    }
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    &.btn-primary {
+        background: var(--primary);
+        color: var(--bg-primary);
+        border-color: var(--secondary);
+        box-shadow: var(--shadow-inverted-primary);
+        &::before {
+            background: var(--gradient-inverted-primary);
+        }
+        &:hover::before,
+        &:focus::before {
+            background: var(--gradient-inverted-focus);
+        }
+        &:hover,
+        &:focus {
+            box-shadow: var(--shadow-inverted-focus);
+        }
+    }
+    &.btn-confirm {
+        background: #dc2626;
+        border-color: #ef4444;
+        color: white;
+    }
+    &.btn-start {
+        background-color: var(--accent-primary);
+        border-color: var(--accent-border);
+        box-shadow: var(--accent-shadow-primary);
+        color: white;
+    }
+    &.btn-start:hover {
+        box-shadow: var(--accent-shadow-focus);
+    }
 }
 
 /* Responsive Button Placement */
@@ -1403,12 +1439,7 @@ html {
 .btn-home {
     display: inline-block;
     padding: 0.75rem 1.5rem;
-    background-color: var(--primary);
-    color: var(--bg-primary);
     text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
-    border: none;
     cursor: pointer;
     font-size: 1rem;
     font-family: inherit;
@@ -1700,11 +1731,25 @@ html {
 }
 
 .progress-bar-fill {
+    position: relative;
     height: 100%;
     background-color: var(--primary);
     width: 0%;
     transition: width 0.5s ease-out;
     border-radius: 4px;
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 10px;
+        background: var(--gradient-inverted-focus);
+        opacity: 0.6;
+        pointer-events: none;
+        z-index: 1;
+    }
 }
 
 .mobile-actions .reading-progress-container {
@@ -1797,9 +1842,6 @@ html {
     border-radius: 10px;
     white-space: nowrap;
     flex-shrink: 0;
-    background-color: var(--primary);
-    color: var(--bg-primary);
-    box-shadow: none;
 }
 
 .cr-progress-wrapper {

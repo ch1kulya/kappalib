@@ -9,10 +9,10 @@ templ Error(props ErrorProps) {
 			<h1 class="error-title">{ props.ErrorTitle }</h1>
 			<p class="error-message">{ props.ErrorMessage }</p>
 			if props.ErrorCode == 503 {
-				<button onclick="window.location.reload()" class="btn-home">Попробовать снова</button>
+				<button onclick="window.location.reload()" class="action-btn btn-home">Попробовать снова</button>
 			} else {
 				<form>
-				<button formaction="/" class="btn-home">Вернуться на главную</button>
+				<button formaction="/" class="action-btn btn-home">Вернуться на главную</button>
 				</form>
 			}
 		</div>
