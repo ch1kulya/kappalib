@@ -385,7 +385,7 @@ function renderLoggedInView(): void {
       return;
     }
 
-    const avatarUrl = `https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${profile.avatar_seed}&scale=110&backgroundColor=ffdfbf,d1d4f9,ffd5dc,c0aede,b6e3f4,ffffff&backgroundType=solid,gradientLinear`;
+    const avatarUrl = `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${profile.avatar_seed}&backgroundType=solid,gradientLinear`;
 
     content.innerHTML = "";
     content.appendChild(
