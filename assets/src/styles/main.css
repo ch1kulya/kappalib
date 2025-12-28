@@ -178,7 +178,7 @@ h1 {
 
 h2 {
     font-size: 1.25rem;
-    font-weight: 800;
+    font-weight: 600;
     margin: 0;
 }
 
@@ -296,7 +296,7 @@ a:hover {
     text-overflow: ellipsis;
     margin-right: 1rem;
     opacity: 0.9;
-    text-shadow: 0 1px 1px var(--secondary);
+    text-shadow: 0 0 1px var(--secondary);
 }
 
 .header-right {
@@ -625,7 +625,8 @@ a:hover {
 }
 .novel-card-info h3 {
     font-size: 0.95rem;
-    font-weight: 700;
+    opacity: 0.9;
+    text-shadow: 0 0 1px var(--secondary);
     line-height: 1.3;
     display: -webkit-box;
     line-clamp: 2;
@@ -785,10 +786,11 @@ a:hover {
 
 .novel-info h1 {
     font-size: 1.75rem;
-    font-weight: 800;
     line-height: 1.2;
     letter-spacing: -0.025em;
     margin-bottom: 0.5rem;
+    opacity: 0.9;
+    text-shadow: 0 0 1px var(--secondary);
     @media (max-width: 450px) {
         font-size: 1.5rem;
     }
@@ -809,10 +811,24 @@ a:hover {
 }
 
 .badge {
+    position: relative;
     background: var(--outline);
     border: 1px solid var(--border);
     padding: 2px 6px;
-    border-radius: 8px;
+    border-radius: 10px;
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 10px;
+        background: var(--gradient-primary);
+        opacity: 0.6;
+        pointer-events: none;
+        z-index: 1;
+    }
 }
 
 /* Chapters */
@@ -820,6 +836,10 @@ a:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    & h2 {
+        opacity: 0.9;
+        text-shadow: 0 0 1px var(--secondary);
+    }
 }
 
 .toggle {
@@ -961,12 +981,8 @@ a:hover {
 }
 
 .footer-section h4 {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     color: var(--tertiary);
-    margin-bottom: 1.25rem;
-    font-weight: 700;
+    margin-bottom: 1rem;
 }
 
 .footer-nav {
@@ -1818,8 +1834,9 @@ html {
 
 .cr-title h3 {
     font-size: 1.4rem;
-    font-weight: 800;
     margin: 0 0 0.25rem 0;
+    opacity: 0.9;
+    text-shadow: 0 0 1px var(--secondary);
     line-height: 1.3;
     display: -webkit-box;
     line-clamp: 2;
