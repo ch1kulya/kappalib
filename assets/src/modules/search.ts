@@ -3,6 +3,9 @@ interface NovelSearchResult {
   title: string;
   author: string;
   cover_url?: string;
+  year_start?: number;
+  status?: string;
+  description?: string;
 }
 
 interface SearchResponse {
@@ -98,11 +101,38 @@ export function initSearch(): void {
           const h3 = document.createElement("h3");
           h3.textContent = novel.title;
 
-          const p = document.createElement("p");
-          p.className = "author";
-          p.textContent = novel.author;
+          const metaDiv = document.createElement("div");
+          metaDiv.className = "search-result-meta";
+
+          if (novel.year_start) {
+            const yearBadge = document.createElement("span");
+            yearBadge.className = "badge";
+            yearBadge.textContent = novel.year_start.toString();
+            metaDiv.appendChild(yearBadge);
+          }
+
+          if (novel.status) {
+            const statusBadge = document.createElement("span");
+            statusBadge.className = "badge";
+            statusBadge.textContent = mapStatus(novel.status);
+            metaDiv.appendChild(statusBadge);
+          }
+
           infoDiv.appendChild(h3);
-          infoDiv.appendChild(p);
+          infoDiv.appendChild(metaDiv);
+
+          if (novel.description) {
+            const descP = document.createElement("p");
+            descP.className = "search-result-desc";
+            descP.textContent = novel.description;
+            infoDiv.appendChild(descP);
+          } else {
+            const authorP = document.createElement("p");
+            authorP.className = "author";
+            authorP.textContent = novel.author;
+            infoDiv.appendChild(authorP);
+          }
+
           a.appendChild(img);
           a.appendChild(infoDiv);
           fragment.appendChild(a);
@@ -132,4 +162,14 @@ export function initSearch(): void {
       }
     }
   });
+}
+
+function mapStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    ongoing: "Выходит",
+    completed: "Завершено",
+    hiatus: "Приостановлено",
+    dropped: "Заброшено",
+  };
+  return statusMap[status] || status;
 }

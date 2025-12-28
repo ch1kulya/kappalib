@@ -171,7 +171,7 @@ svg[class*="icon"] {
 }
 
 .header-left {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 800;
     color: var(--primary);
     text-decoration: none;
@@ -234,11 +234,11 @@ svg[class*="icon"] {
 
 .search-bar input {
     width: 100%;
-    padding: 0.7rem 1rem 0.65rem 2.75rem;
+    padding: 0.55rem 1rem 0.5rem 2.5rem;
     background-color: var(--bg-primary);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    font-size: 0.9rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
     font-weight: 500;
     color: var(--primary);
     outline: none;
@@ -251,20 +251,17 @@ svg[class*="icon"] {
 }
 
 .search-results {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    left: 0;
-    right: 0;
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow:
-        0 4px 6px -1px rgba(0, 0, 0, 0.1),
-        0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    max-height: 60vh;
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 1.5rem);
+    max-width: 800px;
+    background: transparent;
+    max-height: calc(100vh - 90px);
     overflow-y: auto;
     z-index: 100;
-    padding: 0.5rem;
+    padding: 0;
     scrollbar-width: thin;
     scrollbar-color: var(--outline) transparent;
 }
@@ -276,38 +273,45 @@ svg[class*="icon"] {
     color: var(--secondary);
     font-size: 0.9rem;
     font-weight: 500;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .search-result-card {
     display: flex;
     gap: 1rem;
-    padding: 0.75rem;
-    border-radius: 10px;
+    padding: 1rem;
+    border-radius: 12px;
     text-decoration: none;
     color: inherit;
-    align-items: center;
+    align-items: flex-start;
     transition: background-color 0.2s ease;
-    border: none;
-    margin-bottom: 2px;
+    border: 1px solid var(--border);
+    margin-bottom: 0.5rem;
+    background: var(--bg-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.search-result-card:last-child {
+    margin-bottom: 0;
 }
 
 .search-result-card:hover,
 .search-result-card:focus {
-    background-color: var(--border);
+    background-color: var(--outline);
     outline: none;
 }
 
 .search-result-card img {
-    width: 48px;
-    height: 72px;
+    width: 64px;
+    height: 96px;
     object-fit: cover;
-    border-radius: 6px;
+    border-radius: 8px;
     flex-shrink: 0;
     background: var(--outline);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    image-rendering: auto;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .search-result-info {
@@ -315,20 +319,49 @@ svg[class*="icon"] {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    gap: 0.35rem;
 }
 
 .search-result-info h3 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
     overflow: hidden;
     color: var(--primary);
-    line-height: 1.2;
+    line-height: 1.3;
     display: -webkit-box;
     line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+}
+
+.search-result-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.search-result-meta .badge {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    background: var(--outline);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--secondary);
+    font-weight: 500;
+}
+
+.search-result-desc {
+    font-size: 0.85rem;
+    color: var(--secondary);
+    line-height: 1.4;
+    margin: 0;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .search-result-info .author {
@@ -339,6 +372,29 @@ svg[class*="icon"] {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+@media (max-width: 500px) {
+    .search-result-card {
+        padding: 0.75rem;
+        gap: 0.75rem;
+        border-radius: 10px;
+    }
+
+    .search-result-info h3 {
+        font-size: 0.9rem;
+    }
+
+    .search-result-meta .badge {
+        font-size: 0.7rem;
+        padding: 1px 5px;
+    }
+
+    .search-result-desc {
+        font-size: 0.8rem;
+        line-clamp: 2;
+        -webkit-line-clamp: 2;
+    }
 }
 
 @media (max-width: 600px) {
