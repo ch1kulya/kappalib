@@ -3,6 +3,9 @@ interface NovelSearchResult {
   title: string;
   author: string;
   cover_url?: string;
+  year_start?: number;
+  status?: string;
+  description?: string;
 }
 
 interface SearchResponse {
@@ -15,18 +18,47 @@ export function initSearch(): void {
   ) as HTMLInputElement | null;
   const results = document.getElementById("search-results");
   const header = document.getElementById("main-header");
+  const backdrop = document.getElementById("header-backdrop");
+  const profileCard = document.getElementById("profile-card");
 
   if (!input || !results) return;
 
   let timeout: number | undefined;
+  let firstResultUrl: string | null = null;
   const API_URL = process.env.API_URL;
 
   const PLACEHOLDER_IMG =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect fill='%23ecf0f1' width='200' height='300'/%3E%3C/svg%3E";
 
+  const showBackdrop = () => {
+    if (profileCard?.style.display !== "block") {
+      backdrop?.classList.add("active");
+      document.body.style.overflow = "hidden";
+    }
+  };
+
+  const hideBackdrop = () => {
+    if (profileCard?.style.display !== "block") {
+      backdrop?.classList.remove("active");
+      document.body.style.overflow = "";
+    }
+  };
+
   input.onfocus = () => {
     if (window.innerWidth <= 600 && header) {
       header.classList.add("search-expanded");
+    }
+    if (input.value.trim().length >= 2) {
+      showBackdrop();
+    }
+  };
+
+  input.onkeydown = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (firstResultUrl) {
+        window.location.href = firstResultUrl;
+      }
     }
   };
 
@@ -34,10 +66,18 @@ export function initSearch(): void {
     setTimeout(() => {
       const focusMovedToResults = results.contains(document.activeElement);
 
+      /*   TODO: FIX THIS CASE
+      if (firstResultUrl && input.value.trim().length >= 2) {
+        window.location.href = firstResultUrl;
+        return;
+      }
+      */
+
       if (!focusMovedToResults) {
         if (header) header.classList.remove("search-expanded");
         input.value = "";
         results.style.display = "none";
+        hideBackdrop();
       }
     }, 150);
   };
@@ -49,8 +89,12 @@ export function initSearch(): void {
 
     if (query.length < 2) {
       results.style.display = "none";
+      firstResultUrl = null;
+      hideBackdrop();
       return;
     }
+
+    showBackdrop();
 
     timeout = window.setTimeout(async () => {
       try {
@@ -69,6 +113,7 @@ export function initSearch(): void {
         const data: SearchResponse = await res.json();
 
         results.innerHTML = "";
+        firstResultUrl = null;
 
         if (!data.novels || data.novels.length === 0) {
           console.info(`No results found for: "${query}"`);
@@ -80,6 +125,8 @@ export function initSearch(): void {
         }
 
         console.info(`Found ${data.novels.length} results for: "${query}"`);
+
+        firstResultUrl = `/${data.novels[0].id}`;
 
         const fragment = document.createDocumentFragment();
 
@@ -98,11 +145,40 @@ export function initSearch(): void {
           const h3 = document.createElement("h3");
           h3.textContent = novel.title;
 
-          const p = document.createElement("p");
-          p.className = "author";
-          p.textContent = novel.author;
+          const metaDiv = document.createElement("div");
+          metaDiv.className = "search-result-meta";
+
+          if (novel.author) {
+            const authorBadge = document.createElement("span");
+            authorBadge.className = "badge";
+            authorBadge.textContent = novel.author.toString();
+            metaDiv.appendChild(authorBadge);
+          }
+
+          if (novel.year_start) {
+            const yearBadge = document.createElement("span");
+            yearBadge.className = "badge";
+            yearBadge.textContent = novel.year_start.toString();
+            metaDiv.appendChild(yearBadge);
+          }
+
+          if (novel.status) {
+            const statusBadge = document.createElement("span");
+            statusBadge.className = "badge";
+            statusBadge.textContent = mapStatus(novel.status);
+            metaDiv.appendChild(statusBadge);
+          }
+
           infoDiv.appendChild(h3);
-          infoDiv.appendChild(p);
+          infoDiv.appendChild(metaDiv);
+
+          if (novel.description) {
+            const descP = document.createElement("p");
+            descP.className = "search-result-desc";
+            descP.textContent = novel.description;
+            infoDiv.appendChild(descP);
+          }
+
           a.appendChild(img);
           a.appendChild(infoDiv);
           fragment.appendChild(a);
@@ -112,6 +188,7 @@ export function initSearch(): void {
       } catch (err) {
         console.error("Search API request failed", err);
         results.innerHTML = "";
+        firstResultUrl = null;
         const errorDiv = document.createElement("div");
         errorDiv.className = "no-results";
         errorDiv.textContent = "Ошибка поиска";
@@ -127,9 +204,29 @@ export function initSearch(): void {
     ) {
       results.style.display = "none";
       input.value = "";
+      firstResultUrl = null;
+      hideBackdrop();
       if (header) {
         header.classList.remove("search-expanded");
       }
     }
   });
+
+  backdrop?.addEventListener("click", () => {
+    results.style.display = "none";
+    input.value = "";
+    firstResultUrl = null;
+    hideBackdrop();
+    if (header) {
+      header.classList.remove("search-expanded");
+    }
+  });
+}
+
+function mapStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    ongoing: "Онгоинг",
+    completed: "Завершено",
+  };
+  return statusMap[status] || status;
 }

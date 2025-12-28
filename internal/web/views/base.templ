@@ -38,6 +38,7 @@ templ Base(props BaseProps) {
 			<link rel="stylesheet" as="style" crossorigin href="https://rsms.me/inter/inter.css"/>
 			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/npm/noto-sans-cjk-jp@1.0.1/index.min.css"/>
+			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/npm/@ibm/plex-mono@1.1.0/css/ibm-plex-mono-all.min.css"/>
 			<link rel="stylesheet" as="style" href={ fmt.Sprintf("/assets/dist/styles/main.css?v=%d", props.Version) }/>
 			<script defer src="https://stats.ch1kulya.ru/script.js" data-website-id="d7ede2e9-37bc-4a66-b905-188a87d88fd8"></script>
 		</head>
@@ -45,8 +46,8 @@ templ Base(props BaseProps) {
 			<div id="app">
 				@Header(props)
 				@AgeModal(props)
-				@ProfileModal()
-				@ProfileModalTemplates()
+				@Profile()
+				@ProfileTemplates()
 				<div class="container">
 					{ children... }
 				</div>
@@ -58,10 +59,14 @@ templ Base(props BaseProps) {
 }
 
 templ Header(props BaseProps) {
+	<div class="header-backdrop" id="header-backdrop"></div>
 	<header class={ "header", templ.KV("static", props.IsChapterPage) } id="main-header">
 		<div class="header-content">
 			if props.IsChapterPage && props.Novel != nil {
 				<a href={ templ.SafeURL("/" + props.Novel.ID) } class="header-left">{ props.Novel.Title }</a>
+				<button class="header-right" id="header-profile-btn" aria-label="Профиль">
+					@IconUser("header-profile-icon")
+				</button>
 			} else {
 				<h1 style="margin:0; font-size: inherit;">
 					<a href="/" class="header-left">kappalib</a>
@@ -81,67 +86,57 @@ templ Header(props BaseProps) {
 	</header>
 }
 
-templ ProfileModal() {
-	<div class="modal-overlay" id="profile-modal-overlay" style="display: none;">
-		<div class="profile-modal" id="profile-modal-content"></div>
-	</div>
+templ Profile() {
+	<div class="profile-card" id="profile-card" style="display: none;"></div>
 }
 
-templ ProfileModalTemplates() {
-	<template id="tpl-pm-guest">
-		<div class="pm-header">
-			<h3>Аккаунт</h3>
-			<button class="pm-close" id="pm-close">
-				@IconClose("pm-close-icon")
-			</button>
-		</div>
-		<div class="pm-body">
-			<div class="pm-section">
-				<p class="pm-desc">Создайте аккаунт для синхронизации прогресса между устройствами</p>
-				<div id="turnstile-container" class="turnstile-container"></div>
-				<button class="pm-btn pm-btn-primary" id="pm-create" disabled>Создать аккаунт</button>
+templ ProfileTemplates() {
+	<template id="tpl-pc-guest">
+		<div class="pc-body">
+			<div class="pc-section">
+				<p class="pc-desc">Создать аккаунт? Ваш прогресс сохранится</p>
+				<div id="turnstile-container" class="pc-turnstile-container"></div>
+				<button class="pc-btn pc-btn-primary" id="pc-create" disabled>Создать аккаунт</button>
 			</div>
-			<div class="pm-divider"><span>или</span></div>
-			<div class="pm-section">
-				<p class="pm-desc">Уже есть аккаунт?</p>
-				<div class="pm-input-row">
-					<input type="text" class="pm-input" id="pm-sync-input" placeholder="КОД" maxlength="8"/>
-					<button class="pm-btn pm-btn-outline" id="pm-login">Войти</button>
+			<div class="pc-divider"><span>или</span></div>
+			<div class="pc-section">
+				<p class="pc-desc">Уже есть аккаунт?</p>
+				<div class="pc-input-row">
+					<div class="pc-input-wrapper">
+						<input type="text" class="pc-input" id="pc-sync-input" placeholder="КОД" maxlength="8"/>
+					</div>
+					<button class="pc-btn pc-btn-outline" id="pc-login">Войти</button>
 				</div>
-				<div id="pm-error" class="pm-error"></div>
+				<div id="pc-error" class="pc-error"></div>
 			</div>
 		</div>
 	</template>
-	<template id="tpl-pm-loading">
-		<div class="pm-header">
-			<h3>Профиль</h3>
-			<button class="pm-close" id="pm-close">
-				@IconClose("pm-close-icon")
-			</button>
-		</div>
-		<div class="pm-body pm-loading">
-			<div class="pm-loader"></div>
+	<template id="tpl-pc-loading">
+		<div class="pc-body pc-loading">
+			<div class="pc-loader"></div>
 		</div>
 	</template>
-	<template id="tpl-pm-profile">
-		<div class="pm-profile">
-			<img src="" alt="" class="pm-avatar" data-field="avatarUrl"/>
-			<div class="pm-info">
-				<div class="pm-name" data-field="displayName"></div>
-	            <div class="pm-meta">
-	                <span class="pm-id" data-field="profileId"></span>
-	                <span class="pm-date" data-field="createdAt"></span>
-	            </div>
+	<template id="tpl-pc-profile">
+		<div class="pc-body">
+			<div class="pc-profile">
+				<img src="" alt="" class="pc-avatar" data-field="avatarUrl"/>
+				<div class="pc-info">
+					<div class="pc-name" data-field="displayName"></div>
+		            <div class="pc-meta">
+		                <span class="pc-id" data-field="profileId"></span>
+		                <span data-field="createdAt"></span>
+		            </div>
+				</div>
 			</div>
-		</div>
-		<div class="pm-section">
-			<p class="pm-desc">Код для входа на другом устройстве</p>
-			<div id="pm-code-area"></div>
-			<button class="pm-btn pm-btn-primary" id="pm-get-code">Получить код</button>
-		</div>
-		<div class="pm-footer">
-			<button class="pm-btn pm-btn-text" id="pm-logout">Выйти</button>
-			<button class="pm-btn pm-btn-danger-text" id="pm-delete">Удалить аккаунт</button>
+			<div class="pc-section">
+				<p class="pc-desc">Код для входа на другом устройстве</p>
+				<div id="pc-code-area"></div>
+				<button class="pc-btn pc-btn-primary" id="pc-get-code">Получить код</button>
+			</div>
+			<div class="pc-footer">
+				<button class="pc-btn pc-btn-text" id="pc-logout">Выйти</button>
+				<button class="pc-btn pc-btn-danger-text" id="pc-delete">Удалить</button>
+			</div>
 		</div>
 	</template>
 }
@@ -176,16 +171,16 @@ templ Footer(props BaseProps) {
 }
 
 templ AgeModal(props BaseProps) {
-	<div class="modal-overlay" id="age-modal" style="display: none;">
-		<div class="modal-content">
+	<div class="modal-overlay" id="age-modal" style="display: none;" onclick="event.stopPropagation();">
+		<div class="modal-content" onclick="event.stopPropagation();">
 			<h3>Предупреждение</h3>
 			<p>Эта страница содержит материал с возрастным ограничением <span class="age-rating-red">18+</span></p>
 			<label class="age-checkbox-label">
 				<input type="checkbox" id="age-remember"/> Больше не показывать
 			</label>
 			<div class="modal-actions">
-				<button class="btn-back" id="age-back">На главную</button>
-				<button class="btn-confirm" id="age-confirm">Мне есть 18</button>
+				<button class="action-btn" id="age-back">На главную</button>
+				<button class="action-btn btn-confirm" id="age-confirm">Мне есть 18</button>
 			</div>
 		</div>
 	</div>
