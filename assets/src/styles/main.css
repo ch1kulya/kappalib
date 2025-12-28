@@ -47,6 +47,22 @@
     --shadow-focus:
         inset 0 0 1.5px 1px rgba(0, 0, 0, 0.03), 0 0 12px rgba(0, 0, 0, 0.04),
         0 2px 4px rgba(0, 0, 0, 0.08);
+    --gradient-inverted-primary: radial-gradient(
+        80% 80% at 70% 20%,
+        rgba(255, 255, 255, 0.14),
+        rgba(255, 255, 255, 0)
+    );
+    --gradient-inverted-focus: radial-gradient(
+        90% 90% at 70% 20%,
+        rgba(255, 255, 255, 0.22),
+        rgba(255, 255, 255, 0)
+    );
+    --shadow-inverted-primary:
+        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.14),
+        0 1px 2px rgba(0, 0, 0, 0.22);
+    --shadow-inverted-focus:
+        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.14),
+        0 0 12px rgba(255, 255, 255, 0.18), 0 2px 4px rgba(0, 0, 0, 0.22);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -83,6 +99,22 @@
         --shadow-focus:
             inset 0 0 1.5px 1px rgba(255, 255, 255, 0.07),
             0 0 12px rgba(255, 255, 255, 0.05), 0 2px 4px rgba(0, 0, 0, 0.2);
+        --gradient-inverted-primary: radial-gradient(
+            80% 80% at 70% 20%,
+            rgba(0, 0, 0, 0.14),
+            rgba(0, 0, 0, 0)
+        );
+        --gradient-inverted-focus: radial-gradient(
+            90% 90% at 70% 20%,
+            rgba(0, 0, 0, 0.22),
+            rgba(0, 0, 0, 0)
+        );
+        --shadow-inverted-primary:
+            inset 0 0 1.5px 1px rgba(0, 0, 0, 0.14),
+            0 1px 2px rgba(0, 0, 0, 0.22);
+        --shadow-inverted-focus:
+            inset 0 0 1.5px 1px rgba(0, 0, 0, 0.14),
+            0 0 12px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.22);
     }
 }
 
@@ -1840,13 +1872,41 @@ html {
         z-index: 1;
     }
     & .pc-btn {
+        position: relative;
         padding: 0.65rem 0.875rem;
-        border-radius: 8px;
+        border-radius: 10px;
         font-weight: 600;
         font-size: 0.85rem;
         cursor: pointer;
-        transition: opacity 0.2s;
-        border: none;
+        border: 1px solid var(--border);
+        background: var(--bg-primary);
+        color: var(--primary);
+        box-shadow: var(--shadow-primary);
+        overflow: hidden;
+        transition: all 0.2s ease;
+        &::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 10px;
+            background: var(--gradient-primary);
+            opacity: 0.6;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            z-index: 1;
+        }
+        &:hover::before,
+        &:focus::before {
+            opacity: 0.9;
+            background: var(--gradient-focus);
+        }
+        &:hover,
+        &:focus {
+            box-shadow: var(--shadow-focus);
+        }
         &:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -1855,10 +1915,22 @@ html {
             background: var(--primary);
             color: var(--bg-primary);
             width: 100%;
+            border-color: var(--secondary);
+            box-shadow: var(--shadow-inverted-primary);
+            &::before {
+                background: var(--gradient-inverted-primary);
+            }
+            &:hover::before,
+            &:focus::before {
+                background: var(--gradient-inverted-focus);
+            }
+            &:hover,
+            &:focus {
+                box-shadow: var(--shadow-inverted-focus);
+            }
         }
         &.pc-btn-outline {
-            background: transparent;
-            border: 1px solid var(--border);
+            background: var(--bg-primary);
             color: var(--primary);
         }
         &.pc-btn-text {
@@ -1866,34 +1938,69 @@ html {
             color: var(--secondary);
             padding: 0.4rem 0;
             font-size: 0.8rem;
+            border: none;
+            box-shadow: none;
+            &::before {
+                display: none;
+            }
         }
         &.pc-btn-danger-text {
             background: transparent;
             color: #dc2626;
             padding: 0.4rem 0;
             font-size: 0.8rem;
+            border: none;
+            box-shadow: none;
+            &::before {
+                display: none;
+            }
         }
     }
     & .pc-input-row {
         display: flex;
         gap: 0.5rem;
-        & .pc-input {
+        & .pc-input-wrapper {
+            position: relative;
             flex: 1;
             min-width: 0;
+            &::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                border-radius: 10px;
+                background: var(--gradient-input-primary);
+                opacity: 0.6;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                pointer-events: none;
+                z-index: 1;
+            }
+            &:focus-within::before {
+                opacity: 0.9;
+                background: var(--gradient-input-focus);
+            }
+        }
+        & .pc-input {
+            width: 100%;
             border: 1px solid var(--border);
             background: var(--bg-primary);
             color: var(--primary);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 0.65rem;
-            font-family: monospace;
+            font-family: "IBM Plex Mono";
             text-transform: uppercase;
             text-align: center;
             font-size: 0.95rem;
             font-weight: 600;
             letter-spacing: 2px;
+            box-shadow: var(--shadow-primary);
+            transition: all 0.2s ease;
             &:focus {
                 outline: none;
-                border-color: var(--secondary);
+                border-color: var(--tertiary);
+                box-shadow: var(--shadow-focus);
             }
         }
     }

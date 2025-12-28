@@ -38,6 +38,7 @@ templ Base(props BaseProps) {
 			<link rel="stylesheet" as="style" crossorigin href="https://rsms.me/inter/inter.css"/>
 			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/npm/noto-sans-cjk-jp@1.0.1/index.min.css"/>
+			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/npm/@ibm/plex-mono@1.1.0/css/ibm-plex-mono-all.min.css"/>
 			<link rel="stylesheet" as="style" href={ fmt.Sprintf("/assets/dist/styles/main.css?v=%d", props.Version) }/>
 			<script defer src="https://stats.ch1kulya.ru/script.js" data-website-id="d7ede2e9-37bc-4a66-b905-188a87d88fd8"></script>
 		</head>
@@ -101,7 +102,9 @@ templ ProfileTemplates() {
 			<div class="pc-section">
 				<p class="pc-desc">Уже есть аккаунт?</p>
 				<div class="pc-input-row">
-					<input type="text" class="pc-input" id="pc-sync-input" placeholder="КОД" maxlength="8"/>
+					<div class="pc-input-wrapper">
+						<input type="text" class="pc-input" id="pc-sync-input" placeholder="КОД" maxlength="8"/>
+					</div>
 					<button class="pc-btn pc-btn-outline" id="pc-login">Войти</button>
 				</div>
 				<div id="pc-error" class="pc-error"></div>
