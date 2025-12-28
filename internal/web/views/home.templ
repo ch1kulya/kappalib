@@ -56,24 +56,26 @@ templ Home(props HomeProps) {
 					<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
 				</button>
 				<div class="dropdown-menu" role="listbox">
-					for _, opt := range []struct{Val, Label string}{
-						{"oldest", "Сначала старые"},
-						{"newest", "Сначала новые"},
-						{"created", "Недавно добавленные"},
-						{"large", "Сначала большие"},
-						{"small", "Сначала маленькие"},
-						{"alphabet", "По алфавиту"},
-					} {
-						<button
-							class={ "dropdown-item", templ.KV("selected", props.SortOrder == opt.Val) }
-							data-value={ opt.Val }
-							role="option"
-							aria-selected={ fmt.Sprintf("%t", props.SortOrder == opt.Val) }
-						>
-							<span>{ opt.Label }</span>
-							<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-						</button>
-					}
+					<div class="dropdown-menu-inner">
+						for _, opt := range []struct{Val, Label string}{
+							{"oldest", "Сначала старые"},
+							{"newest", "Сначала новые"},
+							{"created", "Недавно добавленные"},
+							{"large", "Сначала большие"},
+							{"small", "Сначала маленькие"},
+							{"alphabet", "По алфавиту"},
+						} {
+							<button
+								class={ "dropdown-item", templ.KV("selected", props.SortOrder == opt.Val) }
+								data-value={ opt.Val }
+								role="option"
+								aria-selected={ fmt.Sprintf("%t", props.SortOrder == opt.Val) }
+							>
+								<span>{ opt.Label }</span>
+								<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							</button>
+						}
+					</div>
 				</div>
 			</div>
 		</div>
