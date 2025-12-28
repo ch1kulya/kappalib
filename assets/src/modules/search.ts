@@ -22,6 +22,7 @@ export function initSearch(): void {
   if (!input || !results) return;
 
   let timeout: number | undefined;
+  let firstResultUrl: string | null = null;
   const API_URL = process.env.API_URL;
 
   const PLACEHOLDER_IMG =
@@ -30,6 +31,15 @@ export function initSearch(): void {
   input.onfocus = () => {
     if (window.innerWidth <= 600 && header) {
       header.classList.add("search-expanded");
+    }
+  };
+
+  input.onkeydown = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (firstResultUrl) {
+        window.location.href = firstResultUrl;
+      }
     }
   };
 
@@ -52,6 +62,7 @@ export function initSearch(): void {
 
     if (query.length < 2) {
       results.style.display = "none";
+      firstResultUrl = null;
       return;
     }
 
@@ -72,6 +83,7 @@ export function initSearch(): void {
         const data: SearchResponse = await res.json();
 
         results.innerHTML = "";
+        firstResultUrl = null;
 
         if (!data.novels || data.novels.length === 0) {
           console.info(`No results found for: "${query}"`);
@@ -83,6 +95,8 @@ export function initSearch(): void {
         }
 
         console.info(`Found ${data.novels.length} results for: "${query}"`);
+
+        firstResultUrl = `/${data.novels[0].id}`;
 
         const fragment = document.createDocumentFragment();
 
@@ -144,6 +158,7 @@ export function initSearch(): void {
       } catch (err) {
         console.error("Search API request failed", err);
         results.innerHTML = "";
+        firstResultUrl = null;
         const errorDiv = document.createElement("div");
         errorDiv.className = "no-results";
         errorDiv.textContent = "Ошибка поиска";
@@ -159,6 +174,7 @@ export function initSearch(): void {
     ) {
       results.style.display = "none";
       input.value = "";
+      firstResultUrl = null;
       if (header) {
         header.classList.remove("search-expanded");
       }
