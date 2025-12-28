@@ -45,8 +45,8 @@ templ Base(props BaseProps) {
 			<div id="app">
 				@Header(props)
 				@AgeModal(props)
-				@ProfileModal()
-				@ProfileModalTemplates()
+				@Profile()
+				@ProfileTemplates()
 				<div class="container">
 					{ children... }
 				</div>
@@ -58,6 +58,7 @@ templ Base(props BaseProps) {
 }
 
 templ Header(props BaseProps) {
+	<div class="header-backdrop" id="header-backdrop"></div>
 	<header class={ "header", templ.KV("static", props.IsChapterPage) } id="main-header">
 		<div class="header-content">
 			if props.IsChapterPage && props.Novel != nil {
@@ -81,67 +82,55 @@ templ Header(props BaseProps) {
 	</header>
 }
 
-templ ProfileModal() {
-	<div class="modal-overlay" id="profile-modal-overlay" style="display: none;">
-		<div class="profile-modal" id="profile-modal-content"></div>
-	</div>
+templ Profile() {
+	<div class="profile-card" id="profile-card" style="display: none;"></div>
 }
 
-templ ProfileModalTemplates() {
-	<template id="tpl-pm-guest">
-		<div class="pm-header">
-			<h3>Аккаунт</h3>
-			<button class="pm-close" id="pm-close">
-				@IconClose("pm-close-icon")
-			</button>
-		</div>
-		<div class="pm-body">
-			<div class="pm-section">
-				<p class="pm-desc">Создайте аккаунт для синхронизации прогресса между устройствами</p>
-				<div id="turnstile-container" class="turnstile-container"></div>
-				<button class="pm-btn pm-btn-primary" id="pm-create" disabled>Создать аккаунт</button>
+templ ProfileTemplates() {
+	<template id="tpl-pc-guest">
+		<div class="pc-body">
+			<div class="pc-section">
+				<p class="pc-desc">Создайте аккаунт для синхронизации прогресса между устройствами</p>
+				<div id="turnstile-container" class="pc-turnstile-container"></div>
+				<button class="pc-btn pc-btn-primary" id="pc-create" disabled>Создать аккаунт</button>
 			</div>
-			<div class="pm-divider"><span>или</span></div>
-			<div class="pm-section">
-				<p class="pm-desc">Уже есть аккаунт?</p>
-				<div class="pm-input-row">
-					<input type="text" class="pm-input" id="pm-sync-input" placeholder="КОД" maxlength="8"/>
-					<button class="pm-btn pm-btn-outline" id="pm-login">Войти</button>
+			<div class="pc-divider"><span>или</span></div>
+			<div class="pc-section">
+				<p class="pc-desc">Уже есть аккаунт?</p>
+				<div class="pc-input-row">
+					<input type="text" class="pc-input" id="pc-sync-input" placeholder="КОД" maxlength="8"/>
+					<button class="pc-btn pc-btn-outline" id="pc-login">Войти</button>
 				</div>
-				<div id="pm-error" class="pm-error"></div>
+				<div id="pc-error" class="pc-error"></div>
 			</div>
 		</div>
 	</template>
-	<template id="tpl-pm-loading">
-		<div class="pm-header">
-			<h3>Профиль</h3>
-			<button class="pm-close" id="pm-close">
-				@IconClose("pm-close-icon")
-			</button>
-		</div>
-		<div class="pm-body pm-loading">
-			<div class="pm-loader"></div>
+	<template id="tpl-pc-loading">
+		<div class="pc-body pc-loading">
+			<div class="pc-loader"></div>
 		</div>
 	</template>
-	<template id="tpl-pm-profile">
-		<div class="pm-profile">
-			<img src="" alt="" class="pm-avatar" data-field="avatarUrl"/>
-			<div class="pm-info">
-				<div class="pm-name" data-field="displayName"></div>
-	            <div class="pm-meta">
-	                <span class="pm-id" data-field="profileId"></span>
-	                <span class="pm-date" data-field="createdAt"></span>
-	            </div>
+	<template id="tpl-pc-profile">
+		<div class="pc-body">
+			<div class="pc-profile">
+				<img src="" alt="" class="pc-avatar" data-field="avatarUrl"/>
+				<div class="pc-info">
+					<div class="pc-name" data-field="displayName"></div>
+		            <div class="pc-meta">
+		                <span class="pc-id" data-field="profileId"></span>
+		                <span class="pc-date" data-field="createdAt"></span>
+		            </div>
+				</div>
 			</div>
-		</div>
-		<div class="pm-section">
-			<p class="pm-desc">Код для входа на другом устройстве</p>
-			<div id="pm-code-area"></div>
-			<button class="pm-btn pm-btn-primary" id="pm-get-code">Получить код</button>
-		</div>
-		<div class="pm-footer">
-			<button class="pm-btn pm-btn-text" id="pm-logout">Выйти</button>
-			<button class="pm-btn pm-btn-danger-text" id="pm-delete">Удалить аккаунт</button>
+			<div class="pc-section">
+				<p class="pc-desc">Код для входа на другом устройстве</p>
+				<div id="pc-code-area"></div>
+				<button class="pc-btn pc-btn-primary" id="pc-get-code">Получить код</button>
+			</div>
+			<div class="pc-footer">
+				<button class="pc-btn pc-btn-text" id="pc-logout">Выйти</button>
+				<button class="pc-btn pc-btn-danger-text" id="pc-delete">Удалить</button>
+			</div>
 		</div>
 	</template>
 }

@@ -18,6 +18,8 @@ export function initSearch(): void {
   ) as HTMLInputElement | null;
   const results = document.getElementById("search-results");
   const header = document.getElementById("main-header");
+  const backdrop = document.getElementById("header-backdrop");
+  const profileCard = document.getElementById("profile-card");
 
   if (!input || !results) return;
 
@@ -28,9 +30,24 @@ export function initSearch(): void {
   const PLACEHOLDER_IMG =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect fill='%23ecf0f1' width='200' height='300'/%3E%3C/svg%3E";
 
+  const showBackdrop = () => {
+    if (profileCard?.style.display !== "block") {
+      backdrop?.classList.add("active");
+    }
+  };
+
+  const hideBackdrop = () => {
+    if (profileCard?.style.display !== "block") {
+      backdrop?.classList.remove("active");
+    }
+  };
+
   input.onfocus = () => {
     if (window.innerWidth <= 600 && header) {
       header.classList.add("search-expanded");
+    }
+    if (input.value.trim().length >= 2) {
+      showBackdrop();
     }
   };
 
@@ -47,15 +64,18 @@ export function initSearch(): void {
     setTimeout(() => {
       const focusMovedToResults = results.contains(document.activeElement);
 
+      /*   TODO: FIX THIS CASE
       if (firstResultUrl && input.value.trim().length >= 2) {
         window.location.href = firstResultUrl;
         return;
       }
+      */
 
       if (!focusMovedToResults) {
         if (header) header.classList.remove("search-expanded");
         input.value = "";
         results.style.display = "none";
+        hideBackdrop();
       }
     }, 150);
   };
@@ -68,8 +88,11 @@ export function initSearch(): void {
     if (query.length < 2) {
       results.style.display = "none";
       firstResultUrl = null;
+      hideBackdrop();
       return;
     }
+
+    showBackdrop();
 
     timeout = window.setTimeout(async () => {
       try {
@@ -180,9 +203,19 @@ export function initSearch(): void {
       results.style.display = "none";
       input.value = "";
       firstResultUrl = null;
+      hideBackdrop();
       if (header) {
         header.classList.remove("search-expanded");
       }
+    }
+  });
+
+  backdrop?.addEventListener("click", () => {
+    results.style.display = "none";
+    input.value = "";
+    firstResultUrl = null;
+    if (header) {
+      header.classList.remove("search-expanded");
     }
   });
 }
