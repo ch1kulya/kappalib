@@ -90,7 +90,7 @@ templ ProfileTemplates() {
 	<template id="tpl-pc-guest">
 		<div class="pc-body">
 			<div class="pc-section">
-				<p class="pc-desc">Создайте аккаунт для синхронизации прогресса между устройствами</p>
+				<p class="pc-desc">Создать аккаунт? Ваш прогресс сохранится</p>
 				<div id="turnstile-container" class="pc-turnstile-container"></div>
 				<button class="pc-btn pc-btn-primary" id="pc-create" disabled>Создать аккаунт</button>
 			</div>
@@ -118,7 +118,7 @@ templ ProfileTemplates() {
 					<div class="pc-name" data-field="displayName"></div>
 		            <div class="pc-meta">
 		                <span class="pc-id" data-field="profileId"></span>
-		                <span class="pc-date" data-field="createdAt"></span>
+		                <span data-field="createdAt"></span>
 		            </div>
 				</div>
 			</div>
