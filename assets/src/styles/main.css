@@ -229,6 +229,7 @@ a:hover {
     top: 0;
     z-index: 60;
     width: 100%;
+    box-shadow: var(--shadow-primary);
 }
 
 .header.static {
@@ -272,6 +273,7 @@ a:hover {
     box-shadow: var(--shadow-primary);
     overflow: hidden;
     border-radius: 10px;
+    min-width: 34px;
     &:hover {
         cursor: pointer;
     }
@@ -296,6 +298,7 @@ a:hover {
     }
     & .header-profile-icon {
         width: 24px;
+        min-width: 24px;
         height: 24px;
         color: var(--tertiary);
     }

@@ -63,6 +63,9 @@ templ Header(props BaseProps) {
 		<div class="header-content">
 			if props.IsChapterPage && props.Novel != nil {
 				<a href={ templ.SafeURL("/" + props.Novel.ID) } class="header-left">{ props.Novel.Title }</a>
+				<button class="header-right" id="header-profile-btn" aria-label="Профиль">
+					@IconUser("header-profile-icon")
+				</button>
 			} else {
 				<h1 style="margin:0; font-size: inherit;">
 					<a href="/" class="header-left">kappalib</a>
