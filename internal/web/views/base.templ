@@ -171,8 +171,8 @@ templ Footer(props BaseProps) {
 }
 
 templ AgeModal(props BaseProps) {
-	<div class="modal-overlay" id="age-modal" style="display: none;">
-		<div class="modal-content">
+	<div class="modal-overlay" id="age-modal" style="display: none;" onclick="event.stopPropagation();">
+		<div class="modal-content" onclick="event.stopPropagation();">
 			<h3>Предупреждение</h3>
 			<p>Эта страница содержит материал с возрастным ограничением <span class="age-rating-red">18+</span></p>
 			<label class="age-checkbox-label">

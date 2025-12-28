@@ -216,6 +216,7 @@ export function initSearch(): void {
     results.style.display = "none";
     input.value = "";
     firstResultUrl = null;
+    hideBackdrop();
     if (header) {
       header.classList.remove("search-expanded");
     }
