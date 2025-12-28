@@ -43,9 +43,11 @@ templ Chapter(props ChapterProps) {
 
 			<div class="chapter-navigation">
 				if props.PrevID != "" {
-					<a href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.PrevID)) }><button>&lt;-- Назад</button></a>
+					<a href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.PrevID)) }>
+						<button class="action-btn">&lt;-- Назад</button>
+					</a>
 				} else {
-					<button disabled>&lt;-- Назад</button>
+					<button disabled class="action-btn">&lt;-- Назад</button>
 				}
 				if props.NextID != "" {
 					<a
@@ -54,10 +56,10 @@ templ Chapter(props ChapterProps) {
 						data-chapter-id={ props.NextID }
            				data-chapter-num={ fmt.Sprintf("%d", props.Chapter.ChapterNum + 1) }
 					>
-						<button>Вперед --&gt;</button>
+						<button class="action-btn">Вперед --&gt;</button>
 					</a>
 				} else {
-					<button disabled>Вперед --&gt;</button>
+					<button class="action-btn" disabled>Вперед --&gt;</button>
 				}
 			</div>
 		</div>

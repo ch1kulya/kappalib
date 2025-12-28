@@ -247,32 +247,50 @@ function fillTemplate(
 }
 
 export function initProfileModal(): void {
-  const overlay = document.getElementById("profile-modal-overlay");
+  const profileCard = document.getElementById("profile-card");
   const profileBtn = document.getElementById("header-profile-btn");
+  const backdrop = document.getElementById("header-backdrop");
 
-  if (!overlay || !profileBtn) return;
+  if (!profileCard || !profileBtn) return;
 
   profileBtn.addEventListener("click", (e) => {
     e.preventDefault();
-    openProfileModal();
+    e.stopPropagation();
+    if (profileCard.style.display === "block") {
+      closeProfileCard();
+    } else {
+      openProfileCard();
+    }
   });
 
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeProfileModal();
+  backdrop?.addEventListener("click", () => {
+    closeProfileCard();
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && overlay.style.display === "flex") {
-      closeProfileModal();
+    if (e.key === "Escape" && profileCard.style.display === "block") {
+      closeProfileCard();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (
+      profileCard.style.display === "block" &&
+      !profileCard.contains(e.target as Node) &&
+      !profileBtn.contains(e.target as Node)
+    ) {
+      closeProfileCard();
     }
   });
 }
 
-function openProfileModal(): void {
-  const overlay = document.getElementById("profile-modal-overlay");
-  if (!overlay) return;
+function openProfileCard(): void {
+  const profileCard = document.getElementById("profile-card");
+  const backdrop = document.getElementById("header-backdrop");
+  if (!profileCard) return;
 
-  overlay.style.display = "flex";
+  profileCard.style.display = "block";
+  backdrop?.classList.add("active");
   document.body.style.overflow = "hidden";
 
   if (profileManager.isLoggedIn()) {
@@ -282,35 +300,44 @@ function openProfileModal(): void {
   }
 }
 
-function closeProfileModal(): void {
-  const overlay = document.getElementById("profile-modal-overlay");
-  if (!overlay) return;
+function closeProfileCard(): void {
+  const profileCard = document.getElementById("profile-card");
+  const backdrop = document.getElementById("header-backdrop");
+  if (!profileCard) return;
 
-  overlay.style.display = "none";
+  profileCard.style.display = "none";
+  backdrop?.classList.remove("active");
   document.body.style.overflow = "";
 
   const container = document.getElementById("turnstile-container");
   if (container) container.innerHTML = "";
 }
 
+export function setBackdropActive(active: boolean): void {
+  const backdrop = document.getElementById("header-backdrop");
+  if (active) {
+    backdrop?.classList.add("active");
+    document.body.style.overflow = "hidden";
+  } else {
+    backdrop?.classList.remove("active");
+    document.body.style.overflow = "";
+  }
+}
+
 function renderGuestView(): void {
-  const content = document.getElementById("profile-modal-content");
+  const content = document.getElementById("profile-card");
   if (!content) return;
 
   content.innerHTML = "";
-  content.appendChild(cloneTemplate("tpl-pm-guest"));
-
-  document
-    .getElementById("pm-close")
-    ?.addEventListener("click", closeProfileModal);
+  content.appendChild(cloneTemplate("tpl-pc-guest"));
 
   loadTurnstile();
 
-  document.getElementById("pm-create")?.addEventListener("click", async () => {
+  document.getElementById("pc-create")?.addEventListener("click", async () => {
     const token = (window as any).turnstileToken;
     if (!token) return;
 
-    const btn = document.getElementById("pm-create") as HTMLButtonElement;
+    const btn = document.getElementById("pc-create") as HTMLButtonElement;
     btn.disabled = true;
     btn.textContent = "Создание...";
 
@@ -324,15 +351,15 @@ function renderGuestView(): void {
     }
   });
 
-  document.getElementById("pm-login")?.addEventListener("click", async () => {
-    const input = document.getElementById("pm-sync-input") as HTMLInputElement;
+  document.getElementById("pc-login")?.addEventListener("click", async () => {
+    const input = document.getElementById("pc-sync-input") as HTMLInputElement;
     const code = input.value.trim().toUpperCase();
     if (code.length !== 8) {
       showError("Введите 8-символьный код");
       return;
     }
 
-    const btn = document.getElementById("pm-login") as HTMLButtonElement;
+    const btn = document.getElementById("pc-login") as HTMLButtonElement;
     btn.disabled = true;
 
     const result = await profileManager.login(code);
@@ -346,15 +373,11 @@ function renderGuestView(): void {
 }
 
 function renderLoggedInView(): void {
-  const content = document.getElementById("profile-modal-content");
+  const content = document.getElementById("profile-card");
   if (!content) return;
 
   content.innerHTML = "";
-  content.appendChild(cloneTemplate("tpl-pm-loading"));
-
-  document
-    .getElementById("pm-close")
-    ?.addEventListener("click", closeProfileModal);
+  content.appendChild(cloneTemplate("tpl-pc-loading"));
 
   profileManager.fetchProfile().then((profile) => {
     if (!profile) {
@@ -362,15 +385,11 @@ function renderLoggedInView(): void {
       return;
     }
 
-    const body = content.querySelector(".pm-body");
-    if (!body) return;
+    const avatarUrl = `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${profile.avatar_seed}&backgroundType=solid,gradientLinear`;
 
-    const avatarUrl = `https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${profile.avatar_seed}&scale=110&backgroundColor=ffdfbf,d1d4f9,ffd5dc,c0aede,b6e3f4,ffffff&backgroundType=solid,gradientLinear`;
-
-    body.classList.remove("pm-loading");
-    body.innerHTML = "";
-    body.appendChild(
-      fillTemplate("tpl-pm-profile", {
+    content.innerHTML = "";
+    content.appendChild(
+      fillTemplate("tpl-pc-profile", {
         avatarUrl,
         displayName: profile.display_name,
         profileId: profile.id,
@@ -379,18 +398,18 @@ function renderLoggedInView(): void {
     );
 
     document
-      .getElementById("pm-get-code")
+      .getElementById("pc-get-code")
       ?.addEventListener("click", async () => {
-        const btn = document.getElementById("pm-get-code") as HTMLButtonElement;
+        const btn = document.getElementById("pc-get-code") as HTMLButtonElement;
         btn.disabled = true;
         btn.textContent = "Генерация...";
 
         const result = await profileManager.generateSyncCode();
         if (result) {
-          const area = document.getElementById("pm-code-area");
+          const area = document.getElementById("pc-code-area");
           if (area) {
             const codeEl = document.createElement("div");
-            codeEl.className = "pm-code";
+            codeEl.className = "pc-code";
             codeEl.textContent = result.sync_code;
             area.appendChild(codeEl);
           }
@@ -401,13 +420,13 @@ function renderLoggedInView(): void {
         }
       });
 
-    document.getElementById("pm-logout")?.addEventListener("click", () => {
+    document.getElementById("pc-logout")?.addEventListener("click", () => {
       profileManager.logout();
       renderGuestView();
     });
 
     document
-      .getElementById("pm-delete")
+      .getElementById("pc-delete")
       ?.addEventListener("click", async () => {
         if (!confirm("Удалить аккаунт? Это действие необратимо.")) return;
         const deleted = await profileManager.deleteProfile();
@@ -420,7 +439,7 @@ function renderLoggedInView(): void {
 
 function loadTurnstile(): void {
   const container = document.getElementById("turnstile-container");
-  const createBtn = document.getElementById("pm-create") as HTMLButtonElement;
+  const createBtn = document.getElementById("pc-create") as HTMLButtonElement;
   if (!container || !createBtn) return;
 
   (window as any).turnstileToken = null;
@@ -439,7 +458,7 @@ function loadTurnstile(): void {
 
 function renderTurnstile(): void {
   const container = document.getElementById("turnstile-container");
-  const createBtn = document.getElementById("pm-create") as HTMLButtonElement;
+  const createBtn = document.getElementById("pc-create") as HTMLButtonElement;
   if (!container || !createBtn || !TURNSTILE_SITE_KEY) return;
 
   (window as any).turnstile.render(container, {
@@ -456,7 +475,7 @@ function renderTurnstile(): void {
 }
 
 function showError(msg: string): void {
-  const el = document.getElementById("pm-error");
+  const el = document.getElementById("pc-error");
   if (el) el.textContent = msg;
 }
 

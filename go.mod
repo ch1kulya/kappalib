@@ -4,7 +4,7 @@ go 1.25.3
 
 require (
 	github.com/a-h/templ v0.3.960
-	github.com/ch1kulya/logger v1.0.3
+	github.com/ch1kulya/logger v1.0.4
 	github.com/danielgtaylor/huma/v2 v2.34.1
 	github.com/evanw/esbuild v0.27.2
 	github.com/go-chi/chi/v5 v5.2.3
