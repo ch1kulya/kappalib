@@ -203,7 +203,7 @@ svg[class*="icon"] {
 
 .header-left {
     font-size: 1.1rem;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--primary);
     text-decoration: none;
     letter-spacing: -0.025em;
@@ -211,6 +211,8 @@ svg[class*="icon"] {
     overflow: hidden;
     text-overflow: ellipsis;
     margin-right: 1rem;
+    opacity: 0.9;
+    text-shadow: 0 1px 1px var(--secondary);
 }
 
 .header-right {
