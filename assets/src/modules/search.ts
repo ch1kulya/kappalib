@@ -47,6 +47,11 @@ export function initSearch(): void {
     setTimeout(() => {
       const focusMovedToResults = results.contains(document.activeElement);
 
+      if (firstResultUrl && input.value.trim().length >= 2) {
+        window.location.href = firstResultUrl;
+        return;
+      }
+
       if (!focusMovedToResults) {
         if (header) header.classList.remove("search-expanded");
         input.value = "";
