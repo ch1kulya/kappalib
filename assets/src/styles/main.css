@@ -939,21 +939,8 @@ a:hover {
 .chapter-navigation button {
     width: 100%;
     padding: 1rem;
-    background: var(--bg-primary);
-    border: var(--border) 1px solid;
     border-radius: 12px;
-    font-weight: 600;
-    color: var(--primary);
     font-size: 0.95rem;
-}
-
-.chapter-navigation button:hover {
-    cursor: pointer;
-}
-
-.chapter-navigation button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
 }
 
 .chapter-source {
@@ -1512,10 +1499,10 @@ html {
 }
 
 .dropdown-btn {
+    position: relative;
     appearance: none;
     background: transparent;
     padding: 0.4rem 0.5rem 0.4rem 0.75rem;
-    border: 1px solid var(--border);
     border-radius: 8px;
     color: var(--primary);
     font-weight: 600;
@@ -1526,11 +1513,38 @@ html {
     transition: all 0.2s ease;
     line-height: 1;
     font-size: 0.9rem;
+    border: 1px solid var(--border);
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-primary);
+    &:hover {
+        cursor: pointer;
+    }
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 10px;
+        background: var(--gradient-primary);
+        opacity: 0.6;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        z-index: 1;
+    }
+    &:hover::before,
+    &:focus::before {
+        opacity: 0.9;
+        background: var(--gradient-focus);
+    }
 }
 
 .dropdown.active .dropdown-btn {
-    border-color: var(--secondary);
-    box-shadow: 0 0 0 1px var(--outline);
+    cursor: default;
+    color: var(--primary);
+    border-color: var(--tertiary);
+    box-shadow: var(--shadow-focus);
 }
 
 .dropdown-btn .chevron {
@@ -1621,6 +1635,8 @@ html {
 
 .dropdown-item.selected .check-icon {
     opacity: 1;
+    padding-top: 3px;
+    padding-left: 2px;
 }
 
 /* Source Card */
