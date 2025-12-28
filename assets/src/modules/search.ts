@@ -104,6 +104,13 @@ export function initSearch(): void {
           const metaDiv = document.createElement("div");
           metaDiv.className = "search-result-meta";
 
+          if (novel.author) {
+            const authorBadge = document.createElement("span");
+            authorBadge.className = "badge";
+            authorBadge.textContent = novel.author.toString();
+            metaDiv.appendChild(authorBadge);
+          }
+
           if (novel.year_start) {
             const yearBadge = document.createElement("span");
             yearBadge.className = "badge";
@@ -126,11 +133,6 @@ export function initSearch(): void {
             descP.className = "search-result-desc";
             descP.textContent = novel.description;
             infoDiv.appendChild(descP);
-          } else {
-            const authorP = document.createElement("p");
-            authorP.className = "author";
-            authorP.textContent = novel.author;
-            infoDiv.appendChild(authorP);
           }
 
           a.appendChild(img);
@@ -166,10 +168,8 @@ export function initSearch(): void {
 
 function mapStatus(status: string): string {
   const statusMap: Record<string, string> = {
-    ongoing: "Выходит",
+    ongoing: "Онгоинг",
     completed: "Завершено",
-    hiatus: "Приостановлено",
-    dropped: "Заброшено",
   };
   return statusMap[status] || status;
 }
