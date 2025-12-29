@@ -331,19 +331,25 @@ async function initTurnstileForComments(container: HTMLElement): Promise<void> {
   });
 }
 
+let tokenPromise: Promise<string | null> | null = null;
+
 async function getTurnstileToken(): Promise<string | null> {
   if (!turnstileWidgetId) return null;
 
-  if (turnstileToken) {
-    const token = turnstileToken;
-    turnstileToken = null;
-    (window as any).turnstile.reset(turnstileWidgetId);
-    return token;
+  if (tokenPromise) {
+    return tokenPromise;
   }
 
-  (window as any).turnstile.reset(turnstileWidgetId);
+  tokenPromise = new Promise((resolve) => {
+    if (turnstileToken) {
+      const token = turnstileToken;
+      turnstileToken = null;
+      (window as any).turnstile.reset(turnstileWidgetId);
+      resolve(token);
+      return;
+    }
 
-  return new Promise((resolve) => {
+    (window as any).turnstile.reset(turnstileWidgetId);
     (window as any).turnstile.execute(turnstileWidgetId);
 
     let attempts = 0;
@@ -362,6 +368,10 @@ async function getTurnstileToken(): Promise<string | null> {
       }
     }, 100);
   });
+
+  const result = await tokenPromise;
+  tokenPromise = null;
+  return result;
 }
 
 function updateCharCounter(textarea: HTMLTextAreaElement): void {

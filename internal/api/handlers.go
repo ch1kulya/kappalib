@@ -236,18 +236,21 @@ func HandleCreateComment(ctx context.Context, input *CreateCommentAPIInput) (*st
 
 	comment, err := data.CreateComment(ctx, input.ProfileID, input.SecretToken, commentInput)
 	if err != nil {
-		if err.Error() == "captcha verification failed" {
+		switch err.Error() {
+		case "rate limit exceeded":
+			return nil, huma.Error429TooManyRequests("Подождите 30 секунд перед отправкой следующего комментария")
+		case "captcha verification failed":
 			return nil, huma.Error400BadRequest("Captcha verification failed")
-		}
-		if err.Error() == "invalid secret token" {
+		case "invalid secret token":
 			return nil, huma.Error403Forbidden("Invalid credentials")
-		}
-		if err.Error() == "invalid content length" {
+		case "invalid content length":
 			return nil, huma.Error400BadRequest("Comment must be 1-1000 characters")
+		case "chapter not found":
+			return nil, huma.Error404NotFound("Chapter not found")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to create comment")
 		}
-		return nil, huma.Error500InternalServerError("Failed to create comment")
 	}
-
 	return &struct{ Body any }{Body: comment}, nil
 }
 

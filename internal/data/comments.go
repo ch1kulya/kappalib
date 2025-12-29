@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ch1kulya/kappalib/internal/database"
@@ -53,9 +54,59 @@ var (
 	}
 )
 
+var userCommentLimiter = struct {
+	sync.Mutex
+	lastComment map[string]time.Time
+}{
+	lastComment: make(map[string]time.Time),
+}
+
+const commentCooldown = 30 * time.Second
+
+func checkCommentRateLimit(userID string) bool {
+	userCommentLimiter.Lock()
+	defer userCommentLimiter.Unlock()
+
+	if last, exists := userCommentLimiter.lastComment[userID]; exists {
+		if time.Since(last) < commentCooldown {
+			return false
+		}
+	}
+	return true
+}
+
+func recordCommentTime(userID string) {
+	userCommentLimiter.Lock()
+	defer userCommentLimiter.Unlock()
+	userCommentLimiter.lastComment[userID] = time.Now()
+}
+
 func init() {
-	markdownPolicy = bluemonday.UGCPolicy()
-	markdownPolicy.AllowAttrs("class").OnElements("code", "pre")
+	markdownPolicy = bluemonday.NewPolicy()
+	markdownPolicy.AllowStandardURLs()
+	markdownPolicy.AllowRelativeURLs(false)
+	markdownPolicy.RequireNoFollowOnLinks(true)
+	markdownPolicy.RequireNoReferrerOnLinks(true)
+	markdownPolicy.AllowElements("p", "br", "strong", "b", "em", "i", "code", "pre", "blockquote")
+	markdownPolicy.AllowElements("h1", "h2", "h3", "h4", "h5", "h6")
+	markdownPolicy.AllowElements("ul", "ol", "li")
+	markdownPolicy.AllowAttrs("href").OnElements("a")
+	markdownPolicy.AllowURLSchemes("http", "https")
+	markdownPolicy.AllowImages()
+	markdownPolicy.AllowAttrs("src", "alt", "title").OnElements("img")
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		for range ticker.C {
+			userCommentLimiter.Lock()
+			now := time.Now()
+			for userID, last := range userCommentLimiter.lastComment {
+				if now.Sub(last) > 5*time.Minute {
+					delete(userCommentLimiter.lastComment, userID)
+				}
+			}
+			userCommentLimiter.Unlock()
+		}
+	}()
 }
 
 func verifyCommentsTurnstile(token string) bool {
@@ -97,12 +148,20 @@ func CreateComment(ctx context.Context, profileID, secretToken string, input mod
 		return nil, fmt.Errorf("invalid content length")
 	}
 
+	if !checkCommentRateLimit(profileID) {
+		return nil, fmt.Errorf("rate limit exceeded")
+	}
+
 	if !verifyCommentsTurnstile(input.TurnstileToken) {
 		return nil, fmt.Errorf("captcha verification failed")
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
+	if !chapterExists(dbCtx, input.ChapterID) {
+		return nil, fmt.Errorf("chapter not found")
+	}
 
 	if !verifySecretToken(dbCtx, profileID, secretToken) {
 		return nil, fmt.Errorf("invalid secret token")
@@ -125,7 +184,9 @@ func CreateComment(ctx context.Context, profileID, secretToken string, input mod
 	comment.UserDisplayName = user.DisplayName
 	comment.UserAvatarSeed = user.AvatarSeed
 
-	go sendCommentToTelegram(&comment)
+	go sendCommentToTelegram(context.Background(), &comment)
+
+	recordCommentTime(profileID)
 
 	logger.Info("Comment created: %s by user %s", comment.ID, profileID)
 	return &comment, nil
@@ -210,10 +271,19 @@ func GetCommentByID(ctx context.Context, commentID string) (*models.Comment, err
 	return &c, nil
 }
 
-func sendCommentToTelegram(comment *models.Comment) {
+func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
 	if telegramBotToken == "" || telegramChatID == "" {
 		logger.Warn("Telegram credentials not set, skipping notification")
 		return
+	}
+
+	commentID := comment.ID
+	if len(commentID) > 50 {
+		commentID = commentID[:50]
+		logger.Warn("Comment ID truncated for Telegram callback: %s", comment.ID)
 	}
 
 	text := fmt.Sprintf(
@@ -226,11 +296,15 @@ func sendCommentToTelegram(comment *models.Comment) {
 		escapeMarkdown(stripHTMLTags(comment.ContentHTML)),
 	)
 
-	keyboard := map[string]interface{}{
+	if len(text) > 4000 {
+		text = text[:4000] + "..."
+	}
+
+	keyboard := map[string]any{
 		"inline_keyboard": [][]map[string]string{
 			{
-				{"text": "✅ Подтвердить", "callback_data": fmt.Sprintf("approve:%s", comment.ID)},
-				{"text": "❌ Отклонить", "callback_data": fmt.Sprintf("reject:%s", comment.ID)},
+				{"text": "✅ Подтвердить", "callback_data": fmt.Sprintf("approve:%s", commentID)},
+				{"text": "❌ Отклонить", "callback_data": fmt.Sprintf("reject:%s", commentID)},
 			},
 		},
 	}
@@ -246,7 +320,14 @@ func sendCommentToTelegram(comment *models.Comment) {
 		"reply_markup": {string(keyboardJSON)},
 	}
 
-	resp, err := telegramClient.PostForm(apiURL, data)
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		logger.Error("Failed to create telegram request: %v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := telegramClient.Do(req)
 	if err != nil {
 		logger.Error("Failed to send telegram message: %v", err)
 		return
@@ -340,4 +421,13 @@ func stripHTMLTags(s string) string {
 		}
 	}
 	return strings.TrimSpace(result.String())
+}
+
+func chapterExists(ctx context.Context, chapterID string) bool {
+	var exists bool
+	err := database.DB.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM chapters WHERE id = $1)`,
+		chapterID,
+	).Scan(&exists)
+	return err == nil && exists
 }
