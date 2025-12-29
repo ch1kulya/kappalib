@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -80,19 +81,7 @@ type CreateCommentAPIInput struct {
 
 type TelegramWebhookInput struct {
 	WebhookSecret string `header:"X-Telegram-Bot-Api-Secret-Token"`
-	Body          struct {
-		CallbackQuery *struct {
-			ID      string `json:"id"`
-			Data    string `json:"data"`
-			Message *struct {
-				MessageID int64  `json:"message_id"`
-				Text      string `json:"text"`
-				Chat      struct {
-					ID int64 `json:"id"`
-				} `json:"chat"`
-			} `json:"message"`
-		} `json:"callback_query"`
-	}
+	Body          json.RawMessage
 }
 
 func HandleStatus(ctx context.Context, input *struct{}) (*struct{ Body APIStatus }, error) {
@@ -257,16 +246,47 @@ func HandleCreateComment(ctx context.Context, input *CreateCommentAPIInput) (*st
 func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*struct{}, error) {
 	expectedSecret := data.GetTelegramWebhookSecret()
 	if expectedSecret != "" && input.WebhookSecret != expectedSecret {
+		logger.Warn("Telegram Webhook: Invalid secret token. Got: %s", input.WebhookSecret)
 		return nil, huma.Error403Forbidden("Invalid webhook secret")
 	}
 
-	if input.Body.CallbackQuery == nil || input.Body.CallbackQuery.Message == nil {
+	bodyStr := string(input.Body)
+	logger.Debug("Telegram Webhook Payload: %s", bodyStr)
+
+	type TelegramUpdate struct {
+		UpdateID      int64 `json:"update_id"`
+		CallbackQuery *struct {
+			ID      string `json:"id"`
+			Data    string `json:"data"`
+			Message *struct {
+				MessageID int64 `json:"message_id"`
+				Chat      struct {
+					ID int64 `json:"id"`
+				} `json:"chat"`
+			} `json:"message"`
+		} `json:"callback_query"`
+	}
+
+	var update TelegramUpdate
+	if err := json.Unmarshal(input.Body, &update); err != nil {
+		logger.Error("Failed to unmarshal Telegram update: %v", err)
 		return &struct{}{}, nil
 	}
 
-	callback := input.Body.CallbackQuery
+	if update.CallbackQuery == nil {
+		return &struct{}{}, nil
+	}
+
+	callback := update.CallbackQuery
+
+	if callback.Message == nil {
+		logger.Warn("CallbackQuery received without Message field")
+		return &struct{}{}, nil
+	}
+
 	parts := strings.SplitN(callback.Data, ":", 2)
 	if len(parts) != 2 {
+		logger.Warn("Invalid callback data format: %s", callback.Data)
 		return &struct{}{}, nil
 	}
 
@@ -284,6 +304,7 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 		status = "rejected"
 		statusText = "❌ Отклонено"
 	default:
+		logger.Warn("Unknown action in callback: %s", action)
 		return &struct{}{}, nil
 	}
 
@@ -292,15 +313,27 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 		return &struct{}{}, nil
 	}
 
-	originalText := callback.Message.Text
-	newText := originalText + "\n\n" + statusText
-	data.UpdateTelegramMessage(callback.Message.MessageID, newText)
+	if err := data.DeleteTelegramMessage(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+	); err != nil {
+		logger.Warn("Failed to delete telegram message: %v", err)
+	}
 
-	answerURL := fmt.Sprintf("https://api.telegram.org/bot%s/answerCallbackQuery", os.Getenv("TELEGRAM_BOT_TOKEN"))
-	http.PostForm(answerURL, url.Values{
-		"callback_query_id": {callback.ID},
-		"text":              {statusText},
-	})
+	answerURL := fmt.Sprintf(
+		"https://api.telegram.org/bot%s/answerCallbackQuery",
+		os.Getenv("TELEGRAM_BOT_TOKEN"),
+	)
+
+	go func() {
+		_, err := http.PostForm(answerURL, url.Values{
+			"callback_query_id": {callback.ID},
+			"text":              {statusText},
+		})
+		if err != nil {
+			logger.Error("Failed to answer callback query: %v", err)
+		}
+	}()
 
 	return &struct{}{}, nil
 }

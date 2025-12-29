@@ -431,3 +431,39 @@ func chapterExists(ctx context.Context, chapterID string) bool {
 	).Scan(&exists)
 	return err == nil && exists
 }
+
+func DeleteTelegramMessage(chatID int64, messageID int64) error {
+	if telegramBotToken == "" {
+		return fmt.Errorf("telegram bot token not set")
+	}
+
+	apiURL := fmt.Sprintf(
+		"https://api.telegram.org/bot%s/deleteMessage",
+		telegramBotToken,
+	)
+
+	data := url.Values{
+		"chat_id":    {fmt.Sprintf("%d", chatID)},
+		"message_id": {fmt.Sprintf("%d", messageID)},
+	}
+
+	resp, err := telegramClient.PostForm(apiURL, data)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		OK bool `json:"ok"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+
+	if !result.OK {
+		return fmt.Errorf("telegram deleteMessage failed")
+	}
+
+	return nil
+}

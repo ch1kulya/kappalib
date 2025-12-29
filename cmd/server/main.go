@@ -285,7 +285,7 @@ func main() {
 		huma.Register(humaApi, huma.Operation{
 			OperationID: "telegram-webhook",
 			Method:      http.MethodPost,
-			Path:        "/telegram/webhook",
+			Path:        "/webhook/telegram",
 			Summary:     "Telegram webhook",
 		}, api.HandleTelegramWebhook)
 	})
