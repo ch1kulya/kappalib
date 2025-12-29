@@ -270,12 +270,9 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	desc := novel.Description
-	if len(desc) > 155 {
-		runes := []rune(desc)
-		if len(runes) > 155 {
-			desc = string(runes[:155]) + "..."
-		}
+	desc := fmt.Sprintf("%d глав · %s", chapters.Count, novel.Description)
+	if len([]rune(desc)) > 155 {
+		desc = string([]rune(desc)[:155]) + "..."
 	}
 
 	isAdult := false
