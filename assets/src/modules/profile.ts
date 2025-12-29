@@ -164,6 +164,7 @@ class ProfileManager {
     this.secretToken = null;
     localStorage.removeItem(PROFILE_ID_KEY);
     localStorage.removeItem(SECRET_TOKEN_KEY);
+    localStorage.removeItem("kappalib_pending_comments");
   }
 
   private getKappalibCookies(): Record<string, CookieValue> {

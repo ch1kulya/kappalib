@@ -86,8 +86,9 @@ func buildAssets() {
 		Format:            esbuild.FormatESModule,
 		TreeShaking:       esbuild.TreeShakingTrue,
 		Define: map[string]string{
-			"process.env.API_URL":            fmt.Sprintf("\"%s\"", apiUrl),
-			"process.env.TURNSTILE_SITE_KEY": fmt.Sprintf("\"%s\"", os.Getenv("TURNSTILE_SITE_KEY")),
+			"process.env.API_URL":                     fmt.Sprintf("\"%s\"", apiUrl),
+			"process.env.TURNSTILE_SITE_KEY":          fmt.Sprintf("\"%s\"", os.Getenv("TURNSTILE_SITE_KEY")),
+			"process.env.TURNSTILE_COMMENTS_SITE_KEY": fmt.Sprintf("\"%s\"", os.Getenv("TURNSTILE_COMMENTS_SITE_KEY")),
 		},
 	})
 
@@ -267,6 +268,26 @@ func main() {
 			Path:        "/profile/sync-cookies",
 			Summary:     "Sync cookies",
 		}, api.HandleSyncCookies)
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-comments",
+			Method:      http.MethodGet,
+			Path:        "/chapters/{chapterId}/comments",
+			Summary:     "Get chapter comments",
+		}, api.HandleGetComments)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "create-comment",
+			Method:      http.MethodPost,
+			Path:        "/chapters/{chapterId}/comments",
+			Summary:     "Create comment",
+		}, api.HandleCreateComment)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "telegram-webhook",
+			Method:      http.MethodPost,
+			Path:        "/telegram/webhook",
+			Summary:     "Telegram webhook",
+		}, api.HandleTelegramWebhook)
 	})
 
 	go func() {
