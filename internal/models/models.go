@@ -88,3 +88,29 @@ type LoginResponse struct {
 	SecretToken string                 `json:"secret_token"`
 	Cookies     map[string]CookieValue `json:"cookies"`
 }
+
+type Comment struct {
+	ID                string    `json:"id"`
+	ChapterID         string    `json:"chapter_id"`
+	UserID            string    `json:"user_id"`
+	ContentHTML       string    `json:"content_html"`
+	Status            string    `json:"status"`
+	TelegramMessageID *int64    `json:"telegram_message_id,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
+	UserDisplayName   string    `json:"user_display_name,omitempty"`
+	UserAvatarSeed    string    `json:"user_avatar_seed,omitempty"`
+}
+
+type CommentsPage struct {
+	Comments   []Comment `json:"comments"`
+	Page       int       `json:"page"`
+	PageSize   int       `json:"page_size"`
+	TotalCount int       `json:"total_count"`
+	TotalPages int       `json:"total_pages"`
+}
+
+type CreateCommentInput struct {
+	ChapterID      string `json:"chapter_id"`
+	Content        string `json:"content"`
+	TurnstileToken string `json:"turnstile_token"`
+}

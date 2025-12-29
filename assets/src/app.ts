@@ -7,6 +7,7 @@ import Dropdown from "./modules/dropdown";
 import { initChaptersSort, initCatalogSort } from "./modules/sort";
 import { initDescription } from "./modules/description";
 import { initProfile, initProfileModal } from "./modules/profile";
+import { initComments } from "./modules/comments";
 
 declare global {
   interface Window {
@@ -29,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initReadingProgressSaver();
     initStatusBadge();
     initCatalogPagination();
+    initComments();
 
     console.info("All modules initialized successfully");
   } catch (err) {
