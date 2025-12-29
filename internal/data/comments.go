@@ -286,14 +286,16 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 		logger.Warn("Comment ID truncated for Telegram callback: %s", comment.ID)
 	}
 
+	contentForTelegram := htmlToTelegramHTML(comment.ContentHTML)
+
 	text := fmt.Sprintf(
-		"💬 *Новый комментарий*\n\n"+
+		"💬 <b>Новый комментарий</b>\n\n"+
 			"👤 Автор: %s\n"+
-			"📖 Глава: `%s`\n\n"+
+			"📖 Глава: <code>%s</code>\n\n"+
 			"📝 Текст:\n%s",
-		escapeMarkdown(comment.UserDisplayName),
+		comment.UserDisplayName,
 		comment.ChapterID,
-		escapeMarkdown(stripHTMLTags(comment.ContentHTML)),
+		contentForTelegram,
 	)
 
 	if len(text) > 4000 {
@@ -316,7 +318,7 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 	data := url.Values{
 		"chat_id":      {telegramChatID},
 		"text":         {text},
-		"parse_mode":   {"Markdown"},
+		"parse_mode":   {"HTML"},
 		"reply_markup": {string(keyboardJSON)},
 	}
 
@@ -353,74 +355,81 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 	}
 }
 
-func escapeMarkdown(s string) string {
-	replacer := strings.NewReplacer(
-		"_", "\\_",
-		"*", "\\*",
-		"[", "\\[",
-		"]", "\\]",
-		"(", "\\(",
-		")", "\\)",
-		"~", "\\~",
-		"`", "\\`",
-		">", "\\>",
-		"#", "\\#",
-		"+", "\\+",
-		"-", "\\-",
-		"=", "\\=",
-		"|", "\\|",
-		"{", "\\{",
-		"}", "\\}",
-		".", "\\.",
-		"!", "\\!",
-	)
-	return replacer.Replace(s)
+func htmlToTelegramHTML(html string) string {
+	if html == "" {
+		return "[без текста]"
+	}
+	result := html
+	for _, h := range []string{"h1", "h2", "h3", "h4", "h5", "h6"} {
+		result = strings.ReplaceAll(result, "<"+h+">", "<b>")
+		result = strings.ReplaceAll(result, "</"+h+">", "</b>\n")
+	}
+	result = strings.ReplaceAll(result, "<p>", "")
+	result = strings.ReplaceAll(result, "</p>", "\n\n")
+	result = strings.ReplaceAll(result, "<br>", "\n")
+	result = strings.ReplaceAll(result, "<br/>", "\n")
+	result = strings.ReplaceAll(result, "<br />", "\n")
+	result = strings.ReplaceAll(result, "<ul>", "")
+	result = strings.ReplaceAll(result, "</ul>", "\n")
+	result = strings.ReplaceAll(result, "<ol>", "")
+	result = strings.ReplaceAll(result, "</ol>", "\n")
+	result = strings.ReplaceAll(result, "<li>", "• ")
+	result = strings.ReplaceAll(result, "</li>", "\n")
+	result = strings.ReplaceAll(result, "<strong>", "<b>")
+	result = strings.ReplaceAll(result, "</strong>", "</b>")
+	result = strings.ReplaceAll(result, "<em>", "<i>")
+	result = strings.ReplaceAll(result, "</em>", "</i>")
+	result = replaceImgTags(result)
+
+	result = strings.TrimSpace(result)
+
+	if result == "" {
+		return "[без текста]"
+	}
+
+	return result
+}
+
+func replaceImgTags(html string) string {
+	result := html
+	for {
+		start := strings.Index(result, "<img")
+		if start == -1 {
+			break
+		}
+		end := strings.Index(result[start:], ">")
+		if end == -1 {
+			break
+		}
+		end += start
+		imgTag := result[start : end+1]
+		src := ""
+		if srcStart := strings.Index(imgTag, `src="`); srcStart != -1 {
+			srcStart += 5
+			if srcEnd := strings.Index(imgTag[srcStart:], `"`); srcEnd != -1 {
+				src = imgTag[srcStart : srcStart+srcEnd]
+			}
+		}
+		alt := "изображение"
+		if altStart := strings.Index(imgTag, `alt="`); altStart != -1 {
+			altStart += 5
+			if altEnd := strings.Index(imgTag[altStart:], `"`); altEnd != -1 {
+				if a := imgTag[altStart : altStart+altEnd]; a != "" {
+					alt = a
+				}
+			}
+		}
+		replacement := "[🖼 " + alt + "]"
+		if src != "" {
+			replacement = `<a href="` + src + `">[🖼 ` + alt + `]</a>`
+		}
+		result = result[:start] + replacement + result[end+1:]
+	}
+	return result
 }
 
 func GetTelegramWebhookSecret() string {
 	return telegramWebhookSecret
-}
-
-func UpdateTelegramMessage(messageID int64, newText string) error {
-	if telegramBotToken == "" || telegramChatID == "" {
-		return fmt.Errorf("telegram credentials not set")
-	}
-
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/editMessageText", telegramBotToken)
-
-	data := url.Values{
-		"chat_id":    {telegramChatID},
-		"message_id": {fmt.Sprintf("%d", messageID)},
-		"text":       {newText},
-		"parse_mode": {"Markdown"},
-	}
-
-	resp, err := telegramClient.PostForm(apiURL, data)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	return nil
-}
-
-func stripHTMLTags(s string) string {
-	var result strings.Builder
-	inTag := false
-	for _, r := range s {
-		if r == '<' {
-			inTag = true
-			continue
-		}
-		if r == '>' {
-			inTag = false
-			continue
-		}
-		if !inTag {
-			result.WriteRune(r)
-		}
-	}
-	return strings.TrimSpace(result.String())
 }
 
 func chapterExists(ctx context.Context, chapterID string) bool {
