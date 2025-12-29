@@ -2,10 +2,17 @@ package api
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
 
 	"github.com/ch1kulya/kappalib/internal/data"
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/models"
+	"github.com/ch1kulya/logger"
 
 	"github.com/danielgtaylor/huma/v2"
 )
@@ -55,6 +62,26 @@ type AuthenticatedProfileInput struct {
 type APIStatus struct {
 	Status   string `json:"status"`
 	Database string `json:"database"`
+}
+
+type GetCommentsInput struct {
+	ChapterID string `path:"chapterId"`
+	Page      int    `query:"page" default:"1" minimum:"1" maximum:"9999"`
+}
+
+type CreateCommentAPIInput struct {
+	ChapterID   string `path:"chapterId"`
+	ProfileID   string `header:"X-Profile-ID" required:"true"`
+	SecretToken string `header:"X-Secret-Token" required:"true"`
+	Body        struct {
+		Content        string `json:"content" minLength:"1" maxLength:"1000"`
+		TurnstileToken string `json:"turnstile_token" minLength:"1"`
+	}
+}
+
+type TelegramWebhookInput struct {
+	WebhookSecret string `header:"X-Telegram-Bot-Api-Secret-Token"`
+	Body          json.RawMessage
 }
 
 func HandleStatus(ctx context.Context, input *struct{}) (*struct{ Body APIStatus }, error) {
@@ -178,5 +205,135 @@ func HandleDeleteProfile(ctx context.Context, input *AuthenticatedProfileInput) 
 		}
 		return nil, huma.Error404NotFound("Profile not found")
 	}
+	return &struct{}{}, nil
+}
+
+func HandleGetComments(ctx context.Context, input *GetCommentsInput) (*struct{ Body any }, error) {
+	comments, err := data.GetApprovedComments(ctx, input.ChapterID, input.Page)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to fetch comments")
+	}
+	return &struct{ Body any }{Body: comments}, nil
+}
+
+func HandleCreateComment(ctx context.Context, input *CreateCommentAPIInput) (*struct{ Body any }, error) {
+	commentInput := models.CreateCommentInput{
+		ChapterID:      input.ChapterID,
+		Content:        input.Body.Content,
+		TurnstileToken: input.Body.TurnstileToken,
+	}
+
+	comment, err := data.CreateComment(ctx, input.ProfileID, input.SecretToken, commentInput)
+	if err != nil {
+		switch err.Error() {
+		case "rate limit exceeded":
+			return nil, huma.Error429TooManyRequests("Подождите 30 секунд перед отправкой следующего комментария")
+		case "captcha verification failed":
+			return nil, huma.Error400BadRequest("Captcha verification failed")
+		case "invalid secret token":
+			return nil, huma.Error403Forbidden("Invalid credentials")
+		case "invalid content length":
+			return nil, huma.Error400BadRequest("Comment must be 1-1000 characters")
+		case "chapter not found":
+			return nil, huma.Error404NotFound("Chapter not found")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to create comment")
+		}
+	}
+	return &struct{ Body any }{Body: comment}, nil
+}
+
+func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*struct{}, error) {
+	expectedSecret := data.GetTelegramWebhookSecret()
+	if expectedSecret != "" && input.WebhookSecret != expectedSecret {
+		logger.Warn("Telegram Webhook: Invalid secret token. Got: %s", input.WebhookSecret)
+		return nil, huma.Error403Forbidden("Invalid webhook secret")
+	}
+
+	bodyStr := string(input.Body)
+	logger.Debug("Telegram Webhook Payload: %s", bodyStr)
+
+	type TelegramUpdate struct {
+		UpdateID      int64 `json:"update_id"`
+		CallbackQuery *struct {
+			ID      string `json:"id"`
+			Data    string `json:"data"`
+			Message *struct {
+				MessageID int64 `json:"message_id"`
+				Chat      struct {
+					ID int64 `json:"id"`
+				} `json:"chat"`
+			} `json:"message"`
+		} `json:"callback_query"`
+	}
+
+	var update TelegramUpdate
+	if err := json.Unmarshal(input.Body, &update); err != nil {
+		logger.Error("Failed to unmarshal Telegram update: %v", err)
+		return &struct{}{}, nil
+	}
+
+	if update.CallbackQuery == nil {
+		return &struct{}{}, nil
+	}
+
+	callback := update.CallbackQuery
+
+	if callback.Message == nil {
+		logger.Warn("CallbackQuery received without Message field")
+		return &struct{}{}, nil
+	}
+
+	parts := strings.SplitN(callback.Data, ":", 2)
+	if len(parts) != 2 {
+		logger.Warn("Invalid callback data format: %s", callback.Data)
+		return &struct{}{}, nil
+	}
+
+	action := parts[0]
+	commentID := parts[1]
+
+	var status string
+	var statusText string
+
+	switch action {
+	case "approve":
+		status = "approved"
+		statusText = "✅ Подтверждено"
+	case "reject":
+		status = "rejected"
+		statusText = "❌ Отклонено"
+	default:
+		logger.Warn("Unknown action in callback: %s", action)
+		return &struct{}{}, nil
+	}
+
+	if err := data.UpdateCommentStatus(ctx, commentID, status); err != nil {
+		logger.Error("Failed to update comment via webhook: %v", err)
+		return &struct{}{}, nil
+	}
+
+	if err := data.DeleteTelegramMessage(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+	); err != nil {
+		logger.Warn("Failed to delete telegram message: %v", err)
+	}
+
+	answerURL := fmt.Sprintf(
+		"https://api.telegram.org/bot%s/answerCallbackQuery",
+		os.Getenv("TELEGRAM_BOT_TOKEN"),
+	)
+
+	go func() {
+		_, err := http.PostForm(answerURL, url.Values{
+			"callback_query_id": {callback.ID},
+			"text":              {statusText},
+		})
+		if err != nil {
+			logger.Error("Failed to answer callback query: %v", err)
+		}
+	}()
+
 	return &struct{}{}, nil
 }
