@@ -333,10 +333,15 @@ a:hover {
         pointer-events: none;
         z-index: 1;
     }
-    &:hover::before,
-    &:focus::before {
+    &:active::before {
         opacity: 0.9;
         background: var(--gradient-focus);
+    }
+    @media (hover: hover) {
+        &:hover::before {
+            opacity: 0.9;
+            background: var(--gradient-focus);
+        }
     }
     & .header-profile-icon {
         width: 24px;
@@ -2283,7 +2288,13 @@ html {
     pointer-events: none;
 }
 
-.pc-avatar-wrapper:hover .pc-avatar-overlay {
+@media (hover: hover) {
+    .pc-avatar-wrapper:hover .pc-avatar-overlay {
+        opacity: 1;
+    }
+}
+
+.pc-avatar-wrapper:active .pc-avatar-overlay {
     opacity: 1;
 }
 
