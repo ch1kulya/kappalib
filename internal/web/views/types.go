@@ -12,6 +12,7 @@ type BaseProps struct {
 	IsChapterPage bool
 	IsAdult       bool
 	Novel         *models.Novel
+	PrefetchURL   string
 }
 
 type LastReadWidgetData struct {

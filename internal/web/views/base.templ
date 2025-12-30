@@ -14,6 +14,9 @@ templ Base(props BaseProps) {
 			if props.Schema != "" {
 				@templ.Raw(props.Schema)
 			}
+			if props.PrefetchURL != "" {
+				<link rel="prefetch" href={ props.PrefetchURL } as="document"/>
+			}
 			<link rel="preconnect" href="https://s3.kappalib.ru/"/>
 			<link rel="preconnect" href="https://status.kappalib.ru/"/>
 			<link rel="preconnect" href="https://stats.kappalib.ru/"/>
