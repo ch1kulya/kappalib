@@ -27,6 +27,17 @@ interface LoginResponse {
   cookies: Record<string, CookieValue>;
 }
 
+export function getAvatarUrl(
+  userId: string,
+  hasCustomAvatar: boolean,
+  avatarSeed: string,
+): string {
+  if (hasCustomAvatar) {
+    return `${S3_URL}/avatars/${userId}.jpg?v=${Date.now()}`;
+  }
+  return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${avatarSeed}&backgroundType=solid,gradientLinear`;
+}
+
 class ProfileManager {
   private profileId: string | null = null;
   private secretToken: string | null = null;

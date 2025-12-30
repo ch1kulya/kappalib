@@ -202,9 +202,10 @@ func CreateComment(ctx context.Context, profileID, secretToken string, input mod
 	}
 
 	var user models.ProfilePublic
-	database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed FROM users WHERE id = $1`, profileID).Scan(&user.DisplayName, &user.AvatarSeed)
+	database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar FROM users WHERE id = $1`, profileID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar)
 	comment.UserDisplayName = user.DisplayName
 	comment.UserAvatarSeed = user.AvatarSeed
+	comment.UserHasCustomAvatar = user.HasCustomAvatar
 
 	go sendCommentToTelegram(context.Background(), &comment)
 
@@ -247,7 +248,7 @@ func GetApprovedComments(ctx context.Context, chapterID string, page int) (*mode
 	comments := make([]models.Comment, 0)
 	for rows.Next() {
 		var c models.Comment
-		if err := rows.Scan(&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed); err != nil {
+		if err := rows.Scan(&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed, &c.UserHasCustomAvatar); err != nil {
 			logger.Warn("Comment row scan error: %v", err)
 			continue
 		}

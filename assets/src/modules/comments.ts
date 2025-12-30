@@ -1,4 +1,4 @@
-import { profileManager } from "./profile";
+import { profileManager, getAvatarUrl } from "./profile";
 
 const API_URL = process.env.API_URL;
 const TURNSTILE_COMMENTS_SITE_KEY =
@@ -8,11 +8,13 @@ const PENDING_TTL = 3 * 60 * 60 * 1000;
 
 interface PendingComment {
   id: string;
+  visibleId: string;
   chapterId: string;
   contentHtml: string;
   createdAt: number;
   userDisplayName: string;
   userAvatarSeed: string;
+  userHasCustomAvatar: boolean;
 }
 
 interface Comment {
@@ -24,6 +26,7 @@ interface Comment {
   created_at: string;
   user_display_name: string;
   user_avatar_seed: string;
+  user_has_custom_avatar: boolean;
 }
 
 interface CommentsPage {
@@ -81,22 +84,24 @@ function createCommentHTML(
   comment: Comment | PendingComment,
   isPending: boolean = false,
 ): string {
-  const displayName =
-    "user_display_name" in comment
-      ? comment.user_display_name
-      : comment.userDisplayName;
-  const avatarSeed =
-    "user_avatar_seed" in comment
-      ? comment.user_avatar_seed
-      : comment.userAvatarSeed;
-  const contentHtml =
-    "content_html" in comment ? comment.content_html : comment.contentHtml;
-  const createdAt =
-    "created_at" in comment
-      ? comment.created_at
-      : new Date(comment.createdAt).toISOString();
+  const isApiComment = "user_display_name" in comment;
 
-  const avatarUrl = `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${avatarSeed}&backgroundType=solid,gradientLinear`;
+  const userId = isApiComment ? comment.user_id : comment.visibleId;
+  const displayName = isApiComment
+    ? comment.user_display_name
+    : comment.userDisplayName;
+  const avatarSeed = isApiComment
+    ? comment.user_avatar_seed
+    : comment.userAvatarSeed;
+  const hasCustomAvatar = isApiComment
+    ? comment.user_has_custom_avatar
+    : comment.userHasCustomAvatar;
+  const contentHtml = isApiComment ? comment.content_html : comment.contentHtml;
+  const createdAt = isApiComment
+    ? comment.created_at
+    : new Date(comment.createdAt).toISOString();
+
+  const avatarUrl = getAvatarUrl(userId, hasCustomAvatar, avatarSeed);
 
   return `
     <div class="comment-item${isPending ? " comment-pending" : ""}" data-comment-id="${comment.id}">
@@ -522,11 +527,13 @@ function initFormHandlers(container: HTMLElement): void {
 
         addPendingComment({
           id: comment.id,
+          visibleId: comment.user_id,
           chapterId: comment.chapter_id,
           contentHtml: comment.content_html,
           createdAt: Date.now(),
           userDisplayName: comment.user_display_name,
           userAvatarSeed: comment.user_avatar_seed,
+          userHasCustomAvatar: comment.user_has_custom_avatar,
         });
 
         textarea.value = "";

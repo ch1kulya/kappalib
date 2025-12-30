@@ -91,15 +91,16 @@ type LoginResponse struct {
 }
 
 type Comment struct {
-	ID                string    `json:"id"`
-	ChapterID         string    `json:"chapter_id"`
-	UserID            string    `json:"user_id"`
-	ContentHTML       string    `json:"content_html"`
-	Status            string    `json:"status"`
-	TelegramMessageID *int64    `json:"telegram_message_id,omitempty"`
-	CreatedAt         time.Time `json:"created_at"`
-	UserDisplayName   string    `json:"user_display_name,omitempty"`
-	UserAvatarSeed    string    `json:"user_avatar_seed,omitempty"`
+	ID                  string    `json:"id"`
+	ChapterID           string    `json:"chapter_id"`
+	UserID              string    `json:"user_id"`
+	ContentHTML         string    `json:"content_html"`
+	Status              string    `json:"status"`
+	TelegramMessageID   *int64    `json:"telegram_message_id,omitempty"`
+	CreatedAt           time.Time `json:"created_at"`
+	UserDisplayName     string    `json:"user_display_name,omitempty"`
+	UserAvatarSeed      string    `json:"user_avatar_seed,omitempty"`
+	UserHasCustomAvatar bool      `json:"user_has_custom_avatar,omitempty"`
 }
 
 type CommentsPage struct {
