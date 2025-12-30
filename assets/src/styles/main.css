@@ -2162,7 +2162,7 @@ html {
                 border-radius: 8px;
                 margin-bottom: 0.875rem;
                 border: 1px dashed var(--primary);
-                font-family: monospace;
+                font-family: "IBM Plex Mono";
                 font-size: 1.35rem;
                 font-weight: 800;
                 letter-spacing: 3px;
@@ -2225,7 +2225,7 @@ html {
                 color: var(--tertiary);
                 align-items: center;
                 & .pc-id {
-                    font-family: monospace;
+                    font-family: "IBM Plex Mono";
                     background: var(--outline);
                     padding: 1px 4px;
                     border-radius: 4px;
