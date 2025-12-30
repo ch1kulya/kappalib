@@ -14,6 +14,9 @@ templ Base(props BaseProps) {
 			if props.Schema != "" {
 				@templ.Raw(props.Schema)
 			}
+			if props.PrefetchURL != "" {
+				<link rel="prefetch" href={ props.PrefetchURL } as="document"/>
+			}
 			<link rel="preconnect" href="https://s3.kappalib.ru/"/>
 			<link rel="preconnect" href="https://status.kappalib.ru/"/>
 			<link rel="preconnect" href="https://stats.kappalib.ru/"/>
@@ -35,11 +38,11 @@ templ Base(props BaseProps) {
 			} else {
 				<meta name="twitter:card" content="summary"/>
 			}
-			<link rel="stylesheet" as="style" crossorigin href="https://rsms.me/inter/inter.css"/>
-			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/npm/noto-sans-cjk-jp@1.0.1/index.min.css"/>
-			<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/npm/@ibm/plex-mono@1.1.0/css/ibm-plex-mono-all.min.css"/>
-			<link rel="stylesheet" as="style" href={ fmt.Sprintf("/assets/dist/styles/main.css?v=%d", props.Version) }/>
+			<link rel="stylesheet" crossorigin href="https://rsms.me/inter/inter.css"/>
+			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" onload="this.media='all'"/>
+			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/noto-sans-cjk-jp@1.0.1/index.min.css" media="print" onload="this.media='all'"/>
+			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/@ibm/plex-mono@1.1.0/css/ibm-plex-mono-all.min.css" media="print" onload="this.media='all'"/>
+			<link rel="stylesheet" href={ fmt.Sprintf("/assets/dist/styles/main.css?v=%d", props.Version) }/>
 			<script defer src="https://stats.ch1kulya.ru/script.js" data-website-id="d7ede2e9-37bc-4a66-b905-188a87d88fd8"></script>
 		</head>
 		<body>
@@ -119,13 +122,25 @@ templ ProfileTemplates() {
 	<template id="tpl-pc-profile">
 		<div class="pc-body">
 			<div class="pc-profile">
-				<img src="" alt="" class="pc-avatar" data-field="avatarUrl"/>
+				<div class="pc-avatar-wrapper">
+					<img src="" alt="" class="pc-avatar" id="pc-avatar-img" data-field="avatarUrl"/>
+					<div class="pc-avatar-overlay" id="pc-avatar-overlay">
+						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg>
+					</div>
+					<input type="file" id="pc-avatar-input" accept="image/jpeg,image/png" style="display:none"/>
+				</div>
 				<div class="pc-info">
-					<div class="pc-name" data-field="displayName"></div>
-		            <div class="pc-meta">
-		                <span class="pc-id" data-field="profileId"></span>
-		                <span data-field="createdAt"></span>
-		            </div>
+					<div class="pc-name-row">
+						<span class="pc-name" id="pc-name-text" data-field="displayName"></span>
+						<button class="pc-name-edit" id="pc-name-edit" aria-label="Изменить имя">
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg>
+						</button>
+						<input type="text" class="pc-name-input" id="pc-name-input" maxlength="15" style="display:none"/>
+					</div>
+					<div class="pc-meta">
+						<span class="pc-id" data-field="profileId"></span>
+						<span data-field="createdAt"></span>
+					</div>
 				</div>
 			</div>
 			<div class="pc-section">

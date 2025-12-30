@@ -14,6 +14,8 @@ import (
 
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/models"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"github.com/ch1kulya/logger"
 	"github.com/microcosm-cc/bluemonday"
@@ -107,6 +109,26 @@ func init() {
 			userCommentLimiter.Unlock()
 		}
 	}()
+	endpoint := os.Getenv("S3_ENDPOINT")
+	accessKey := os.Getenv("S3_ACCESS_KEY")
+	secretKey := os.Getenv("S3_SECRET_KEY")
+	useSSL := os.Getenv("S3_USE_SSL") != "false"
+
+	if endpoint != "" && accessKey != "" && secretKey != "" {
+		endpoint = strings.TrimPrefix(endpoint, "https://")
+		endpoint = strings.TrimPrefix(endpoint, "http://")
+
+		client, err := minio.New(endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+			Secure: useSSL,
+		})
+		if err != nil {
+			logger.Error("Failed to initialize MinIO client: %v", err)
+		} else {
+			minioClient = client
+			logger.Info("MinIO client initialized for endpoint: %s", endpoint)
+		}
+	}
 }
 
 func verifyCommentsTurnstile(token string) bool {
@@ -180,9 +202,10 @@ func CreateComment(ctx context.Context, profileID, secretToken string, input mod
 	}
 
 	var user models.ProfilePublic
-	database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed FROM users WHERE id = $1`, profileID).Scan(&user.DisplayName, &user.AvatarSeed)
+	database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar FROM users WHERE id = $1`, profileID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar)
 	comment.UserDisplayName = user.DisplayName
 	comment.UserAvatarSeed = user.AvatarSeed
+	comment.UserHasCustomAvatar = user.HasCustomAvatar
 
 	go sendCommentToTelegram(context.Background(), &comment)
 
@@ -225,7 +248,7 @@ func GetApprovedComments(ctx context.Context, chapterID string, page int) (*mode
 	comments := make([]models.Comment, 0)
 	for rows.Next() {
 		var c models.Comment
-		if err := rows.Scan(&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed); err != nil {
+		if err := rows.Scan(&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed, &c.UserHasCustomAvatar); err != nil {
 			logger.Warn("Comment row scan error: %v", err)
 			continue
 		}

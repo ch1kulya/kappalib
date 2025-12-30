@@ -309,6 +309,13 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		schema = ""
 	}
 
+	var prefetchURL string
+	if cookieData.LastChapterID != "" {
+		prefetchURL = fmt.Sprintf("/%s/chapter/%s", id, cookieData.LastChapterID)
+	} else if firstChapterID != "" {
+		prefetchURL = fmt.Sprintf("/%s/chapter/%s", id, firstChapterID)
+	}
+
 	props := views.NovelProps{
 		BaseProps: views.BaseProps{
 			Title:       title,
@@ -318,6 +325,7 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 			Version:     h.assetVersion,
 			IsAdult:     isAdult,
 			Schema:      schema,
+			PrefetchURL: prefetchURL,
 		},
 		Novel:           novel,
 		Chapters:        chapters.Chapters,
@@ -456,6 +464,11 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 		schema = ""
 	}
 
+	var prefetchURL string
+	if nextID != "" {
+		prefetchURL = fmt.Sprintf("/%s/chapter/%s", novelID, nextID)
+	}
+
 	props := views.ChapterProps{
 		BaseProps: views.BaseProps{
 			Title:         chapterTitle,
@@ -466,6 +479,7 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 			IsAdult:       isAdult,
 			Novel:         novel,
 			Schema:        schema,
+			PrefetchURL:   prefetchURL,
 		},
 		Novel:   novel,
 		Chapter: chapter,

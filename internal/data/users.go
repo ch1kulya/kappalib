@@ -1,12 +1,16 @@
 package data
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"maps"
 	"math/big"
@@ -18,6 +22,9 @@ import (
 
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/models"
+	"github.com/microcosm-cc/bluemonday"
+	"github.com/minio/minio-go/v7"
+	"golang.org/x/image/draw"
 
 	"github.com/ch1kulya/logger"
 )
@@ -37,6 +44,17 @@ var (
 	cookieValueRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-]{1,200}$`)
 	turnstileSecret  = os.Getenv("TURNSTILE_SECRET")
 )
+
+var (
+	minioClient        *minio.Client
+	s3Bucket           = os.Getenv("S3_BUCKET")
+	imageProcessingSem = make(chan struct{}, 5)
+	displayNameRegex   = regexp.MustCompile(`^[\p{L}\p{N} ]+$`)
+	multiSpaceRegex    = regexp.MustCompile(`\s+`)
+	strictPolicy       = bluemonday.StrictPolicy()
+)
+
+var ErrUnsupportedFormat = fmt.Errorf("unsupported image format")
 
 func generateRandomName() string {
 	adjIdx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(adjectives))))
@@ -164,8 +182,8 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 
 	var profile models.ProfilePublic
 	err := database.DB.QueryRow(dbCtx,
-		`SELECT id, display_name, avatar_seed, created_at FROM users WHERE id = $1`,
-		profileID).Scan(&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.CreatedAt)
+		`SELECT id, display_name, avatar_seed, has_custom_avatar, created_at FROM users WHERE id = $1`,
+		profileID).Scan(&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &profile.CreatedAt)
 
 	if err != nil {
 		return nil, err
@@ -294,4 +312,133 @@ func DeleteProfile(ctx context.Context, profileID, secretToken string) error {
 
 	logger.Info("Profile deleted: %s", profileID)
 	return nil
+}
+
+func ValidateDisplayName(name string) (string, error) {
+	name = strictPolicy.Sanitize(name)
+	name = multiSpaceRegex.ReplaceAllString(name, " ")
+	name = strings.TrimSpace(name)
+
+	if len(name) == 0 {
+		return "", fmt.Errorf("name is empty")
+	}
+
+	runeCount := len([]rune(name))
+	if runeCount > 15 {
+		return "", fmt.Errorf("name too long")
+	}
+
+	if !displayNameRegex.MatchString(name) {
+		return "", fmt.Errorf("invalid characters")
+	}
+
+	return name, nil
+}
+
+func UpdateDisplayName(ctx context.Context, profileID, secretToken, newName string) (*models.ProfilePublic, error) {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	if !verifySecretToken(dbCtx, profileID, secretToken) {
+		return nil, fmt.Errorf("invalid secret token")
+	}
+
+	validName, err := ValidateDisplayName(newName)
+	if err != nil {
+		return nil, fmt.Errorf("invalid name: %w", err)
+	}
+
+	_, err = database.DB.Exec(dbCtx,
+		`UPDATE users SET display_name = $1, last_active_at = now() WHERE id = $2`,
+		validName, profileID)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Debug("Updated display name for %s: %s", profileID, validName)
+
+	return GetProfile(ctx, profileID)
+}
+
+func UpdateAvatar(ctx context.Context, profileID, secretToken string, imageData []byte) (*models.ProfilePublic, error) {
+	if minioClient == nil {
+		return nil, fmt.Errorf("s3 not configured")
+	}
+
+	dbCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if !verifySecretToken(dbCtx, profileID, secretToken) {
+		return nil, fmt.Errorf("invalid secret token")
+	}
+
+	select {
+	case imageProcessingSem <- struct{}{}:
+		defer func() { <-imageProcessingSem }()
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	imgData, err := processAvatar(imageData)
+	if err != nil {
+		if errors.Is(err, ErrUnsupportedFormat) {
+			return nil, fmt.Errorf("unsupported format")
+		}
+		return nil, fmt.Errorf("image processing failed: %w", err)
+	}
+
+	key := fmt.Sprintf("avatars/%s.jpg", profileID)
+	reader := bytes.NewReader(imgData)
+
+	_, err = minioClient.PutObject(ctx, s3Bucket, key, reader, int64(len(imgData)), minio.PutObjectOptions{
+		ContentType: "image/jpeg",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("s3 upload failed: %w", err)
+	}
+
+	_, err = database.DB.Exec(dbCtx,
+		`UPDATE users SET has_custom_avatar = true, last_active_at = now() WHERE id = $1`,
+		profileID)
+	if err != nil {
+		return nil, err
+	}
+
+	return GetProfile(ctx, profileID)
+}
+
+func processAvatar(data []byte) ([]byte, error) {
+	img, format, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, ErrUnsupportedFormat
+	}
+
+	if format != "jpeg" && format != "png" {
+		return nil, ErrUnsupportedFormat
+	}
+
+	bounds := img.Bounds()
+	srcW, srcH := bounds.Dx(), bounds.Dy()
+
+	var cropRect image.Rectangle
+	if srcW > srcH {
+		offset := (srcW - srcH) / 2
+		cropRect = image.Rect(offset, 0, offset+srcH, srcH)
+	} else {
+		offset := (srcH - srcW) / 2
+		cropRect = image.Rect(0, offset, srcW, offset+srcW)
+	}
+
+	cropped := image.NewRGBA(image.Rect(0, 0, cropRect.Dx(), cropRect.Dy()))
+	draw.Draw(cropped, cropped.Bounds(), img, cropRect.Min, draw.Src)
+
+	resized := image.NewRGBA(image.Rect(0, 0, 250, 250))
+	draw.CatmullRom.Scale(resized, resized.Bounds(), cropped, cropped.Bounds(), draw.Over, nil)
+
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, resized, &jpeg.Options{Quality: 85}); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }

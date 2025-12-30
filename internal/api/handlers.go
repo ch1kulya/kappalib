@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -82,6 +83,22 @@ type CreateCommentAPIInput struct {
 type TelegramWebhookInput struct {
 	WebhookSecret string `header:"X-Telegram-Bot-Api-Secret-Token"`
 	Body          json.RawMessage
+}
+
+type UpdateDisplayNameInput struct {
+	ProfileID   string `path:"id"`
+	SecretToken string `header:"X-Secret-Token" required:"true"`
+	Body        struct {
+		DisplayName string `json:"display_name" minLength:"1" maxLength:"15"`
+	}
+}
+
+type UploadAvatarInput struct {
+	ProfileID   string `path:"id"`
+	SecretToken string `header:"X-Secret-Token" required:"true"`
+	Body        struct {
+		Image string `json:"image" minLength:"1"`
+	}
 }
 
 func HandleStatus(ctx context.Context, input *struct{}) (*struct{ Body APIStatus }, error) {
@@ -336,4 +353,41 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 	}()
 
 	return &struct{}{}, nil
+}
+
+func HandleUpdateDisplayName(ctx context.Context, input *UpdateDisplayNameInput) (*struct{ Body any }, error) {
+	profile, err := data.UpdateDisplayName(ctx, input.ProfileID, input.SecretToken, input.Body.DisplayName)
+	if err != nil {
+		if strings.Contains(err.Error(), "invalid secret token") {
+			return nil, huma.Error403Forbidden("Invalid credentials")
+		}
+		if strings.Contains(err.Error(), "invalid name") {
+			return nil, huma.Error400BadRequest("Invalid display name")
+		}
+		return nil, huma.Error500InternalServerError("Failed to update profile")
+	}
+	return &struct{ Body any }{Body: profile}, nil
+}
+
+func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{ Body any }, error) {
+	imageData, err := base64.StdEncoding.DecodeString(input.Body.Image)
+	if err != nil {
+		return nil, huma.Error400BadRequest("Invalid base64 image")
+	}
+
+	if len(imageData) > 1<<20 {
+		return nil, huma.Error400BadRequest("Image too large (max 1MB)")
+	}
+
+	profile, err := data.UpdateAvatar(ctx, input.ProfileID, input.SecretToken, imageData)
+	if err != nil {
+		if strings.Contains(err.Error(), "invalid secret token") {
+			return nil, huma.Error403Forbidden("Invalid credentials")
+		}
+		if strings.Contains(err.Error(), "unsupported format") {
+			return nil, huma.Error400BadRequest("Unsupported format")
+		}
+		return nil, huma.Error500InternalServerError("Upload failed")
+	}
+	return &struct{ Body any }{Body: profile}, nil
 }
