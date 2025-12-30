@@ -2205,23 +2205,13 @@ html {
         margin-bottom: 1rem;
         padding-bottom: 1rem;
         border-bottom: 1px solid var(--border);
-        & .pc-avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: var(--outline);
-            border: 1px solid var(--border);
-            flex-shrink: 0;
-        }
         & .pc-info {
             flex: 1;
             min-width: 0;
-            & .pc-name {
-                font-size: 1rem;
-                font-weight: 700;
-                color: var(--primary);
-                margin-bottom: 0.25rem;
-            }
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.25rem;
             & .pc-meta {
                 display: flex;
                 flex-wrap: wrap;
@@ -2251,17 +2241,104 @@ html {
         .pc-body {
             padding: 1rem;
         }
-        .pc-avatar {
-            width: 44px;
-            height: 44px;
-        }
-        .pc-name {
-            font-size: 0.95rem;
-        }
         .pc-turnstile-container > div {
             transform: scale(0.85);
         }
     }
+}
+
+.pc-avatar-wrapper {
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+}
+
+.pc-avatar-wrapper .pc-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--outline);
+    border: 1px solid var(--border);
+    object-fit: cover;
+    transition: opacity 0.15s;
+}
+
+.pc-avatar-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+    color: white;
+    pointer-events: none;
+}
+
+.pc-avatar-wrapper:hover .pc-avatar-overlay {
+    opacity: 1;
+}
+
+.pc-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 24px;
+}
+
+.pc-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.2;
+}
+
+.pc-name-edit {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    color: var(--tertiary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+}
+
+.pc-name-edit:hover {
+    color: var(--primary);
+}
+
+.pc-name-input {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    width: 130px;
+    outline: none;
+    line-height: 1.2;
+}
+
+.pc-name-input:focus {
+    border-bottom-color: var(--primary);
+}
+
+.pc-name-input::placeholder {
+    color: var(--tertiary);
+    font-weight: 700;
 }
 
 /* Comments Section */

@@ -14,6 +14,8 @@ import (
 
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/models"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"github.com/ch1kulya/logger"
 	"github.com/microcosm-cc/bluemonday"
@@ -107,6 +109,26 @@ func init() {
 			userCommentLimiter.Unlock()
 		}
 	}()
+	endpoint := os.Getenv("S3_ENDPOINT")
+	accessKey := os.Getenv("S3_ACCESS_KEY")
+	secretKey := os.Getenv("S3_SECRET_KEY")
+	useSSL := os.Getenv("S3_USE_SSL") != "false"
+
+	if endpoint != "" && accessKey != "" && secretKey != "" {
+		endpoint = strings.TrimPrefix(endpoint, "https://")
+		endpoint = strings.TrimPrefix(endpoint, "http://")
+
+		client, err := minio.New(endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+			Secure: useSSL,
+		})
+		if err != nil {
+			logger.Error("Failed to initialize MinIO client: %v", err)
+		} else {
+			minioClient = client
+			logger.Info("MinIO client initialized for endpoint: %s", endpoint)
+		}
+	}
 }
 
 func verifyCommentsTurnstile(token string) bool {

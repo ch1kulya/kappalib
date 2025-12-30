@@ -2,6 +2,7 @@ const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
 const SECRET_TOKEN_KEY = "kappalib_secret_token";
 const TURNSTILE_SITE_KEY = process.env.TURNSTILE_SITE_KEY || "";
+const S3_URL = `${process.env.S3_USE_SSL !== "false" ? "https" : "http"}://${process.env.S3_ENDPOINT}/${process.env.S3_BUCKET}`;
 
 interface CookieValue {
   value: string;
@@ -12,6 +13,7 @@ interface ProfilePublic {
   id: string;
   display_name: string;
   avatar_seed: string;
+  has_custom_avatar: boolean;
   created_at: string;
 }
 
@@ -40,6 +42,17 @@ class ProfileManager {
 
   getProfileId(): string | null {
     return this.profileId;
+  }
+
+  getSecretToken(): string | null {
+    return this.secretToken;
+  }
+
+  getAvatarUrl(profile: ProfilePublic): string {
+    if (profile.has_custom_avatar) {
+      return `${S3_URL}/avatars/${profile.id}.jpg?v=${Date.now()}`;
+    }
+    return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${profile.avatar_seed}&backgroundType=solid,gradientLinear`;
   }
 
   async createProfile(turnstileToken: string): Promise<ProfilePublic | null> {
@@ -89,7 +102,8 @@ class ProfileManager {
   async fetchProfile(): Promise<ProfilePublic | null> {
     if (!this.profileId) return null;
     try {
-      const res = await fetch(`${API_URL}/profile/${this.profileId}`);
+      const url = `${API_URL}/profile/${this.profileId}?v=${Date.now()}`;
+      const res = await fetch(url);
       if (res.ok) return await res.json();
       if (res.status === 404) this.logout();
     } catch (err) {
@@ -139,6 +153,64 @@ class ProfileManager {
     } catch (err) {
       console.error("Sync cookies failed", err);
     }
+  }
+
+  async updateDisplayName(newName: string): Promise<ProfilePublic | null> {
+    if (!this.profileId || !this.secretToken) return null;
+    try {
+      const res = await fetch(`${API_URL}/profile/${this.profileId}/name`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Secret-Token": this.secretToken,
+        },
+        body: JSON.stringify({ display_name: newName }),
+      });
+      if (res.ok) return await res.json();
+    } catch (err) {
+      console.error("Update name failed", err);
+    }
+    return null;
+  }
+
+  async uploadAvatar(file: File): Promise<ProfilePublic | null> {
+    if (!this.profileId || !this.secretToken) return null;
+    try {
+      const base64 = await this.fileToBase64(file);
+
+      const res = await fetch(`${API_URL}/profile/${this.profileId}/avatar`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Secret-Token": this.secretToken,
+        },
+        body: JSON.stringify({ image: base64 }),
+      });
+
+      if (res.ok) return await res.json();
+
+      const error = await res.json().catch(() => null);
+      if (error?.detail) {
+        alert(error.detail);
+      }
+      return null;
+    } catch (err) {
+      console.error("Upload avatar failed", err);
+    }
+    return null;
+  }
+
+  private fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   async deleteProfile(): Promise<boolean> {
@@ -386,7 +458,7 @@ function renderLoggedInView(): void {
       return;
     }
 
-    const avatarUrl = `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${profile.avatar_seed}&backgroundType=solid,gradientLinear`;
+    const avatarUrl = profileManager.getAvatarUrl(profile);
 
     content.innerHTML = "";
     content.appendChild(
@@ -398,43 +470,149 @@ function renderLoggedInView(): void {
       }),
     );
 
-    document
-      .getElementById("pc-get-code")
-      ?.addEventListener("click", async () => {
-        const btn = document.getElementById("pc-get-code") as HTMLButtonElement;
-        btn.disabled = true;
-        btn.textContent = "Генерация...";
+    initProfileInteractions(profile);
+  });
+}
 
-        const result = await profileManager.generateSyncCode();
-        if (result) {
-          const area = document.getElementById("pc-code-area");
-          if (area) {
-            const codeEl = document.createElement("div");
-            codeEl.className = "pc-code";
-            codeEl.textContent = result.sync_code;
-            area.appendChild(codeEl);
-          }
-          btn.style.display = "none";
-        } else {
-          btn.disabled = false;
-          btn.textContent = "Получить код";
+function initProfileInteractions(profile: any): void {
+  const avatarWrapper = document.getElementById("pc-avatar-img")?.parentElement;
+  const avatarInput = document.getElementById(
+    "pc-avatar-input",
+  ) as HTMLInputElement;
+  const nameText = document.getElementById("pc-name-text");
+  const nameEdit = document.getElementById("pc-name-edit");
+  const nameInput = document.getElementById(
+    "pc-name-input",
+  ) as HTMLInputElement;
+
+  let isSavingName = false;
+
+  avatarWrapper?.addEventListener("click", () => {
+    avatarInput?.click();
+  });
+
+  avatarInput?.addEventListener("change", async () => {
+    const file = avatarInput.files?.[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+      alert("Файл слишком большой (максимум 1 МБ)");
+      avatarInput.value = "";
+      return;
+    }
+
+    const avatarImg = document.getElementById(
+      "pc-avatar-img",
+    ) as HTMLImageElement;
+    const overlay = document.getElementById("pc-avatar-overlay");
+
+    if (avatarImg) avatarImg.style.opacity = "0.5";
+    if (overlay) overlay.style.opacity = "0";
+
+    const result = await profileManager.uploadAvatar(file);
+
+    if (avatarImg) avatarImg.style.opacity = "1";
+    avatarInput.value = "";
+
+    if (result && avatarImg) {
+      avatarImg.src = profileManager.getAvatarUrl(result);
+    }
+  });
+
+  nameEdit?.addEventListener("click", () => {
+    if (!nameText || !nameInput) return;
+    nameText.style.display = "none";
+    nameEdit.style.display = "none";
+    nameInput.style.display = "block";
+    nameInput.value = "";
+    nameInput.placeholder = profile.display_name;
+    nameInput.focus();
+  });
+
+  nameInput?.addEventListener("blur", () => {
+    saveName();
+  });
+
+  nameInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      nameInput.blur();
+    }
+    if (e.key === "Escape") {
+      nameInput.value = "";
+      nameInput.blur();
+    }
+  });
+
+  async function saveName() {
+    if (!nameText || !nameInput || !nameEdit) return;
+    if (isSavingName) return;
+
+    const newName = nameInput.value.trim();
+
+    if (!newName || newName === profile.display_name) {
+      cancelNameEdit();
+      return;
+    }
+
+    isSavingName = true;
+    nameInput.disabled = true;
+
+    const result = await profileManager.updateDisplayName(newName);
+
+    nameInput.disabled = false;
+    isSavingName = false;
+
+    if (result) {
+      profile.display_name = result.display_name;
+      nameText.textContent = result.display_name;
+    }
+
+    cancelNameEdit();
+  }
+
+  function cancelNameEdit() {
+    if (!nameText || !nameInput || !nameEdit) return;
+    nameInput.style.display = "none";
+    nameInput.value = "";
+    nameText.style.display = "inline";
+    nameEdit.style.display = "inline-flex";
+  }
+
+  document
+    .getElementById("pc-get-code")
+    ?.addEventListener("click", async () => {
+      const btn = document.getElementById("pc-get-code") as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = "Генерация...";
+
+      const result = await profileManager.generateSyncCode();
+      if (result) {
+        const area = document.getElementById("pc-code-area");
+        if (area) {
+          const codeEl = document.createElement("div");
+          codeEl.className = "pc-code";
+          codeEl.textContent = result.sync_code;
+          area.appendChild(codeEl);
         }
-      });
-
-    document.getElementById("pc-logout")?.addEventListener("click", () => {
-      profileManager.logout();
-      renderGuestView();
+        btn.style.display = "none";
+      } else {
+        btn.disabled = false;
+        btn.textContent = "Получить код";
+      }
     });
 
-    document
-      .getElementById("pc-delete")
-      ?.addEventListener("click", async () => {
-        if (!confirm("Удалить аккаунт? Это действие необратимо.")) return;
-        const deleted = await profileManager.deleteProfile();
-        if (deleted) {
-          renderGuestView();
-        }
-      });
+  document.getElementById("pc-logout")?.addEventListener("click", () => {
+    profileManager.logout();
+    renderGuestView();
+  });
+
+  document.getElementById("pc-delete")?.addEventListener("click", async () => {
+    if (!confirm("Удалить аккаунт? Это действие необратимо.")) return;
+    const deleted = await profileManager.deleteProfile();
+    if (deleted) {
+      renderGuestView();
+    }
   });
 }
 

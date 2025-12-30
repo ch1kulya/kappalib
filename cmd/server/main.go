@@ -89,6 +89,9 @@ func buildAssets() {
 			"process.env.API_URL":                     fmt.Sprintf("\"%s\"", apiUrl),
 			"process.env.TURNSTILE_SITE_KEY":          fmt.Sprintf("\"%s\"", os.Getenv("TURNSTILE_SITE_KEY")),
 			"process.env.TURNSTILE_COMMENTS_SITE_KEY": fmt.Sprintf("\"%s\"", os.Getenv("TURNSTILE_COMMENTS_SITE_KEY")),
+			"process.env.S3_ENDPOINT":                 fmt.Sprintf("\"%s\"", os.Getenv("S3_ENDPOINT")),
+			"process.env.S3_BUCKET":                   fmt.Sprintf("\"%s\"", os.Getenv("S3_BUCKET")),
+			"process.env.S3_USE_SSL":                  fmt.Sprintf("\"%s\"", os.Getenv("S3_USE_SSL")),
 		},
 	})
 
@@ -288,6 +291,20 @@ func main() {
 			Path:        "/webhook/telegram",
 			Summary:     "Telegram webhook",
 		}, api.HandleTelegramWebhook)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "update-display-name",
+			Method:      http.MethodPatch,
+			Path:        "/profile/{id}/name",
+			Summary:     "Update display name",
+		}, api.HandleUpdateDisplayName)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "upload-avatar",
+			Method:      http.MethodPost,
+			Path:        "/profile/{id}/avatar",
+			Summary:     "Upload avatar",
+		}, api.HandleUploadAvatar)
 	})
 
 	go func() {

@@ -64,10 +64,11 @@ type CookieValue struct {
 }
 
 type ProfilePublic struct {
-	ID          string    `json:"id"`
-	DisplayName string    `json:"display_name"`
-	AvatarSeed  string    `json:"avatar_seed"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID              string    `json:"id"`
+	DisplayName     string    `json:"display_name"`
+	AvatarSeed      string    `json:"avatar_seed"`
+	HasCustomAvatar bool      `json:"has_custom_avatar"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type ProfileWithToken struct {
@@ -113,4 +114,8 @@ type CreateCommentInput struct {
 	ChapterID      string `json:"chapter_id"`
 	Content        string `json:"content"`
 	TurnstileToken string `json:"turnstile_token"`
+}
+
+type UpdateProfileInput struct {
+	DisplayName *string `json:"display_name,omitempty"`
 }
