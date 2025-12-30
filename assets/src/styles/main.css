@@ -507,7 +507,7 @@ a:hover {
                     & .badge {
                         font-size: 0.75rem;
                         padding: 2px 6px;
-                        background: var(--outline);
+                        background: var(--bg-primary);
                         border: 1px solid var(--border);
                         border-radius: 6px;
                         color: var(--secondary);
@@ -816,7 +816,7 @@ a:hover {
 
 .badge {
     position: relative;
-    background: var(--outline);
+    background: var(--bg-primary);
     border: 1px solid var(--border);
     padding: 2px 6px;
     border-radius: 10px;
@@ -829,7 +829,7 @@ a:hover {
         left: 0;
         right: 0;
         bottom: 0;
-        background: var(--gradient-primary);
+        background: var(--gradient-focus);
         opacity: 0.6;
         pointer-events: none;
         z-index: 1;
@@ -1346,13 +1346,13 @@ html {
     &.btn-confirm {
         background: #dc2626;
         border-color: #ef4444;
-        color: white;
+        color: var(--accent-text);
     }
     &.btn-start {
         background-color: var(--accent-primary);
         border-color: var(--accent-border);
         box-shadow: var(--accent-shadow-primary);
-        color: white;
+        color: var(--accent-text);
     }
     &.btn-start:hover {
         box-shadow: var(--accent-shadow-focus);
@@ -2226,7 +2226,6 @@ html {
                 align-items: center;
                 & .pc-id {
                     font-family: "IBM Plex Mono";
-                    background: var(--outline);
                     padding: 1px 4px;
                     border-radius: 4px;
                     border: 1px solid var(--border);
