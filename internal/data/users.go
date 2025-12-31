@@ -391,7 +391,8 @@ func UpdateAvatar(ctx context.Context, profileID, secretToken string, imageData 
 	reader := bytes.NewReader(imgData)
 
 	_, err = minioClient.PutObject(ctx, s3Bucket, key, reader, int64(len(imgData)), minio.PutObjectOptions{
-		ContentType: "image/jpeg",
+		ContentType:  "image/jpeg",
+		CacheControl: "public, max-age=3600",
 	})
 	if err != nil {
 		return nil, fmt.Errorf("s3 upload failed: %w", err)
