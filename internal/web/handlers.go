@@ -547,7 +547,7 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		case "degraded":
 			indicator = "minor"
 			description = "Наблюдаются сбои"
-		case "outage":
+		case "downtime":
 			indicator = "major"
 			description = "Серьезный сбой"
 		case "maintenance":
