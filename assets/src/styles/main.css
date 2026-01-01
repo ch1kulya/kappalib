@@ -355,7 +355,6 @@ a:hover {
 .header-buttons {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
 }
 
 /* Settings Card */
@@ -487,7 +486,6 @@ a:hover {
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -514,9 +512,21 @@ a:hover {
     border-radius: 9px;
     box-shadow: var(--shadow-focus);
     border-right-color: transparent;
-    margin: -1px;
-    padding: calc(0.5rem + 1px) calc(0.75rem + 1px);
     border: 1px solid var(--tertiary);
+}
+
+.settings-toggle-btn:first-child.active {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.settings-toggle-btn:last-child.active {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.settings-toggle-btn:not(:first-child):not(:last-child).active {
+    border-radius: 0;
 }
 
 .settings-toggle-btn.active::before {
@@ -526,7 +536,7 @@ a:hover {
     left: 0;
     right: 0;
     bottom: 0;
-    border-radius: 9px;
+    border-radius: inherit;
     background: var(--gradient-focus);
     opacity: 0.9;
     pointer-events: none;
@@ -564,6 +574,7 @@ a:hover {
     overflow: hidden;
     line-height: 1;
     padding: 0;
+    padding-bottom: 2px;
 }
 
 .settings-font-btn::before {
