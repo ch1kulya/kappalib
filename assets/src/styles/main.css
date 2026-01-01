@@ -1,133 +1,4 @@
-:root {
-    font-family:
-        InterVariable,
-        Pretendard,
-        Noto Sans CJK JP,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        sans-serif;
-    font-feature-settings:
-        "liga" 1,
-        "calt" 1,
-        "ss01" 1,
-        "cv06" 1;
-    --bg-primary: #f9f9f9;
-    --primary: #1b1b1b;
-    --secondary: #757575;
-    --tertiary: #8e8e8e;
-    --border: #d5d4d5;
-    --outline: #f1f1f1;
-    --accent-primary: #f97316;
-    --accent-text: white;
-    --accent-border: rgba(249, 115, 22, 0.1);
-    --accent-shadow-primary:
-        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.14),
-        0 1px 2px rgba(0, 0, 0, 0.06);
-    --accent-shadow-focus:
-        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.14),
-        0 0 3px rgba(255, 255, 255, 0.09), 0 2px 2px rgba(0, 0, 0, 0.06);
-    --gradient-input-primary: radial-gradient(
-        80% 80% at 30% 20%,
-        rgba(0, 0, 0, 0.04),
-        rgba(0, 0, 0, 0)
-    );
-    --gradient-input-focus: radial-gradient(
-        90% 90% at 30% 20%,
-        rgba(0, 0, 0, 0.06),
-        rgba(0, 0, 0, 0)
-    );
-    --gradient-primary: radial-gradient(
-        80% 80% at 70% 20%,
-        rgba(0, 0, 0, 0.04),
-        rgba(0, 0, 0, 0)
-    );
-    --gradient-focus: radial-gradient(
-        90% 90% at 70% 20%,
-        rgba(0, 0, 0, 0.06),
-        rgba(0, 0, 0, 0)
-    );
-    --shadow-primary:
-        inset 0 0 1.5px 1px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.06);
-    --shadow-secondary:
-        inset 0 0 1.5px 1px rgba(0, 0, 0, 0.01), 0 1px 2px rgba(0, 0, 0, 0.03);
-    --shadow-focus:
-        inset 0 0 1.5px 1px rgba(0, 0, 0, 0.03), 0 0 12px rgba(0, 0, 0, 0.04),
-        0 2px 4px rgba(0, 0, 0, 0.08);
-    --gradient-inverted-primary: radial-gradient(
-        80% 80% at 70% 20%,
-        rgba(255, 255, 255, 0.14),
-        rgba(255, 255, 255, 0)
-    );
-    --gradient-inverted-focus: radial-gradient(
-        90% 90% at 70% 20%,
-        rgba(255, 255, 255, 0.22),
-        rgba(255, 255, 255, 0)
-    );
-    --shadow-inverted-primary:
-        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.14),
-        0 1px 2px rgba(0, 0, 0, 0.22);
-    --shadow-inverted-focus:
-        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.14),
-        0 0 12px rgba(255, 255, 255, 0.18), 0 2px 4px rgba(0, 0, 0, 0.22);
-}
-
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-primary: #131313;
-        --primary: rgba(255, 255, 255, 0.9);
-        --secondary: rgba(255, 255, 255, 0.62);
-        --tertiary: rgba(255, 255, 255, 0.44);
-        --border: #2a2b2a;
-        --outline: #272727;
-        --gradient-input-primary: radial-gradient(
-            80% 80% at 30% 20%,
-            rgba(255, 255, 255, 0.09),
-            rgba(255, 255, 255, 0)
-        );
-        --gradient-input-focus: radial-gradient(
-            90% 90% at 30% 20%,
-            rgba(255, 255, 255, 0.13),
-            rgba(255, 255, 255, 0)
-        );
-        --gradient-primary: radial-gradient(
-            80% 80% at 70% 20%,
-            rgba(255, 255, 255, 0.09),
-            rgba(255, 255, 255, 0)
-        );
-        --gradient-focus: radial-gradient(
-            90% 90% at 70% 20%,
-            rgba(255, 255, 255, 0.13),
-            rgba(255, 255, 255, 0)
-        );
-        --shadow-primary:
-            inset 0 0 1.5px 1px rgba(255, 255, 255, 0.07),
-            0 1px 2px rgba(0, 0, 0, 0.2);
-        --shadow-secondary:
-            inset 0 0 1.5px 1px rgba(255, 255, 255, 0.03),
-            0 1px 2px rgba(0, 0, 0, 0.1);
-        --shadow-focus:
-            inset 0 0 1.5px 1px rgba(255, 255, 255, 0.07),
-            0 0 12px rgba(255, 255, 255, 0.05), 0 2px 4px rgba(0, 0, 0, 0.2);
-        --gradient-inverted-primary: radial-gradient(
-            80% 80% at 70% 20%,
-            rgba(0, 0, 0, 0.14),
-            rgba(0, 0, 0, 0)
-        );
-        --gradient-inverted-focus: radial-gradient(
-            90% 90% at 70% 20%,
-            rgba(0, 0, 0, 0.22),
-            rgba(0, 0, 0, 0)
-        );
-        --shadow-inverted-primary:
-            inset 0 0 1.5px 1px rgba(0, 0, 0, 0.14),
-            0 1px 2px rgba(0, 0, 0, 0.22);
-        --shadow-inverted-focus:
-            inset 0 0 1.5px 1px rgba(0, 0, 0, 0.14),
-            0 0 12px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.22);
-    }
-}
+@import url("theme.css");
 
 * {
     margin: 0;
@@ -385,7 +256,7 @@ a:hover {
         right: 0;
         bottom: 0;
         border-radius: 12px;
-        background: var(--gradient-primary);
+        background: var(--gradient-secondary);
         opacity: 0.6;
         pointer-events: none;
         z-index: 1;
@@ -686,112 +557,6 @@ a:hover {
     text-indent: var(--reader-indent);
 }
 
-/* Theme Override */
-:root[data-theme="light"] {
-    --bg-primary: #f9f9f9;
-    --primary: #1b1b1b;
-    --secondary: #757575;
-    --tertiary: #8e8e8e;
-    --border: #d5d4d5;
-    --outline: #f1f1f1;
-    --gradient-input-primary: radial-gradient(
-        80% 80% at 30% 20%,
-        rgba(0, 0, 0, 0.04),
-        rgba(0, 0, 0, 0)
-    );
-    --gradient-input-focus: radial-gradient(
-        90% 90% at 30% 20%,
-        rgba(0, 0, 0, 0.06),
-        rgba(0, 0, 0, 0)
-    );
-    --gradient-primary: radial-gradient(
-        80% 80% at 70% 20%,
-        rgba(0, 0, 0, 0.04),
-        rgba(0, 0, 0, 0)
-    );
-    --gradient-focus: radial-gradient(
-        90% 90% at 70% 20%,
-        rgba(0, 0, 0, 0.06),
-        rgba(0, 0, 0, 0)
-    );
-    --shadow-primary:
-        inset 0 0 1.5px 1px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.06);
-    --shadow-secondary:
-        inset 0 0 1.5px 1px rgba(0, 0, 0, 0.01), 0 1px 2px rgba(0, 0, 0, 0.03);
-    --shadow-focus:
-        inset 0 0 1.5px 1px rgba(0, 0, 0, 0.03), 0 0 12px rgba(0, 0, 0, 0.04),
-        0 2px 4px rgba(0, 0, 0, 0.08);
-    --gradient-inverted-primary: radial-gradient(
-        80% 80% at 70% 20%,
-        rgba(255, 255, 255, 0.14),
-        rgba(255, 255, 255, 0)
-    );
-    --gradient-inverted-focus: radial-gradient(
-        90% 90% at 70% 20%,
-        rgba(255, 255, 255, 0.22),
-        rgba(255, 255, 255, 0)
-    );
-    --shadow-inverted-primary:
-        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.14),
-        0 1px 2px rgba(0, 0, 0, 0.22);
-    --shadow-inverted-focus:
-        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.14),
-        0 0 12px rgba(255, 255, 255, 0.18), 0 2px 4px rgba(0, 0, 0, 0.22);
-}
-
-:root[data-theme="dark"] {
-    --bg-primary: #131313;
-    --primary: rgba(255, 255, 255, 0.9);
-    --secondary: rgba(255, 255, 255, 0.62);
-    --tertiary: rgba(255, 255, 255, 0.44);
-    --border: #2a2b2a;
-    --outline: #272727;
-    --gradient-input-primary: radial-gradient(
-        80% 80% at 30% 20%,
-        rgba(255, 255, 255, 0.09),
-        rgba(255, 255, 255, 0)
-    );
-    --gradient-input-focus: radial-gradient(
-        90% 90% at 30% 20%,
-        rgba(255, 255, 255, 0.13),
-        rgba(255, 255, 255, 0)
-    );
-    --gradient-primary: radial-gradient(
-        80% 80% at 70% 20%,
-        rgba(255, 255, 255, 0.09),
-        rgba(255, 255, 255, 0)
-    );
-    --gradient-focus: radial-gradient(
-        90% 90% at 70% 20%,
-        rgba(255, 255, 255, 0.13),
-        rgba(255, 255, 255, 0)
-    );
-    --shadow-primary:
-        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.07),
-        0 1px 2px rgba(0, 0, 0, 0.2);
-    --shadow-secondary:
-        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.03),
-        0 1px 2px rgba(0, 0, 0, 0.1);
-    --shadow-focus:
-        inset 0 0 1.5px 1px rgba(255, 255, 255, 0.07),
-        0 0 12px rgba(255, 255, 255, 0.05), 0 2px 4px rgba(0, 0, 0, 0.2);
-    --gradient-inverted-primary: radial-gradient(
-        80% 80% at 70% 20%,
-        rgba(0, 0, 0, 0.14),
-        rgba(0, 0, 0, 0)
-    );
-    --gradient-inverted-focus: radial-gradient(
-        90% 90% at 70% 20%,
-        rgba(0, 0, 0, 0.22),
-        rgba(0, 0, 0, 0)
-    );
-    --shadow-inverted-primary:
-        inset 0 0 1.5px 1px rgba(0, 0, 0, 0.14), 0 1px 2px rgba(0, 0, 0, 0.22);
-    --shadow-inverted-focus:
-        inset 0 0 1.5px 1px rgba(0, 0, 0, 0.14), 0 0 12px rgba(0, 0, 0, 0.18),
-        0 2px 4px rgba(0, 0, 0, 0.22);
-}
-
 /* Density Classes for Chapter Content */
 .chapter-content.density-compact {
     line-height: 1.5;
@@ -819,20 +584,6 @@ a:hover {
 
 .chapter-content.density-relaxed p {
     margin-bottom: 1.4em;
-}
-
-@media (prefers-color-scheme: dark) {
-    .settings-select {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.62)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    }
-}
-
-:root[data-theme="dark"] .settings-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.62)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-}
-
-:root[data-theme="light"] .settings-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23757575' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 /* Search */
@@ -2484,7 +2235,7 @@ html {
         right: 0;
         bottom: 0;
         border-radius: 12px;
-        background: var(--gradient-primary);
+        background: var(--gradient-secondary);
         opacity: 0.6;
         pointer-events: none;
         z-index: 1;
