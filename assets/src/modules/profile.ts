@@ -334,12 +334,18 @@ export function initProfileModal(): void {
   const profileCard = document.getElementById("profile-card");
   const profileBtn = document.getElementById("header-profile-btn");
   const backdrop = document.getElementById("header-backdrop");
+  const settingsCard = document.getElementById("settings-card");
 
   if (!profileCard || !profileBtn) return;
 
   profileBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (settingsCard?.style.display === "block") {
+      settingsCard.style.display = "none";
+    }
+
     if (profileCard.style.display === "block") {
       closeProfileCard();
     } else {
@@ -387,11 +393,15 @@ function openProfileCard(): void {
 function closeProfileCard(): void {
   const profileCard = document.getElementById("profile-card");
   const backdrop = document.getElementById("header-backdrop");
+  const settingsCard = document.getElementById("settings-card");
   if (!profileCard) return;
 
   profileCard.style.display = "none";
-  backdrop?.classList.remove("active");
-  document.body.style.overflow = "";
+
+  if (settingsCard?.style.display !== "block") {
+    backdrop?.classList.remove("active");
+    document.body.style.overflow = "";
+  }
 
   const container = document.getElementById("turnstile-container");
   if (container) container.innerHTML = "";
