@@ -1534,6 +1534,7 @@ html {
     border: 1px solid var(--border);
     background: var(--bg-primary);
     box-shadow: var(--shadow-primary);
+    overflow: hidden;
     &:hover {
         cursor: pointer;
     }
@@ -1544,7 +1545,6 @@ html {
         left: 0;
         right: 0;
         bottom: 0;
-        border-radius: 10px;
         background: var(--gradient-primary);
         opacity: 0.6;
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
