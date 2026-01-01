@@ -102,6 +102,21 @@ function saveSettings(settings: ReaderSettings): void {
   applySettings(settings);
 }
 
+function enableThemeTransition(): void {
+  const root = document.documentElement;
+  root.classList.add("theme-transitioning");
+
+  const handleTransitionEnd = () => {
+    root.classList.remove("theme-transitioning");
+    root.removeEventListener("transitionend", handleTransitionEnd);
+  };
+
+  root.addEventListener("transitionend", handleTransitionEnd);
+  setTimeout(() => {
+    root.classList.remove("theme-transitioning");
+  }, 100);
+}
+
 function applySettings(settings: ReaderSettings): void {
   const root = document.documentElement;
 
@@ -279,6 +294,22 @@ function closeSettingsCard(): void {
   }
 }
 
+function updateFontSizeButtons(fontSize: number): void {
+  const fontDecrease = document.getElementById(
+    "font-decrease",
+  ) as HTMLButtonElement | null;
+  const fontIncrease = document.getElementById(
+    "font-increase",
+  ) as HTMLButtonElement | null;
+
+  if (fontDecrease) {
+    fontDecrease.disabled = fontSize <= 14;
+  }
+  if (fontIncrease) {
+    fontIncrease.disabled = fontSize >= 26;
+  }
+}
+
 function renderSettingsView(): void {
   const content = document.getElementById("settings-card");
   if (!content) return;
@@ -314,9 +345,9 @@ function renderSettingsView(): void {
         </div>
         <div class="settings-col settings-col-size">
           <div class="settings-font-size">
-            <button class="settings-font-btn" id="font-decrease">−</button>
+            <button class="settings-font-btn" id="font-decrease"${settings.fontSize <= 14 ? " disabled" : ""}>−</button>
             <span class="settings-font-value" id="font-size-value">${settings.fontSize}</span>
-            <button class="settings-font-btn" id="font-increase">+</button>
+            <button class="settings-font-btn" id="font-increase"${settings.fontSize >= 26 ? " disabled" : ""}>+</button>
           </div>
         </div>
       </div>
@@ -384,8 +415,12 @@ function initSettingsInteractions(): void {
     ) as HTMLElement;
     if (!btn) return;
     const value = btn.dataset.value as "auto" | "light" | "dark";
-    settingsManager.updateSetting("theme", value);
-    updateActiveToggle(themeToggle as HTMLElement, value);
+    const currentTheme = settingsManager.getSettings().theme;
+    if (value !== currentTheme) {
+      enableThemeTransition();
+      settingsManager.updateSetting("theme", value);
+      updateActiveToggle(themeToggle as HTMLElement, value);
+    }
   });
 
   const justifyToggle = document.querySelector('[data-setting="justify"]');
@@ -428,16 +463,20 @@ function initSettingsInteractions(): void {
   fontDecrease?.addEventListener("click", () => {
     const current = settingsManager.getSettings().fontSize;
     if (current > 14) {
-      settingsManager.updateSetting("fontSize", current - 1);
-      if (fontSizeValue) fontSizeValue.textContent = String(current - 1);
+      const newSize = current - 1;
+      settingsManager.updateSetting("fontSize", newSize);
+      if (fontSizeValue) fontSizeValue.textContent = String(newSize);
+      updateFontSizeButtons(newSize);
     }
   });
 
   fontIncrease?.addEventListener("click", () => {
     const current = settingsManager.getSettings().fontSize;
     if (current < 26) {
-      settingsManager.updateSetting("fontSize", current + 1);
-      if (fontSizeValue) fontSizeValue.textContent = String(current + 1);
+      const newSize = current + 1;
+      settingsManager.updateSetting("fontSize", newSize);
+      if (fontSizeValue) fontSizeValue.textContent = String(newSize);
+      updateFontSizeButtons(newSize);
     }
   });
 }

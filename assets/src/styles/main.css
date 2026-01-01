@@ -1,5 +1,12 @@
 @import url("theme.css");
 
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+    transition: none !important;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -463,26 +470,31 @@ a:hover {
 }
 
 @media (hover: hover) {
-    .settings-font-btn:hover {
+    .settings-font-btn:hover:not(:disabled) {
         color: var(--primary);
         border-color: var(--tertiary);
         box-shadow: var(--shadow-focus);
     }
-    .settings-font-btn:hover::before {
+    .settings-font-btn:hover:not(:disabled)::before {
         opacity: 0.9;
         background: var(--gradient-focus);
     }
 }
 
-.settings-font-btn:active {
+.settings-font-btn:active:not(:disabled) {
     color: var(--primary);
     border-color: var(--tertiary);
     box-shadow: var(--shadow-focus);
 }
 
-.settings-font-btn:active::before {
+.settings-font-btn:active:not(:disabled)::before {
     opacity: 0.9;
     background: var(--gradient-focus);
+}
+
+.settings-font-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .settings-font-value {
