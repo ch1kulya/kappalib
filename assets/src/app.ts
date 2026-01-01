@@ -8,6 +8,7 @@ import { initChaptersSort, initCatalogSort } from "./modules/sort";
 import { initDescription } from "./modules/description";
 import { initProfile, initProfileModal } from "./modules/profile";
 import { initComments } from "./modules/comments";
+import { initSettings, initSettingsModal } from "./modules/settings";
 
 declare global {
   interface Window {
@@ -20,8 +21,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const dropdowns = document.querySelectorAll<HTMLElement>(".dropdown");
     dropdowns.forEach((el) => new Dropdown(el));
 
+    initSettings();
     initProfile();
     initProfileModal();
+    initSettingsModal();
     initChaptersSort();
     initCatalogSort();
     initSearch();
