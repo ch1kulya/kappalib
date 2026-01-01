@@ -529,6 +529,9 @@ a:hover {
 .chapter-content,
 .chapter-reader > h1 {
     --reader-indent: 0;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 .chapter-content.density-compact {
