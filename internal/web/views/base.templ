@@ -50,6 +50,7 @@ templ Base(props BaseProps) {
 				@Header(props)
 				@AgeModal(props)
 				@Profile()
+				@Settings()
 				@ProfileTemplates()
 				<div class="container">
 					{ children... }
@@ -67,9 +68,14 @@ templ Header(props BaseProps) {
 		<div class="header-content">
 			if props.IsChapterPage && props.Novel != nil {
 				<a href={ templ.SafeURL("/" + props.Novel.ID) } class="header-left">{ props.Novel.Title }</a>
-				<button class="header-right" id="header-profile-btn" aria-label="Профиль">
-					@IconUser("header-profile-icon")
-				</button>
+				<div class="header-buttons">
+					<button class="header-right" id="header-settings-btn" aria-label="Настройки">
+						@IconSettings("header-profile-icon")
+					</button>
+					<button class="header-right" id="header-profile-btn" aria-label="Профиль">
+						@IconUser("header-profile-icon")
+					</button>
+				</div>
 			} else {
 				<h1 style="margin:0; font-size: inherit;">
 					<a href="/" class="header-left">kappalib</a>
@@ -91,6 +97,10 @@ templ Header(props BaseProps) {
 
 templ Profile() {
 	<div class="profile-card" id="profile-card" style="display: none;"></div>
+}
+
+templ Settings() {
+	<div class="settings-card" id="settings-card" style="display: none;"></div>
 }
 
 templ ProfileTemplates() {
