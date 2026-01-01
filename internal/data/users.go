@@ -41,7 +41,7 @@ var (
 		"Филин", "Хорёк", "Енот", "Суслик", "Бобр",
 	}
 	cookieNameRegex  = regexp.MustCompile(`^kappalib_[a-z0-9_]{1,50}$`)
-	cookieValueRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-]{1,200}$`)
+	cookieValueRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-{}\[\]":,.\s]{1,500}$`)
 	turnstileSecret  = os.Getenv("TURNSTILE_SECRET")
 )
 

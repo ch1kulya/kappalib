@@ -1,7 +1,7 @@
 import Dropdown from "./dropdown";
+import { setKappalibCookie } from "./profile";
 
 const SETTINGS_COOKIE_KEY = "kappalib_reader_settings";
-const SETTINGS_TIMESTAMP_KEY = "kappalib_reader_settings_updated_at";
 
 interface ReaderSettings {
   theme: "auto" | "light" | "dark";
@@ -78,12 +78,6 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null;
 }
 
-function setCookie(name: string, value: string): void {
-  const timestamp = Date.now();
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=31536000; SameSite=Lax`;
-  localStorage.setItem(SETTINGS_TIMESTAMP_KEY, timestamp.toString());
-}
-
 function getSettings(): ReaderSettings {
   try {
     const raw = getCookie(SETTINGS_COOKIE_KEY);
@@ -98,7 +92,7 @@ function getSettings(): ReaderSettings {
 }
 
 function saveSettings(settings: ReaderSettings): void {
-  setCookie(SETTINGS_COOKIE_KEY, JSON.stringify(settings));
+  setKappalibCookie(SETTINGS_COOKIE_KEY, JSON.stringify(settings));
   applySettings(settings);
 }
 

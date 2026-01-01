@@ -1,4 +1,4 @@
-import { profileManager, setKappalibCookie } from "./profile";
+import { setKappalibCookie } from "./profile";
 
 interface HistoryItem {
   id: string;
