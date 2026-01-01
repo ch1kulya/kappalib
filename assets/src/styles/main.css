@@ -1551,10 +1551,16 @@ html {
         pointer-events: none;
         z-index: 1;
     }
-    &:hover::before,
-    &:focus::before {
+    &:active::before,
+    &:focus-visible::before {
         opacity: 0.9;
         background: var(--gradient-focus);
+    }
+    @media (hover: hover) {
+        &:hover::before {
+            opacity: 0.9;
+            background: var(--gradient-focus);
+        }
     }
 }
 
