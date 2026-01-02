@@ -3,16 +3,17 @@ package views
 import "github.com/ch1kulya/kappalib/internal/models"
 
 type BaseProps struct {
-	Title         string
-	Description   string
-	Canonical     string
-	Version       int64
-	Schema        string
-	OGImage       string
-	IsChapterPage bool
-	IsAdult       bool
-	Novel         *models.Novel
-	PrefetchURL   string
+	Title          string
+	Description    string
+	Canonical      string
+	Version        int64
+	Schema         string
+	OGImage        string
+	IsChapterPage  bool
+	IsAdult        bool
+	Novel          *models.Novel
+	PrefetchURL    string
+	ReaderSettings ReaderSettings
 }
 
 type LastReadWidgetData struct {
@@ -62,4 +63,19 @@ type ErrorProps struct {
 	ErrorCode    int
 	ErrorTitle   string
 	ErrorMessage string
+}
+
+type ReaderSettings struct {
+	Theme      string
+	FontSize   int
+	FontFamily string
+	Indent     int
+	Density    string
+	Justify    bool
+}
+
+type FontOption struct {
+	Value  string
+	Label  string
+	Family string
 }

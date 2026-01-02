@@ -23,27 +23,26 @@ const DEFAULT_SETTINGS: ReaderSettings = {
 
 const FONT_OPTIONS: { value: string; label: string; family: string }[] = [
   { value: "default", label: "Стандартный", family: "inherit" },
-  { value: "literata", label: "Literata", family: "'Literata', serif" },
+  { value: "literata", label: "Literata", family: "Literata, serif" },
   {
-    value: "source-serif",
-    label: "Source Serif",
-    family: "'Source Serif 4', serif",
+    value: "nunito",
+    label: "Nunito",
+    family: "Nunito, sans-serif",
   },
   {
     value: "merriweather",
     label: "Merriweather",
-    family: "'Merriweather', serif",
+    family: "Merriweather, serif",
   },
-  { value: "lora", label: "Lora", family: "'Lora', serif" },
-  { value: "pt-serif", label: "PT Serif", family: "'PT Serif', serif" },
-  { value: "open-sans", label: "Open Sans", family: "'Open Sans', sans-serif" },
-  { value: "roboto", label: "Roboto", family: "'Roboto', sans-serif" },
+  { value: "lora", label: "Lora", family: "Lora, serif" },
+  { value: "pt-serif", label: "PT Serif", family: "PT Serif, serif" },
+  { value: "open-sans", label: "Open Sans", family: "Open Sans, sans-serif" },
+  { value: "roboto", label: "Roboto", family: "Roboto, sans-serif" },
 ];
 
 const FONT_URLS: Record<string, string> = {
   literata: "https://cdn.jsdelivr.net/npm/@fontsource/literata@5/index.min.css",
-  "source-serif":
-    "https://cdn.jsdelivr.net/npm/@fontsource/source-serif-4@5/index.min.css",
+  nunito: "https://cdn.jsdelivr.net/npm/@fontsource/nunito@5/index.min.css",
   merriweather:
     "https://cdn.jsdelivr.net/npm/@fontsource/merriweather@5/index.min.css",
   lora: "https://cdn.jsdelivr.net/npm/@fontsource/lora@5/index.min.css",
@@ -288,6 +287,15 @@ function closeSettingsCard(): void {
   }
 }
 
+function cloneTemplate(id: string): DocumentFragment {
+  const template = document.getElementById(id) as HTMLTemplateElement | null;
+  if (!template) {
+    console.error(`Template #${id} not found`);
+    return document.createDocumentFragment();
+  }
+  return template.content.cloneNode(true) as DocumentFragment;
+}
+
 function updateFontSizeButtons(fontSize: number): void {
   const fontDecrease = document.getElementById(
     "font-decrease",
@@ -304,6 +312,18 @@ function updateFontSizeButtons(fontSize: number): void {
   }
 }
 
+function createToggleButton(
+  value: string,
+  label: string,
+  isActive: boolean,
+): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.className = "settings-toggle-btn" + (isActive ? " active" : "");
+  btn.dataset.value = value;
+  btn.innerHTML = label;
+  return btn;
+}
+
 function renderSettingsView(): void {
   const content = document.getElementById("settings-card");
   if (!content) return;
@@ -313,82 +333,96 @@ function renderSettingsView(): void {
     FONT_OPTIONS.find((f) => f.value === settings.fontFamily) ||
     FONT_OPTIONS[0];
 
-  content.innerHTML = `
-    <div class="settings-body">
-      <div class="settings-row settings-row-font">
-        <div class="settings-col settings-col-font">
-          <div class="settings-label">Шрифт</div>
-          <div class="dropdown settings-dropdown" id="font-dropdown">
-            <button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
-              <span class="js-dropdown-label">${currentFont.label}</span>
-              <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </button>
-            <div class="dropdown-menu" role="listbox">
-              <div class="dropdown-menu-inner">
-                ${FONT_OPTIONS.map(
-                  (f) => `
-                  <button class="dropdown-item${settings.fontFamily === f.value ? " selected" : ""}" data-value="${f.value}" role="option" aria-selected="${settings.fontFamily === f.value}">
-                    <span>${f.label}</span>
-                    <svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  </button>
-                `,
-                ).join("")}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="settings-col settings-col-size">
-          <div class="settings-font-size">
-            <button class="settings-font-btn" id="font-decrease"${settings.fontSize <= 14 ? " disabled" : ""}>−</button>
-            <span class="settings-font-value" id="font-size-value">${settings.fontSize}</span>
-            <button class="settings-font-btn" id="font-increase"${settings.fontSize >= 26 ? " disabled" : ""}>+</button>
-          </div>
-        </div>
-      </div>
+  content.innerHTML = "";
+  content.appendChild(cloneTemplate("tpl-settings"));
 
-      <div class="settings-section">
-        <div class="settings-label">Тема</div>
-        <div class="settings-toggle settings-toggle-3" data-setting="theme">
-          <button class="settings-toggle-btn${settings.theme === "light" ? " active" : ""}" data-value="light">Светлая</button>
-          <button class="settings-toggle-btn${settings.theme === "dark" ? " active" : ""}" data-value="dark">Тёмная</button>
-          <button class="settings-toggle-btn${settings.theme === "auto" ? " active" : ""}" data-value="auto">Авто</button>
-        </div>
-      </div>
+  const fontLabel = content.querySelector('[data-field="currentFontLabel"]');
+  if (fontLabel) fontLabel.textContent = currentFont.label;
 
-      <div class="settings-row">
-        <div class="settings-col">
-          <div class="settings-label">Выравнивание</div>
-          <div class="settings-toggle settings-toggle-2" data-setting="justify">
-            <button class="settings-toggle-btn${!settings.justify ? " active" : ""}" data-value="false">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6H3"/><path d="M21 12H3"/><path d="M15 18H3"/></svg>
-            </button>
-            <button class="settings-toggle-btn${settings.justify ? " active" : ""}" data-value="true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="settings-col">
-          <div class="settings-label">Отступ</div>
-          <div class="settings-toggle settings-toggle-4" data-setting="indent">
-            <button class="settings-toggle-btn${settings.indent === 0 ? " active" : ""}" data-value="0">0</button>
-            <button class="settings-toggle-btn${settings.indent === 1 ? " active" : ""}" data-value="1">1</button>
-            <button class="settings-toggle-btn${settings.indent === 2 ? " active" : ""}" data-value="2">2</button>
-            <button class="settings-toggle-btn${settings.indent === 3 ? " active" : ""}" data-value="3">3</button>
-          </div>
-        </div>
-      </div>
+  const fontSizeValue = content.querySelector('[data-field="fontSize"]');
+  if (fontSizeValue) fontSizeValue.textContent = String(settings.fontSize);
 
-      <div class="settings-section">
-        <div class="settings-label">Плотность текста</div>
-        <div class="settings-toggle settings-toggle-3" data-setting="density">
-          <button class="settings-toggle-btn${settings.density === "compact" ? " active" : ""}" data-value="compact">Компактно</button>
-          <button class="settings-toggle-btn${settings.density === "normal" ? " active" : ""}" data-value="normal">Обычно</button>
-          <button class="settings-toggle-btn${settings.density === "relaxed" ? " active" : ""}" data-value="relaxed">Свободно</button>
-        </div>
-      </div>
-    </div>
-  `;
+  const fontOptionsContainer = document.getElementById(
+    "font-options-container",
+  );
+  if (fontOptionsContainer) {
+    FONT_OPTIONS.forEach((f) => {
+      const optionTemplate = cloneTemplate("tpl-font-option");
+      const btn = optionTemplate.querySelector(".dropdown-item") as HTMLElement;
+      if (btn) {
+        btn.dataset.value = f.value;
+        btn.setAttribute(
+          "aria-selected",
+          String(settings.fontFamily === f.value),
+        );
+        if (settings.fontFamily === f.value) {
+          btn.classList.add("selected");
+        }
+        const label = btn.querySelector('[data-field="label"]');
+        if (label) label.textContent = f.label;
+      }
+      fontOptionsContainer.appendChild(optionTemplate);
+    });
+  }
 
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) {
+    themeToggle.appendChild(
+      createToggleButton("light", "Светлая", settings.theme === "light"),
+    );
+    themeToggle.appendChild(
+      createToggleButton("dark", "Тёмная", settings.theme === "dark"),
+    );
+    themeToggle.appendChild(
+      createToggleButton("auto", "Авто", settings.theme === "auto"),
+    );
+  }
+
+  const justifyToggle = document.getElementById("justify-toggle");
+  if (justifyToggle) {
+    justifyToggle.appendChild(
+      createToggleButton(
+        "false",
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6H3"/><path d="M21 12H3"/><path d="M15 18H3"/></svg>',
+        !settings.justify,
+      ),
+    );
+    justifyToggle.appendChild(
+      createToggleButton(
+        "true",
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg>',
+        settings.justify,
+      ),
+    );
+  }
+
+  const indentToggle = document.getElementById("indent-toggle");
+  if (indentToggle) {
+    for (let i = 0; i <= 3; i++) {
+      indentToggle.appendChild(
+        createToggleButton(String(i), String(i), settings.indent === i),
+      );
+    }
+  }
+
+  const densityToggle = document.getElementById("density-toggle");
+  if (densityToggle) {
+    densityToggle.appendChild(
+      createToggleButton(
+        "compact",
+        "Компактно",
+        settings.density === "compact",
+      ),
+    );
+    densityToggle.appendChild(
+      createToggleButton("normal", "Обычно", settings.density === "normal"),
+    );
+    densityToggle.appendChild(
+      createToggleButton("relaxed", "Свободно", settings.density === "relaxed"),
+    );
+  }
+
+  updateFontSizeButtons(settings.fontSize);
   initSettingsInteractions();
 }
 

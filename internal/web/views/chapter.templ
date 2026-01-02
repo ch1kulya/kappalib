@@ -1,6 +1,8 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
+)
 
 templ Chapter(props ChapterProps) {
 	@Base(props.BaseProps) {
@@ -11,14 +13,14 @@ templ Chapter(props ChapterProps) {
 				data-chapter-num={ fmt.Sprintf("%d", props.Chapter.ChapterNum) }
 				style="display: none;">
 			</div>
-			<h1>
+			<h1 class={ chapterTitleClasses(props.ReaderSettings) } style={ chapterTitleStyle(props.ReaderSettings) }>
 				if props.Chapter.Title != "Без названия" {
 					Глава { fmt.Sprintf("%d", props.Chapter.ChapterNum) }: { props.Chapter.Title }
 				} else {
 					Глава { fmt.Sprintf("%d", props.Chapter.ChapterNum) }
 				}
 			</h1>
-			<div class="chapter-content">
+			<div class={ chapterContentClasses(props.ReaderSettings) } style={ chapterContentStyle(props.ReaderSettings) }>
 				@templ.Raw(props.Chapter.Content)
 			</div>
 
