@@ -4,3 +4,4 @@
 .gitignore
 .air.toml
 .github/workflows
+*.sh
