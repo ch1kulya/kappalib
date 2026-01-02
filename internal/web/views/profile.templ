@@ -1,0 +1,68 @@
+package views
+
+templ Profile() {
+	<div class="profile-card" id="profile-card" style="display: none;"></div>
+}
+
+templ ProfileTemplates() {
+	<template id="tpl-pc-guest">
+		<div class="pc-body">
+			<div class="pc-section">
+				<p class="pc-desc">Создать аккаунт? Ваш прогресс сохранится</p>
+				<div id="turnstile-container" class="pc-turnstile-container"></div>
+				<button class="pc-btn pc-btn-primary" id="pc-create" disabled>Создать аккаунт</button>
+			</div>
+			<div class="pc-divider"><span>или</span></div>
+			<div class="pc-section">
+				<p class="pc-desc">Уже есть аккаунт?</p>
+				<div class="pc-input-row">
+					<div class="pc-input-wrapper">
+						<input type="text" class="pc-input" id="pc-sync-input" placeholder="КОД" maxlength="8"/>
+					</div>
+					<button class="pc-btn pc-btn-outline" id="pc-login">Войти</button>
+				</div>
+				<div id="pc-error" class="pc-error"></div>
+			</div>
+		</div>
+	</template>
+	<template id="tpl-pc-loading">
+		<div class="pc-body pc-loading">
+			<div class="pc-loader"></div>
+		</div>
+	</template>
+	<template id="tpl-pc-profile">
+		<div class="pc-body">
+			<div class="pc-profile">
+				<div class="pc-avatar-wrapper">
+					<img src="" alt="" class="pc-avatar" id="pc-avatar-img" data-field="avatarUrl"/>
+					<div class="pc-avatar-overlay" id="pc-avatar-overlay">
+						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg>
+					</div>
+					<input type="file" id="pc-avatar-input" accept="image/jpeg,image/png" style="display:none"/>
+				</div>
+				<div class="pc-info">
+					<div class="pc-name-row">
+						<span class="pc-name" id="pc-name-text" data-field="displayName"></span>
+						<button class="pc-name-edit" id="pc-name-edit" aria-label="Изменить имя">
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg>
+						</button>
+						<input type="text" class="pc-name-input" id="pc-name-input" maxlength="15" style="display:none"/>
+					</div>
+					<div class="pc-meta">
+						<span class="pc-id badge" data-field="profileId"></span>
+						<span data-field="createdAt"></span>
+					</div>
+				</div>
+			</div>
+			<div class="pc-section">
+				<p class="pc-desc">Код для входа на другом устройстве</p>
+				<div id="pc-code-area"></div>
+				<button class="pc-btn pc-btn-primary" id="pc-get-code">Получить код</button>
+			</div>
+			<div class="pc-footer">
+				<button class="pc-btn pc-btn-text" id="pc-logout">Выйти</button>
+				<button class="pc-btn pc-btn-danger-text" id="pc-delete">Удалить</button>
+			</div>
+		</div>
+	</template>
+}

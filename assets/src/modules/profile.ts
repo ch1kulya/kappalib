@@ -253,8 +253,10 @@ class ProfileManager {
   private getKappalibCookies(): Record<string, CookieValue> {
     const cookies: Record<string, CookieValue> = {};
     document.cookie.split(";").forEach((c) => {
-      const [name, value] = c.trim().split("=");
-      if (name && name.startsWith("kappalib_") && value) {
+      const [name, rawValue] = c.trim().split("=");
+      if (name && name.startsWith("kappalib_") && rawValue) {
+        const value = decodeURIComponent(rawValue);
+        console.log(value);
         const timestampKey = `${name}_updated_at`;
         const storedTimestamp = localStorage.getItem(timestampKey);
         const updatedAt = storedTimestamp
@@ -273,7 +275,7 @@ class ProfileManager {
   private applyCookies(cookies: Record<string, CookieValue>): void {
     for (const [name, cv] of Object.entries(cookies)) {
       if (name.startsWith("kappalib_")) {
-        document.cookie = `${name}=${cv.value}; path=/; max-age=31536000; SameSite=Lax`;
+        document.cookie = `${name}=${encodeURIComponent(cv.value)}; path=/; max-age=31536000; SameSite=Lax`;
         localStorage.setItem(`${name}_updated_at`, cv.updated_at.toString());
       }
     }
@@ -293,7 +295,8 @@ export function setKappalibCookie(name: string, value: string): void {
     name = `kappalib_${name}`;
   }
   const timestamp = Date.now();
-  document.cookie = `${name}=${value}; path=/; max-age=31536000; SameSite=Lax`;
+  const encodedValue = encodeURIComponent(value);
+  document.cookie = `${name}=${encodedValue}; path=/; max-age=31536000; SameSite=Lax`;
   localStorage.setItem(`${name}_updated_at`, timestamp.toString());
 
   if (profileManager.isLoggedIn()) {

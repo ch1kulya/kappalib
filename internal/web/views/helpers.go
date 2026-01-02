@@ -151,3 +151,100 @@ func FormatRelativeTime(t time.Time) string {
 		return fmt.Sprintf("%d %s назад", years, pluralize(years, "год", "года", "лет"))
 	}
 }
+
+var FontOptions = []FontOption{
+	{Value: "default", Label: "Стандартный", Family: "inherit"},
+	{Value: "literata", Label: "Literata", Family: "Literata, serif"},
+	{Value: "nunito", Label: "Nunito", Family: "Nunito, serif"},
+	{Value: "merriweather", Label: "Merriweather", Family: "Merriweather, serif"},
+	{Value: "lora", Label: "Lora", Family: "Lora, serif"},
+	{Value: "pt-serif", Label: "PT Serif", Family: "PT Serif, serif"},
+	{Value: "open-sans", Label: "Open Sans", Family: "Open Sans, sans-serif"},
+	{Value: "roboto", Label: "Roboto", Family: "Roboto, sans-serif"},
+}
+
+var FontURLs = map[string]string{
+	"literata":     "https://cdn.jsdelivr.net/npm/@fontsource/literata@5/index.min.css",
+	"nunito":       "https://cdn.jsdelivr.net/npm/@fontsource/nunito@5/index.min.css",
+	"merriweather": "https://cdn.jsdelivr.net/npm/@fontsource/merriweather@5/index.min.css",
+	"lora":         "https://cdn.jsdelivr.net/npm/@fontsource/lora@5/index.min.css",
+	"pt-serif":     "https://cdn.jsdelivr.net/npm/@fontsource/pt-serif@5/index.min.css",
+	"open-sans":    "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5/index.min.css",
+	"roboto":       "https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/index.min.css",
+}
+
+var DefaultReaderSettings = ReaderSettings{
+	Theme:      "auto",
+	FontSize:   18,
+	FontFamily: "default",
+	Indent:     0,
+	Density:    "normal",
+	Justify:    false,
+}
+
+func GetFontFamily(fontKey string) string {
+	for _, f := range FontOptions {
+		if f.Value == fontKey {
+			return f.Family
+		}
+	}
+	return "inherit"
+}
+
+func GetFontLabel(fontKey string) string {
+	for _, f := range FontOptions {
+		if f.Value == fontKey {
+			return f.Label
+		}
+	}
+	return "Стандартный"
+}
+
+func GetFontURL(fontKey string) string {
+	return FontURLs[fontKey]
+}
+
+func chapterContentClasses(settings ReaderSettings) string {
+	classes := "chapter-content"
+	classes += " density-" + settings.Density
+	if settings.Justify {
+		classes += " justify-text"
+	}
+	return classes
+}
+
+func chapterContentStyle(settings ReaderSettings) string {
+	style := fmt.Sprintf("font-size: %.4frem;", float64(settings.FontSize)/16)
+	if settings.FontFamily != "default" {
+		style += fmt.Sprintf(" font-family: %s;", GetFontFamily(settings.FontFamily))
+	}
+	if settings.Indent > 0 {
+		style += fmt.Sprintf(" --reader-indent: %dem;", settings.Indent)
+	} else {
+		style += " --reader-indent: 0;"
+	}
+	return style
+}
+
+func chapterTitleStyle(settings ReaderSettings) string {
+	baseFontSize := float64(settings.FontSize)
+	titleRatio := 1.5 / 1.125
+	titleFontSize := baseFontSize * titleRatio
+
+	baseMarginRem := 2.0
+	marginRatio := baseFontSize / 18
+	titleMargin := baseMarginRem * marginRatio
+
+	style := fmt.Sprintf("font-size: %.4frem; margin-bottom: %.4frem;", titleFontSize/16, titleMargin)
+	if settings.FontFamily != "default" {
+		style += fmt.Sprintf(" font-family: %s;", GetFontFamily(settings.FontFamily))
+	}
+	return style
+}
+
+func chapterTitleClasses(settings ReaderSettings) string {
+	if settings.Justify {
+		return "justify-text"
+	}
+	return ""
+}

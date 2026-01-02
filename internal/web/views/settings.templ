@@ -1,0 +1,63 @@
+package views
+
+templ Settings() {
+	<div class="settings-card" id="settings-card" style="display: none;"></div>
+}
+
+templ SettingsTemplates() {
+	<template id="tpl-settings">
+		<div class="settings-body">
+			<div class="settings-row settings-row-font">
+				<div class="settings-col settings-col-font">
+					<div class="settings-label">Шрифт</div>
+					<div class="dropdown settings-dropdown" id="font-dropdown">
+						<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+							<span class="js-dropdown-label" data-field="currentFontLabel"></span>
+							<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+						</button>
+						<div class="dropdown-menu" role="listbox">
+							<div class="dropdown-menu-inner" id="font-options-container"></div>
+						</div>
+					</div>
+				</div>
+				<div class="settings-col settings-col-size">
+					<div class="settings-font-size">
+						<button class="settings-font-btn" id="font-decrease">−</button>
+						<span class="settings-font-value" id="font-size-value" data-field="fontSize"></span>
+						<button class="settings-font-btn" id="font-increase">+</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="settings-section">
+				<div class="settings-label">Тема</div>
+				<div class="settings-toggle settings-toggle-3" data-setting="theme" id="theme-toggle"></div>
+			</div>
+
+			<div class="settings-row">
+				<div class="settings-col">
+					<div class="settings-label">Выравнивание</div>
+					<div class="settings-toggle settings-toggle-2" data-setting="justify" id="justify-toggle"></div>
+				</div>
+				<div class="settings-col">
+					<div class="settings-label">Отступ</div>
+					<div class="settings-toggle settings-toggle-4" data-setting="indent" id="indent-toggle"></div>
+				</div>
+			</div>
+
+			<div class="settings-section">
+				<div class="settings-label">Плотность текста</div>
+				<div class="settings-toggle settings-toggle-3" data-setting="density" id="density-toggle"></div>
+			</div>
+		</div>
+	</template>
+	<template id="tpl-font-option">
+		<button class="dropdown-item" data-value="" role="option" aria-selected="false">
+			<span data-field="label"></span>
+			<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+		</button>
+	</template>
+	<template id="tpl-toggle-btn">
+		<button class="settings-toggle-btn" data-value=""></button>
+	</template>
+}

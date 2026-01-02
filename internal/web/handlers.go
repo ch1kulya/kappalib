@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -51,9 +52,10 @@ func (h *Handler) renderError(w http.ResponseWriter, r *http.Request, code int, 
 	w.WriteHeader(code)
 	props := views.ErrorProps{
 		BaseProps: views.BaseProps{
-			Title:       fmt.Sprintf("%d - %s", code, title),
-			Description: message,
-			Version:     h.assetVersion,
+			Title:          fmt.Sprintf("%d - %s", code, title),
+			Description:    message,
+			Version:        h.assetVersion,
+			ReaderSettings: h.getReaderSettings(r),
 		},
 		ErrorCode:    code,
 		ErrorTitle:   title,
@@ -115,6 +117,91 @@ func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/xml")
 	w.Write([]byte(content))
+}
+
+func (h *Handler) getReaderSettings(r *http.Request) views.ReaderSettings {
+	settings := views.DefaultReaderSettings
+
+	cookie, err := r.Cookie("kappalib_reader_settings")
+	if err != nil {
+		logger.Debug("Default settings. Reason: %v", err)
+		return settings
+	}
+
+	rawValue := cookie.Value
+	if rawValue == "" {
+		logger.Warn("Empty reader settings cookie.")
+		return settings
+	}
+
+	decoded, err := url.QueryUnescape(rawValue)
+	if err != nil {
+		logger.Warn("QueryUnescape failed: %v", err)
+		decoded = rawValue
+	}
+
+	var parsed struct {
+		Theme      string `json:"theme"`
+		FontSize   int    `json:"fontSize"`
+		FontFamily string `json:"fontFamily"`
+		Indent     int    `json:"indent"`
+		Density    string `json:"density"`
+		Justify    bool   `json:"justify"`
+	}
+
+	if err := json.Unmarshal([]byte(decoded), &parsed); err != nil {
+		logger.Warn("Failed to parse reader settings cookie: %v", err)
+		return settings
+	}
+
+	switch parsed.Theme {
+	case "light", "dark", "auto":
+		settings.Theme = parsed.Theme
+	default:
+		logger.Warn("Invalid theme value in reader settings: %s", parsed.Theme)
+		return settings
+	}
+
+	if parsed.FontSize < 14 || parsed.FontSize > 26 {
+		logger.Warn("Invalid fontSize value in reader settings: %d", parsed.FontSize)
+		return settings
+	}
+	settings.FontSize = parsed.FontSize
+
+	if !h.isValidFontFamily(parsed.FontFamily) {
+		logger.Warn("Invalid fontFamily value in reader settings: %s", parsed.FontFamily)
+		return settings
+	}
+	settings.FontFamily = parsed.FontFamily
+
+	if parsed.Indent < 0 || parsed.Indent > 3 {
+		logger.Warn("Invalid indent value in reader settings: %d", parsed.Indent)
+		return settings
+	}
+	settings.Indent = parsed.Indent
+
+	switch parsed.Density {
+	case "compact", "normal", "relaxed":
+		settings.Density = parsed.Density
+	default:
+		logger.Warn("Invalid density value in reader settings: %s", parsed.Density)
+		return settings
+	}
+
+	settings.Justify = parsed.Justify
+
+	logger.Debug("User settings applied successful.")
+
+	return settings
+}
+
+func (h *Handler) isValidFontFamily(family string) bool {
+	for _, f := range views.FontOptions {
+		if f.Value == family {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Handler) getNovelCookieData(r *http.Request, novelID string, chapters []models.ChapterSummary, totalChapters int) NovelCookieData {
@@ -318,14 +405,15 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 
 	props := views.NovelProps{
 		BaseProps: views.BaseProps{
-			Title:       title,
-			Description: desc,
-			Canonical:   canonical,
-			OGImage:     ogImage,
-			Version:     h.assetVersion,
-			IsAdult:     isAdult,
-			Schema:      schema,
-			PrefetchURL: prefetchURL,
+			Title:          title,
+			Description:    desc,
+			Canonical:      canonical,
+			OGImage:        ogImage,
+			Version:        h.assetVersion,
+			IsAdult:        isAdult,
+			Schema:         schema,
+			PrefetchURL:    prefetchURL,
+			ReaderSettings: h.getReaderSettings(r),
 		},
 		Novel:           novel,
 		Chapters:        chapters.Chapters,
@@ -377,11 +465,12 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 
 	props := views.HomeProps{
 		BaseProps: views.BaseProps{
-			Title:       title,
-			Description: description,
-			Canonical:   canonical,
-			Version:     h.assetVersion,
-			Schema:      schema,
+			Title:          title,
+			Description:    description,
+			Canonical:      canonical,
+			Version:        h.assetVersion,
+			Schema:         schema,
+			ReaderSettings: h.getReaderSettings(r),
 		},
 		Novels:     dataResp.Novels,
 		Page:       page,
@@ -471,15 +560,16 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 
 	props := views.ChapterProps{
 		BaseProps: views.BaseProps{
-			Title:         chapterTitle,
-			Description:   description,
-			Canonical:     canonical,
-			Version:       h.assetVersion,
-			IsChapterPage: true,
-			IsAdult:       isAdult,
-			Novel:         novel,
-			Schema:        schema,
-			PrefetchURL:   prefetchURL,
+			Title:          chapterTitle,
+			Description:    description,
+			Canonical:      canonical,
+			Version:        h.assetVersion,
+			IsChapterPage:  true,
+			IsAdult:        isAdult,
+			Novel:          novel,
+			Schema:         schema,
+			PrefetchURL:    prefetchURL,
+			ReaderSettings: h.getReaderSettings(r),
 		},
 		Novel:   novel,
 		Chapter: chapter,
@@ -514,10 +604,11 @@ func (h *Handler) StaticPage(name, title string) http.HandlerFunc {
 
 		props := views.DocumentProps{
 			BaseProps: views.BaseProps{
-				Title:       title,
-				Description: title,
-				Canonical:   fmt.Sprintf("https://kappalib.ru/%s", name),
-				Version:     h.assetVersion,
+				Title:          title,
+				Description:    title,
+				Canonical:      fmt.Sprintf("https://kappalib.ru/%s", name),
+				Version:        h.assetVersion,
+				ReaderSettings: h.getReaderSettings(r),
 			},
 			Content: content,
 		}

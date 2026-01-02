@@ -289,6 +289,8 @@ func SyncCookies(ctx context.Context, profileID, secretToken string, cookies map
 		return nil, err
 	}
 
+	logger.Debug("Synced cookies for user: %v", profileID)
+
 	return merged, nil
 }
 
