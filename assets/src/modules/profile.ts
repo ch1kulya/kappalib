@@ -256,7 +256,6 @@ class ProfileManager {
       const [name, rawValue] = c.trim().split("=");
       if (name && name.startsWith("kappalib_") && rawValue) {
         const value = decodeURIComponent(rawValue);
-        console.log(value);
         const timestampKey = `${name}_updated_at`;
         const storedTimestamp = localStorage.getItem(timestampKey);
         const updatedAt = storedTimestamp
