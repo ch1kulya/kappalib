@@ -40,8 +40,8 @@
     --tertiary: light-dark(#8c8fa1, #7f849c);
     --border: light-dark(#ccd0da, #313244);
     --outline: light-dark(#e6e9ef, #262637);
-    --accent-primary: light-dark(#fe640b, #fab387);
-    --accent-text: light-dark(#eff1f5, #1e1e2e);
+    --accent-primary: #fe640b;
+    --accent-text: #eff1f5;
     --accent-border: light-dark(
         rgba(254, 100, 11, 0.15),
         rgba(250, 179, 135, 0.15)
@@ -57,8 +57,8 @@
     --tertiary: light-dark(#7c6f64, #928374);
     --border: light-dark(#d5c4a1, #3c3836);
     --outline: light-dark(#ebdbb2, #32302f);
-    --accent-primary: light-dark(#d65d0e, #fe8019);
-    --accent-text: light-dark(#fbf1c7, #282828);
+    --accent-primary: #d65d0e;
+    --accent-text: #fbf1c7;
     --accent-border: light-dark(
         rgba(214, 93, 14, 0.15),
         rgba(254, 128, 25, 0.15)
@@ -74,8 +74,8 @@
     --tertiary: light-dark(#616e88, #81a1c1);
     --border: light-dark(#d8dee9, #3b4252);
     --outline: light-dark(#e5e9f0, #3a3f4b);
-    --accent-primary: light-dark(#d08770, #d08770);
-    --accent-text: light-dark(#eceff4, #2e3440);
+    --accent-primary: #d08770;
+    --accent-text: #eceff4;
     --accent-border: rgba(208, 135, 112, 0.15);
 }
 
@@ -88,8 +88,8 @@
     --tertiary: light-dark(#9893a5, #6e6a86);
     --border: light-dark(#dfdad9, #393552);
     --outline: light-dark(#f2e9e1, #2a283e);
-    --accent-primary: light-dark(#d7827e, #ea9a97);
-    --accent-text: light-dark(#faf4ed, #232136);
+    --accent-primary: #d7827e;
+    --accent-text: #faf4ed;
     --accent-border: light-dark(
         rgba(215, 130, 126, 0.15),
         rgba(234, 154, 151, 0.15)
