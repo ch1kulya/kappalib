@@ -163,6 +163,14 @@ var FontOptions = []FontOption{
 	{Value: "roboto", Label: "Roboto", Family: "Roboto, sans-serif"},
 }
 
+var ColorSchemeOptions = []ColorSchemeOption{
+	{Value: "default", Label: "Стандартная"},
+	{Value: "catppuccin", Label: "Catppuccin"},
+	{Value: "gruvbox", Label: "Gruvbox"},
+	{Value: "nord", Label: "Nord"},
+	{Value: "rosepine", Label: "Rosé Pine"},
+}
+
 var FontURLs = map[string]string{
 	"literata":     "https://cdn.jsdelivr.net/npm/@fontsource/literata@5/index.min.css",
 	"nunito":       "https://cdn.jsdelivr.net/npm/@fontsource/nunito@5/index.min.css",
@@ -174,12 +182,13 @@ var FontURLs = map[string]string{
 }
 
 var DefaultReaderSettings = ReaderSettings{
-	Theme:      "auto",
-	FontSize:   18,
-	FontFamily: "default",
-	Indent:     0,
-	Density:    "normal",
-	Justify:    false,
+	Theme:       "auto",
+	ColorScheme: "default",
+	FontSize:    18,
+	FontFamily:  "default",
+	Indent:      0,
+	Density:     "normal",
+	Justify:     false,
 }
 
 func GetFontFamily(fontKey string) string {
@@ -202,6 +211,15 @@ func GetFontLabel(fontKey string) string {
 
 func GetFontURL(fontKey string) string {
 	return FontURLs[fontKey]
+}
+
+func IsValidColorScheme(scheme string) bool {
+	for _, s := range ColorSchemeOptions {
+		if s.Value == scheme {
+			return true
+		}
+	}
+	return false
 }
 
 func chapterContentClasses(settings ReaderSettings) string {
