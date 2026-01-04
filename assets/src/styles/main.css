@@ -709,6 +709,7 @@ a:hover {
                 box-shadow: var(--shadow-focus);
             }
             &::placeholder {
+                color: var(--tertiary);
                 opacity: 0.9;
                 transition: opacity 0.3s ease;
             }
