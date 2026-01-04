@@ -42,12 +42,51 @@ const FONT_OPTIONS: { value: string; label: string; family: string }[] = [
   { value: "roboto", label: "Roboto", family: "Roboto, sans-serif" },
 ];
 
-const COLOR_SCHEME_OPTIONS: { value: string; label: string }[] = [
-  { value: "default", label: "Стандартная" },
-  { value: "catppuccin", label: "Catppuccin" },
-  { value: "gruvbox", label: "Gruvbox" },
-  { value: "nord", label: "Nord" },
-  { value: "rosepine", label: "Rosé Pine" },
+const COLOR_SCHEME_OPTIONS: {
+  value: string;
+  label: string;
+  colors: { light: string[]; dark: string[] };
+}[] = [
+  {
+    value: "default",
+    label: "Стандартная",
+    colors: {
+      light: ["#f9f9f9", "#1b1b1b", "#757575", "#f97316"],
+      dark: ["#131313", "#e7e7e7", "#a5a5a5", "#f97316"],
+    },
+  },
+  {
+    value: "catppuccin",
+    label: "Catppuccin",
+    colors: {
+      light: ["#eff1f5", "#4c4f69", "#6c6f85", "#fe640b"],
+      dark: ["#1e1e2e", "#cdd6f4", "#a6adc8", "#fab387"],
+    },
+  },
+  {
+    value: "gruvbox",
+    label: "Gruvbox",
+    colors: {
+      light: ["#fbf1c7", "#3c3836", "#665c54", "#d65d0e"],
+      dark: ["#282828", "#ebdbb2", "#a89984", "#fe8019"],
+    },
+  },
+  {
+    value: "nord",
+    label: "Nord",
+    colors: {
+      light: ["#eceff4", "#2e3440", "#4c566a", "#d08770"],
+      dark: ["#2e3440", "#eceff4", "#d8dee9", "#d08770"],
+    },
+  },
+  {
+    value: "rosepine",
+    label: "Rosé Pine",
+    colors: {
+      light: ["#faf4ed", "#575279", "#797593", "#d7827e"],
+      dark: ["#232136", "#e0def4", "#908caa", "#ea9a97"],
+    },
+  },
 ];
 
 const FONT_URLS: Record<string, string> = {
@@ -205,6 +244,33 @@ function applyGlobalSettings(): void {
   } else {
     root.setAttribute("data-scheme", settings.colorScheme);
   }
+}
+
+function isDarkMode(): boolean {
+  const root = document.documentElement;
+  const theme = root.getAttribute("data-theme");
+  if (theme === "dark") return true;
+  if (theme === "light") return false;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+function createColorPalette(colors: {
+  light: string[];
+  dark: string[];
+}): HTMLElement {
+  const palette = document.createElement("div");
+  palette.className = "scheme-palette";
+
+  const currentColors = isDarkMode() ? colors.dark : colors.light;
+
+  currentColors.forEach((color) => {
+    const swatch = document.createElement("span");
+    swatch.className = "scheme-swatch";
+    swatch.style.backgroundColor = color;
+    palette.appendChild(swatch);
+  });
+
+  return palette;
 }
 
 class SettingsManager {
@@ -369,6 +435,19 @@ function renderSettingsView(): void {
   );
   if (schemeLabel) schemeLabel.textContent = currentScheme.label;
 
+  const schemePaletteBtn = content.querySelector(
+    "#scheme-dropdown .dropdown-btn",
+  );
+  if (schemePaletteBtn) {
+    const existingPalette = schemePaletteBtn.querySelector(".scheme-palette");
+    if (existingPalette) existingPalette.remove();
+    const palette = createColorPalette(currentScheme.colors);
+    schemePaletteBtn.insertBefore(
+      palette,
+      schemePaletteBtn.querySelector(".chevron"),
+    );
+  }
+
   const fontSizeValue = content.querySelector('[data-field="fontSize"]');
   if (fontSizeValue) fontSizeValue.textContent = String(settings.fontSize);
 
@@ -400,21 +479,47 @@ function renderSettingsView(): void {
   );
   if (schemeOptionsContainer) {
     COLOR_SCHEME_OPTIONS.forEach((s) => {
-      const optionTemplate = cloneTemplate("tpl-scheme-option");
-      const btn = optionTemplate.querySelector(".dropdown-item") as HTMLElement;
-      if (btn) {
-        btn.dataset.value = s.value;
-        btn.setAttribute(
-          "aria-selected",
-          String(settings.colorScheme === s.value),
-        );
-        if (settings.colorScheme === s.value) {
-          btn.classList.add("selected");
-        }
-        const label = btn.querySelector('[data-field="label"]');
-        if (label) label.textContent = s.label;
+      const btn = document.createElement("button");
+      btn.className = "dropdown-item";
+      if (settings.colorScheme === s.value) {
+        btn.classList.add("selected");
       }
-      schemeOptionsContainer.appendChild(optionTemplate);
+      btn.dataset.value = s.value;
+      btn.setAttribute("role", "option");
+      btn.setAttribute(
+        "aria-selected",
+        String(settings.colorScheme === s.value),
+      );
+
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = s.label;
+      btn.appendChild(labelSpan);
+
+      const palette = createColorPalette(s.colors);
+      btn.appendChild(palette);
+
+      const checkIcon = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "svg",
+      );
+      checkIcon.setAttribute("class", "check-icon");
+      checkIcon.setAttribute("width", "16");
+      checkIcon.setAttribute("height", "16");
+      checkIcon.setAttribute("viewBox", "0 0 24 24");
+      checkIcon.setAttribute("fill", "none");
+      checkIcon.setAttribute("stroke", "currentColor");
+      checkIcon.setAttribute("stroke-width", "3");
+      checkIcon.setAttribute("stroke-linecap", "round");
+      checkIcon.setAttribute("stroke-linejoin", "round");
+      const polyline = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "polyline",
+      );
+      polyline.setAttribute("points", "20 6 9 17 4 12");
+      checkIcon.appendChild(polyline);
+      btn.appendChild(checkIcon);
+
+      schemeOptionsContainer.appendChild(btn);
     });
   }
 
@@ -479,6 +584,31 @@ function renderSettingsView(): void {
   initSettingsInteractions();
 }
 
+function updateSchemePalettes(): void {
+  const schemeDropdown = document.getElementById("scheme-dropdown");
+  if (!schemeDropdown) return;
+
+  schemeDropdown.querySelectorAll(".scheme-palette").forEach((palette) => {
+    const btn = palette.closest("[data-value]") as HTMLElement;
+    if (!btn) return;
+
+    const scheme = COLOR_SCHEME_OPTIONS.find(
+      (s) => s.value === btn.dataset.value,
+    );
+    if (!scheme) return;
+
+    const currentColors = isDarkMode()
+      ? scheme.colors.dark
+      : scheme.colors.light;
+    const swatches = palette.querySelectorAll(".scheme-swatch");
+    swatches.forEach((swatch, i) => {
+      if (currentColors[i]) {
+        (swatch as HTMLElement).style.backgroundColor = currentColors[i];
+      }
+    });
+  });
+}
+
 function initSettingsInteractions(): void {
   const fontDropdownEl = document.getElementById("font-dropdown");
   if (fontDropdownEl) {
@@ -499,6 +629,26 @@ function initSettingsInteractions(): void {
         "colorScheme",
         customEvent.detail.value as ReaderSettings["colorScheme"],
       );
+
+      const scheme = COLOR_SCHEME_OPTIONS.find(
+        (s) => s.value === customEvent.detail.value,
+      );
+      if (scheme) {
+        const btnPalette = schemeDropdownEl.querySelector(
+          ".dropdown-btn .scheme-palette",
+        );
+        if (btnPalette) {
+          const currentColors = isDarkMode()
+            ? scheme.colors.dark
+            : scheme.colors.light;
+          const swatches = btnPalette.querySelectorAll(".scheme-swatch");
+          swatches.forEach((swatch, i) => {
+            if (currentColors[i]) {
+              (swatch as HTMLElement).style.backgroundColor = currentColors[i];
+            }
+          });
+        }
+      }
     });
   }
 
@@ -514,6 +664,7 @@ function initSettingsInteractions(): void {
       enableThemeTransition();
       settingsManager.updateSetting("theme", value);
       updateActiveToggle(themeToggle as HTMLElement, value);
+      setTimeout(updateSchemePalettes, 50);
     }
   });
 
