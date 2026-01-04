@@ -525,6 +525,57 @@ a:hover {
     z-index: 200;
 }
 
+.scheme-palette {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-left: auto;
+    margin-right: 0.5rem;
+}
+
+.scheme-swatch {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.dropdown-btn .scheme-palette {
+    margin-right: 0;
+}
+
+.dropdown-item .scheme-palette {
+    margin-left: auto;
+    margin-right: 0.25rem;
+}
+
+@media (max-width: 440px) {
+    .scheme-swatch {
+        width: 12px;
+        height: 12px;
+    }
+
+    .scheme-palette {
+        border-radius: 3px;
+    }
+}
+
+#scheme-dropdown {
+    z-index: 20;
+}
+
+#scheme-dropdown .dropdown-menu {
+    z-index: 210;
+}
+
+#font-dropdown {
+    z-index: 10;
+}
+
+#font-dropdown .dropdown-menu {
+    z-index: 200;
+}
+
 /* Chapter Content Settings */
 .chapter-content,
 .chapter-reader > h1 {
@@ -658,6 +709,7 @@ a:hover {
                 box-shadow: var(--shadow-focus);
             }
             &::placeholder {
+                color: var(--tertiary);
                 opacity: 0.9;
                 transition: opacity 0.3s ease;
             }

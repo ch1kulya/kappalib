@@ -9,6 +9,9 @@ templ Base(props BaseProps) {
 		if props.ReaderSettings.Theme != "auto" {
 			data-theme={ props.ReaderSettings.Theme }
 		}
+		if props.ReaderSettings.ColorScheme != "" && props.ReaderSettings.ColorScheme != "default" {
+			data-scheme={ props.ReaderSettings.ColorScheme }
+		}
 	>
 		<head>
 			<meta charset="UTF-8"/>

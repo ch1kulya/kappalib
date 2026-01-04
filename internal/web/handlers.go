@@ -141,12 +141,13 @@ func (h *Handler) getReaderSettings(r *http.Request) views.ReaderSettings {
 	}
 
 	var parsed struct {
-		Theme      string `json:"theme"`
-		FontSize   int    `json:"fontSize"`
-		FontFamily string `json:"fontFamily"`
-		Indent     int    `json:"indent"`
-		Density    string `json:"density"`
-		Justify    bool   `json:"justify"`
+		Theme       string `json:"theme"`
+		ColorScheme string `json:"colorScheme"`
+		FontSize    int    `json:"fontSize"`
+		FontFamily  string `json:"fontFamily"`
+		Indent      int    `json:"indent"`
+		Density     string `json:"density"`
+		Justify     bool   `json:"justify"`
 	}
 
 	if err := json.Unmarshal([]byte(decoded), &parsed); err != nil {
@@ -160,6 +161,12 @@ func (h *Handler) getReaderSettings(r *http.Request) views.ReaderSettings {
 	default:
 		logger.Warn("Invalid theme value in reader settings: %s", parsed.Theme)
 		return settings
+	}
+
+	if views.IsValidColorScheme(parsed.ColorScheme) {
+		settings.ColorScheme = parsed.ColorScheme
+	} else if parsed.ColorScheme != "" {
+		logger.Warn("Invalid colorScheme value in reader settings: %s", parsed.ColorScheme)
 	}
 
 	if parsed.FontSize < 14 || parsed.FontSize > 26 {
