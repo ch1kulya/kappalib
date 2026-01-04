@@ -132,40 +132,44 @@
         rgba(var(--rgb-light), 0.22),
         rgba(var(--rgb-dark), 0.22)
     );
+    --grad-base: light-dark(
+        rgba(var(--rgb-light), 0.01),
+        rgba(var(--rgb-dark), 0.01)
+    );
     --gradient-input-primary: radial-gradient(
         80% 80% at 30% 20%,
         var(--grad-input-prm),
-        transparent
+        var(--grad-base)
     );
     --gradient-input-focus: radial-gradient(
         90% 90% at 30% 20%,
         var(--grad-input-foc),
-        transparent
+        var(--grad-base)
     );
     --gradient-primary: radial-gradient(
         80% 80% at 70% 20%,
         var(--grad-prm),
-        transparent
+        var(--grad-base)
     );
     --gradient-secondary: radial-gradient(
         60% 60% at 60% 20%,
         var(--grad-sec),
-        transparent
+        var(--grad-base)
     );
     --gradient-focus: radial-gradient(
         90% 90% at 70% 20%,
         var(--grad-foc),
-        transparent
+        var(--grad-base)
     );
     --gradient-inverted-primary: radial-gradient(
         80% 80% at 70% 20%,
         var(--grad-inv-prm),
-        transparent
+        var(--grad-base)
     );
     --gradient-inverted-focus: radial-gradient(
         90% 90% at 70% 20%,
         var(--grad-inv-foc),
-        transparent
+        var(--grad-base)
     );
     --shadow-primary:
         inset 0 0 1.5px 1px
