@@ -5,6 +5,7 @@ const SETTINGS_COOKIE_KEY = "kappalib_reader_settings";
 
 interface ReaderSettings {
   theme: "auto" | "light" | "dark";
+  colorScheme: "default" | "catppuccin" | "gruvbox" | "nord" | "rosepine";
   fontSize: number;
   fontFamily: string;
   indent: number;
@@ -14,6 +15,7 @@ interface ReaderSettings {
 
 const DEFAULT_SETTINGS: ReaderSettings = {
   theme: "auto",
+  colorScheme: "default",
   fontSize: 18,
   fontFamily: "default",
   indent: 0,
@@ -38,6 +40,14 @@ const FONT_OPTIONS: { value: string; label: string; family: string }[] = [
   { value: "pt-serif", label: "PT Serif", family: "PT Serif, serif" },
   { value: "open-sans", label: "Open Sans", family: "Open Sans, sans-serif" },
   { value: "roboto", label: "Roboto", family: "Roboto, sans-serif" },
+];
+
+const COLOR_SCHEME_OPTIONS: { value: string; label: string }[] = [
+  { value: "default", label: "Стандартная" },
+  { value: "catppuccin", label: "Catppuccin" },
+  { value: "gruvbox", label: "Gruvbox" },
+  { value: "nord", label: "Nord" },
+  { value: "rosepine", label: "Rosé Pine" },
 ];
 
 const FONT_URLS: Record<string, string> = {
@@ -119,6 +129,12 @@ function applySettings(settings: ReaderSettings): void {
     root.setAttribute("data-theme", settings.theme);
   }
 
+  if (settings.colorScheme === "default") {
+    root.removeAttribute("data-scheme");
+  } else {
+    root.setAttribute("data-scheme", settings.colorScheme);
+  }
+
   const chapterContent = document.querySelector(
     ".chapter-content",
   ) as HTMLElement | null;
@@ -182,6 +198,12 @@ function applyGlobalSettings(): void {
     root.removeAttribute("data-theme");
   } else {
     root.setAttribute("data-theme", settings.theme);
+  }
+
+  if (settings.colorScheme === "default") {
+    root.removeAttribute("data-scheme");
+  } else {
+    root.setAttribute("data-scheme", settings.colorScheme);
   }
 }
 
@@ -332,12 +354,20 @@ function renderSettingsView(): void {
   const currentFont =
     FONT_OPTIONS.find((f) => f.value === settings.fontFamily) ||
     FONT_OPTIONS[0];
+  const currentScheme =
+    COLOR_SCHEME_OPTIONS.find((s) => s.value === settings.colorScheme) ||
+    COLOR_SCHEME_OPTIONS[0];
 
   content.innerHTML = "";
   content.appendChild(cloneTemplate("tpl-settings"));
 
   const fontLabel = content.querySelector('[data-field="currentFontLabel"]');
   if (fontLabel) fontLabel.textContent = currentFont.label;
+
+  const schemeLabel = content.querySelector(
+    '[data-field="currentSchemeLabel"]',
+  );
+  if (schemeLabel) schemeLabel.textContent = currentScheme.label;
 
   const fontSizeValue = content.querySelector('[data-field="fontSize"]');
   if (fontSizeValue) fontSizeValue.textContent = String(settings.fontSize);
@@ -362,6 +392,29 @@ function renderSettingsView(): void {
         if (label) label.textContent = f.label;
       }
       fontOptionsContainer.appendChild(optionTemplate);
+    });
+  }
+
+  const schemeOptionsContainer = document.getElementById(
+    "scheme-options-container",
+  );
+  if (schemeOptionsContainer) {
+    COLOR_SCHEME_OPTIONS.forEach((s) => {
+      const optionTemplate = cloneTemplate("tpl-scheme-option");
+      const btn = optionTemplate.querySelector(".dropdown-item") as HTMLElement;
+      if (btn) {
+        btn.dataset.value = s.value;
+        btn.setAttribute(
+          "aria-selected",
+          String(settings.colorScheme === s.value),
+        );
+        if (settings.colorScheme === s.value) {
+          btn.classList.add("selected");
+        }
+        const label = btn.querySelector('[data-field="label"]');
+        if (label) label.textContent = s.label;
+      }
+      schemeOptionsContainer.appendChild(optionTemplate);
     });
   }
 
@@ -433,6 +486,19 @@ function initSettingsInteractions(): void {
     fontDropdownEl.addEventListener("change", (e: Event) => {
       const customEvent = e as CustomEvent<{ value: string }>;
       settingsManager.updateSetting("fontFamily", customEvent.detail.value);
+    });
+  }
+
+  const schemeDropdownEl = document.getElementById("scheme-dropdown");
+  if (schemeDropdownEl) {
+    new Dropdown(schemeDropdownEl);
+    schemeDropdownEl.addEventListener("change", (e: Event) => {
+      const customEvent = e as CustomEvent<{ value: string }>;
+      enableThemeTransition();
+      settingsManager.updateSetting(
+        "colorScheme",
+        customEvent.detail.value as ReaderSettings["colorScheme"],
+      );
     });
   }
 
@@ -518,4 +584,4 @@ function updateActiveToggle(container: HTMLElement, activeValue: string): void {
   });
 }
 
-export { FONT_OPTIONS, getSettings };
+export { FONT_OPTIONS, COLOR_SCHEME_OPTIONS, getSettings };

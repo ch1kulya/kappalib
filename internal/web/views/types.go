@@ -66,16 +66,22 @@ type ErrorProps struct {
 }
 
 type ReaderSettings struct {
-	Theme      string
-	FontSize   int
-	FontFamily string
-	Indent     int
-	Density    string
-	Justify    bool
+	Theme       string
+	ColorScheme string
+	FontSize    int
+	FontFamily  string
+	Indent      int
+	Density     string
+	Justify     bool
 }
 
 type FontOption struct {
 	Value  string
 	Label  string
 	Family string
+}
+
+type ColorSchemeOption struct {
+	Value string
+	Label string
 }
