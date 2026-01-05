@@ -14,6 +14,20 @@ html.theme-transitioning *::after {
     -webkit-tap-highlight-color: transparent;
 }
 
+html::selection {
+    color: var(--accent-text);
+    background-color: var(--accent-primary);
+    opacity: 1;
+}
+
+img,
+.status-text,
+.pagination,
+.js-dropdown-label,
+.dropdown-item {
+    user-select: none;
+}
+
 button,
 input,
 optgroup,
