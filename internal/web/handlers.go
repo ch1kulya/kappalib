@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -78,6 +79,19 @@ func (h *Handler) RobotsTxt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(content))
+}
+
+func (h *Handler) IndexNowKey(w http.ResponseWriter, r *http.Request) {
+	content, err := templates.RenderIndexNowKey(templates.IndexNowKeyData{
+		Key: os.Getenv("INDEX_NOW_KEY"),
+	})
+	if err != nil {
+		logger.Error("Failed to render IndexNow key: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(content))
 }

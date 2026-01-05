@@ -1,0 +1,16 @@
+name: IndexNow
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  check-and-submit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: indexnow-action
+        uses: bojieyang/indexnow-action@v2
+        with:
+          sitemap-location: "https://kappalib.ru/sitemap.xml"
+          key: ${{ secrets.INDEX_NOW_KEY }}

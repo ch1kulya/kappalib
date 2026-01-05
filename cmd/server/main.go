@@ -48,6 +48,7 @@ var requiredEnvVars = []string{
 	"S3_ACCESS_KEY",
 	"S3_SECRET_KEY",
 	"S3_USE_SSL",
+	"INDEX_NOW_KEY",
 }
 
 func runMigrations() {
@@ -189,6 +190,7 @@ func main() {
 
 	r.Get("/robots.txt", h.RobotsTxt)
 	r.Get("/sitemap.xml", h.Sitemap)
+	r.Get(fmt.Sprintf("/%s.txt", os.Getenv("INDEX_NOW_KEY")), h.IndexNowKey)
 	r.Get("/", h.Home)
 	r.Get("/dmca", h.StaticPage("dmca", "DMCA"))
 	r.Get("/privacy", h.StaticPage("privacy", "Политика конфиденциальности"))
