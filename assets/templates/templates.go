@@ -15,6 +15,7 @@ var (
 	schemaWebsiteTmpl *template.Template
 	schemaNovelTmpl   *template.Template
 	schemaChapterTmpl *template.Template
+	indexNowKeyTmpl   *template.Template
 )
 
 func Init() error {
@@ -41,6 +42,11 @@ func Init() error {
 	}
 
 	schemaChapterTmpl, err = template.ParseFS(FS, "schema_chapter.html.tmpl")
+	if err != nil {
+		return err
+	}
+
+	indexNowKeyTmpl, err = template.ParseFS(FS, "indexnow.txt.tmpl")
 	if err != nil {
 		return err
 	}
@@ -135,6 +141,18 @@ type SchemaChapterData struct {
 func RenderSchemaChapter(data SchemaChapterData) (string, error) {
 	var buf bytes.Buffer
 	if err := schemaChapterTmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+type IndexNowKeyData struct {
+	Key string
+}
+
+func RenderIndexNowKey(data IndexNowKeyData) (string, error) {
+	var buf bytes.Buffer
+	if err := indexNowKeyTmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
