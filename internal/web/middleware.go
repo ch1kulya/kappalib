@@ -130,3 +130,14 @@ func StaticCacheMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+func UserAgentMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ua := r.UserAgent()
+		if ua == "" {
+			ua = "[Empty]"
+		}
+		logger.Debug("User-Agent: %s", ua)
+		next.ServeHTTP(w, r)
+	})
+}
