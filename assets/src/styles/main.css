@@ -14,6 +14,20 @@ html.theme-transitioning *::after {
     -webkit-tap-highlight-color: transparent;
 }
 
+html::selection {
+    color: var(--accent-text);
+    background-color: var(--accent-primary);
+    opacity: 1;
+}
+
+img,
+.status-text,
+.pagination,
+.js-dropdown-label,
+.dropdown-item {
+    user-select: none;
+}
+
 button,
 input,
 optgroup,
@@ -178,7 +192,6 @@ a:hover {
     overflow: hidden;
     text-overflow: ellipsis;
     margin-right: 1rem;
-    opacity: 0.9;
     text-shadow: 0 0 1px var(--secondary);
 }
 
@@ -936,7 +949,6 @@ a:hover {
 }
 .novel-card-info h3 {
     font-size: 0.95rem;
-    opacity: 0.9;
     text-shadow: 0 0 1px var(--secondary);
     line-height: 1.3;
     display: -webkit-box;
@@ -1100,7 +1112,6 @@ a:hover {
     line-height: 1.2;
     letter-spacing: -0.025em;
     margin-bottom: 0.5rem;
-    opacity: 0.9;
     text-shadow: 0 0 1px var(--secondary);
     @media (max-width: 450px) {
         font-size: 1.5rem;
@@ -1149,7 +1160,6 @@ a:hover {
     justify-content: space-between;
     align-items: center;
     & h2 {
-        opacity: 0.9;
         text-shadow: 0 0 1px var(--secondary);
     }
 }
@@ -2192,7 +2202,6 @@ html {
 .cr-title h3 {
     font-size: 1.4rem;
     margin: 0 0 0.25rem 0;
-    opacity: 0.9;
     text-shadow: 0 0 1px var(--secondary);
     line-height: 1.3;
     display: -webkit-box;
