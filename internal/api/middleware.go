@@ -30,6 +30,9 @@ func NewRateLimiter() *RateLimiter {
 		visitors: make(map[string]*visitor),
 		apiToken: os.Getenv("API_TOKEN"),
 	}
+	if rl.apiToken == "" {
+		logger.Warn("API_TOKEN is not set.")
+	}
 	go rl.cleanupVisitors()
 	return rl
 }

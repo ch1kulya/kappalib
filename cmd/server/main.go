@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,6 +32,23 @@ import (
 
 //go:embed docs.html
 var docsHTML string
+
+var requiredEnvVars = []string{
+	"DATABASE_URL",
+	"BETTERSTACK_TOKEN",
+	"TURNSTILE_SITE_KEY",
+	"TURNSTILE_SECRET",
+	"TURNSTILE_COMMENTS_SITE_KEY",
+	"TURNSTILE_COMMENTS_SECRET",
+	"TELEGRAM_BOT_TOKEN",
+	"TELEGRAM_CHAT_ID",
+	"TELEGRAM_WEBHOOK_SECRET",
+	"S3_ENDPOINT",
+	"S3_BUCKET",
+	"S3_ACCESS_KEY",
+	"S3_SECRET_KEY",
+	"S3_USE_SSL",
+}
 
 func runMigrations() {
 	logger.Info("Starting database migrations...")
@@ -111,8 +129,27 @@ func buildAssets() {
 	logger.Info("Assets built successfully")
 }
 
+func validateEnv() error {
+	var missingVars []string
+	for _, key := range requiredEnvVars {
+		value := os.Getenv(key)
+		if value == "" {
+			missingVars = append(missingVars, key)
+		}
+	}
+	if len(missingVars) > 0 {
+		return fmt.Errorf("missing required env variables: %s", strings.Join(missingVars, ", "))
+	}
+	return nil
+}
+
 func main() {
 	logger.Info("Initializing application...")
+
+	if err := validateEnv(); err != nil {
+		logger.Error("Configuration error: %v", err)
+		os.Exit(1)
+	}
 
 	if err := templates.Init(); err != nil {
 		logger.Error("Failed to initialize templates: %v", err)
