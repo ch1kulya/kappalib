@@ -6,7 +6,7 @@ type BaseProps struct {
 	Title          string
 	Description    string
 	Canonical      string
-	Version        int64
+	Version        string
 	Schema         string
 	OGImage        string
 	IsChapterPage  bool

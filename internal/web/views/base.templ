@@ -57,7 +57,7 @@ templ Base(props BaseProps) {
 					<link rel="stylesheet" crossorigin href={ fontURL }/>
 				}
 			}
-			<link rel="stylesheet" href={ fmt.Sprintf("/assets/dist/styles/main.css?v=%d", props.Version) }/>
+			<link rel="stylesheet" href={ fmt.Sprintf("/assets/dist/styles/main.css?v=%s", props.Version) }/>
 			<script defer src="https://stats.ch1kulya.ru/script.js" data-website-id="d7ede2e9-37bc-4a66-b905-188a87d88fd8"></script>
 		</head>
 		<body>
@@ -73,7 +73,7 @@ templ Base(props BaseProps) {
 				</div>
 				@Footer(props)
 			</div>
-			<script type="module" src={ fmt.Sprintf("/assets/dist/app.js?v=%d", props.Version) }></script>
+			<script type="module" src={ fmt.Sprintf("/assets/dist/app.js?v=%s", props.Version) }></script>
 		</body>
 	</html>
 }
