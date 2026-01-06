@@ -137,13 +137,13 @@ func verifyTurnstile(token string) bool {
 	return result.Success
 }
 
-func createSession(ctx context.Context, userID, token, deviceInfo string) error {
+func createSession(ctx context.Context, userID, token string) error {
 	tokenHash := hashToken(token)
 
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, err := database.DB.Exec(dbCtx, querySessionsCreate, userID, tokenHash, deviceInfo)
+	_, err := database.DB.Exec(dbCtx, querySessionsCreate, userID, tokenHash)
 	if err != nil {
 		logger.Error("Failed to create session: %v", err)
 		return err
@@ -261,7 +261,7 @@ func CreateProfile(ctx context.Context, turnstileToken string) (*models.ProfileW
 		return nil, err
 	}
 
-	if err := createSession(ctx, profile.ID, token, ""); err != nil {
+	if err := createSession(ctx, profile.ID, token); err != nil {
 		return nil, err
 	}
 
@@ -344,7 +344,7 @@ func LoginWithSyncCode(ctx context.Context, syncCode string) (*models.LoginRespo
 		return nil, err
 	}
 
-	if err := createSession(ctx, userID, newToken, ""); err != nil {
+	if err := createSession(ctx, userID, newToken); err != nil {
 		return nil, err
 	}
 
