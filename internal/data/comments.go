@@ -165,12 +165,12 @@ func renderMarkdown(content string) string {
 	return strings.TrimSpace(string(safe))
 }
 
-func CreateComment(ctx context.Context, profileID, secretToken string, input models.CreateCommentInput) (*models.Comment, error) {
+func CreateComment(ctx context.Context, userID string, input models.CreateCommentInput) (*models.Comment, error) {
 	if len(input.Content) == 0 || len(input.Content) > 1000 {
 		return nil, fmt.Errorf("invalid content length")
 	}
 
-	if !checkCommentRateLimit(profileID) {
+	if !checkCommentRateLimit(userID) {
 		return nil, fmt.Errorf("rate limit exceeded")
 	}
 
@@ -185,15 +185,11 @@ func CreateComment(ctx context.Context, profileID, secretToken string, input mod
 		return nil, fmt.Errorf("chapter not found")
 	}
 
-	if !verifySecretToken(dbCtx, profileID, secretToken) {
-		return nil, fmt.Errorf("invalid secret token")
-	}
-
 	contentHTML := renderMarkdown(input.Content)
 
 	var comment models.Comment
 	err := database.DB.QueryRow(dbCtx, queryCommentsCreate,
-		input.ChapterID, profileID, contentHTML,
+		input.ChapterID, userID, contentHTML,
 	).Scan(&comment.ID, &comment.ChapterID, &comment.UserID, &comment.ContentHTML, &comment.Status, &comment.CreatedAt)
 
 	if err != nil {
@@ -202,16 +198,16 @@ func CreateComment(ctx context.Context, profileID, secretToken string, input mod
 	}
 
 	var user models.ProfilePublic
-	database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar FROM users WHERE id = $1`, profileID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar)
+	database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar)
 	comment.UserDisplayName = user.DisplayName
 	comment.UserAvatarSeed = user.AvatarSeed
 	comment.UserHasCustomAvatar = user.HasCustomAvatar
 
 	go sendCommentToTelegram(context.Background(), &comment)
 
-	recordCommentTime(profileID)
+	recordCommentTime(userID)
 
-	logger.Info("Comment created: %s by user %s", comment.ID, profileID)
+	logger.Info("Comment created: %s by user %s", comment.ID, userID)
 	return &comment, nil
 }
 

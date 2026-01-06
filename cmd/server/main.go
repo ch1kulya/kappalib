@@ -208,6 +208,7 @@ func main() {
 		r.Use(api.CorsMiddleware)
 		r.Use(api.RateLimitMiddleware(apiRateLimiter))
 		r.Use(api.CacheMiddleware)
+		r.Use(api.AuthMiddleware)
 
 		config := huma.DefaultConfig("kappalib", "stable")
 		config.Info.Description = "Public API for accessing kappalib services."
@@ -278,6 +279,13 @@ func main() {
 		}, api.HandleCreateProfile)
 
 		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-current-user",
+			Method:      http.MethodGet,
+			Path:        "/profile/me",
+			Summary:     "Get current authenticated user",
+		}, api.HandleGetCurrentUser)
+
+		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-profile",
 			Method:      http.MethodGet,
 			Path:        "/profile/{id}",
@@ -306,11 +314,19 @@ func main() {
 		}, api.HandleLogin)
 
 		huma.Register(humaApi, huma.Operation{
+			OperationID: "logout",
+			Method:      http.MethodPost,
+			Path:        "/profile/logout",
+			Summary:     "Logout and clear session cookie",
+		}, api.HandleLogout)
+
+		huma.Register(humaApi, huma.Operation{
 			OperationID: "sync-cookies",
 			Method:      http.MethodPost,
 			Path:        "/profile/sync-cookies",
 			Summary:     "Sync cookies",
 		}, api.HandleSyncCookies)
+
 		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-comments",
 			Method:      http.MethodGet,

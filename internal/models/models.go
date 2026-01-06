@@ -72,11 +72,12 @@ type ProfilePublic struct {
 }
 
 type ProfileWithToken struct {
-	ID          string    `json:"id"`
-	SecretToken string    `json:"secret_token"`
-	DisplayName string    `json:"display_name"`
-	AvatarSeed  string    `json:"avatar_seed"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID              string    `json:"id"`
+	Token           string    `json:"token"`
+	DisplayName     string    `json:"display_name"`
+	AvatarSeed      string    `json:"avatar_seed"`
+	HasCustomAvatar bool      `json:"has_custom_avatar"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type SyncCodeResponse struct {
@@ -85,9 +86,9 @@ type SyncCodeResponse struct {
 }
 
 type LoginResponse struct {
-	Profile     ProfilePublic          `json:"profile"`
-	SecretToken string                 `json:"secret_token"`
-	Cookies     map[string]CookieValue `json:"cookies"`
+	Profile ProfilePublic          `json:"profile"`
+	Token   string                 `json:"token"`
+	Cookies map[string]CookieValue `json:"cookies"`
 }
 
 type Comment struct {

@@ -18,6 +18,11 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
+const (
+	SessionCookieName = "kpl_session"
+	CookieMaxAge      = 31536000
+)
+
 type GetNovelsInput struct {
 	Page int    `query:"page" default:"1" minimum:"1" maximum:"9999"`
 	Sort string `query:"sort" default:"oldest" enum:"newest,oldest,large,small,alphabet,created"`
@@ -44,20 +49,13 @@ type LoginInput struct {
 }
 
 type SyncCookiesInput struct {
-	ProfileID   string `header:"X-Profile-ID" required:"true"`
-	SecretToken string `header:"X-Secret-Token" required:"true"`
-	Body        struct {
+	Body struct {
 		Cookies map[string]models.CookieValue `json:"cookies"`
 	}
 }
 
 type ProfileIDInput struct {
 	ProfileID string `path:"id"`
-}
-
-type AuthenticatedProfileInput struct {
-	ProfileID   string `path:"id"`
-	SecretToken string `header:"X-Secret-Token" required:"true"`
 }
 
 type APIStatus struct {
@@ -71,10 +69,8 @@ type GetCommentsInput struct {
 }
 
 type CreateCommentAPIInput struct {
-	ChapterID   string `path:"chapterId"`
-	ProfileID   string `header:"X-Profile-ID" required:"true"`
-	SecretToken string `header:"X-Secret-Token" required:"true"`
-	Body        struct {
+	ChapterID string `path:"chapterId"`
+	Body      struct {
 		Content        string `json:"content" minLength:"1" maxLength:"1000"`
 		TurnstileToken string `json:"turnstile_token" minLength:"1"`
 	}
@@ -86,17 +82,15 @@ type TelegramWebhookInput struct {
 }
 
 type UpdateDisplayNameInput struct {
-	ProfileID   string `path:"id"`
-	SecretToken string `header:"X-Secret-Token" required:"true"`
-	Body        struct {
+	ProfileID string `path:"id"`
+	Body      struct {
 		DisplayName string `json:"display_name" minLength:"1" maxLength:"15"`
 	}
 }
 
 type UploadAvatarInput struct {
-	ProfileID   string `path:"id"`
-	SecretToken string `header:"X-Secret-Token" required:"true"`
-	Body        struct {
+	ProfileID string `path:"id"`
+	Body      struct {
 		Image string `json:"image" minLength:"1"`
 	}
 }
@@ -170,12 +164,32 @@ func HandleGetChapter(ctx context.Context, input *IDInput) (*struct{ Body any },
 	return &struct{ Body any }{Body: chapter}, nil
 }
 
-func HandleCreateProfile(ctx context.Context, input *CreateProfileInput) (*struct{ Body any }, error) {
+func HandleCreateProfile(ctx context.Context, input *CreateProfileInput) (*struct {
+	Body       any
+	SetCookies []http.Cookie `header:"Set-Cookie"`
+}, error) {
 	profile, err := data.CreateProfile(ctx, input.Body.TurnstileToken)
 	if err != nil {
 		return nil, huma.Error400BadRequest("Captcha verification failed")
 	}
-	return &struct{ Body any }{Body: profile}, nil
+
+	cookie := http.Cookie{
+		Name:     SessionCookieName,
+		Value:    profile.Token,
+		Path:     "/",
+		MaxAge:   CookieMaxAge,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
+
+	return &struct {
+		Body       any
+		SetCookies []http.Cookie `header:"Set-Cookie"`
+	}{
+		Body:       profile,
+		SetCookies: []http.Cookie{cookie},
+	}, nil
 }
 
 func HandleGetProfile(ctx context.Context, input *ProfileIDInput) (*struct{ Body any }, error) {
@@ -186,43 +200,119 @@ func HandleGetProfile(ctx context.Context, input *ProfileIDInput) (*struct{ Body
 	return &struct{ Body any }{Body: profile}, nil
 }
 
-func HandleGenerateSyncCode(ctx context.Context, input *AuthenticatedProfileInput) (*struct{ Body any }, error) {
-	result, err := data.GenerateSyncCode(ctx, input.ProfileID, input.SecretToken)
+func HandleGenerateSyncCode(ctx context.Context, input *ProfileIDInput) (*struct{ Body any }, error) {
+	userID := GetUserIDFromContext(ctx)
+	if userID == "" {
+		return nil, huma.Error401Unauthorized("Authentication required")
+	}
+
+	if userID != input.ProfileID {
+		return nil, huma.Error403Forbidden("Access denied")
+	}
+
+	result, err := data.GenerateSyncCode(ctx, userID)
 	if err != nil {
-		return nil, huma.Error403Forbidden("Invalid secret token")
+		return nil, huma.Error500InternalServerError("Failed to generate sync code")
 	}
 	return &struct{ Body any }{Body: result}, nil
 }
 
-func HandleLogin(ctx context.Context, input *LoginInput) (*struct{ Body any }, error) {
+func HandleLogin(ctx context.Context, input *LoginInput) (*struct {
+	Body       any
+	SetCookies []http.Cookie `header:"Set-Cookie"`
+}, error) {
 	result, err := data.LoginWithSyncCode(ctx, input.Body.SyncCode)
 	if err != nil {
 		return nil, huma.Error404NotFound("Invalid or expired sync code")
 	}
-	return &struct{ Body any }{Body: result}, nil
+
+	cookie := http.Cookie{
+		Name:     SessionCookieName,
+		Value:    result.Token,
+		Path:     "/",
+		MaxAge:   CookieMaxAge,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
+
+	return &struct {
+		Body       any
+		SetCookies []http.Cookie `header:"Set-Cookie"`
+	}{
+		Body:       result,
+		SetCookies: []http.Cookie{cookie},
+	}, nil
 }
 
 func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct{ Body any }, error) {
-	if input.ProfileID == "" {
-		return nil, huma.Error401Unauthorized("X-Profile-ID header required")
+	userID := GetUserIDFromContext(ctx)
+	if userID == "" {
+		return nil, huma.Error401Unauthorized("Authentication required")
 	}
 
-	result, err := data.SyncCookies(ctx, input.ProfileID, input.SecretToken, input.Body.Cookies)
+	result, err := data.SyncCookies(ctx, userID, input.Body.Cookies)
 	if err != nil {
-		return nil, huma.Error403Forbidden("Invalid secret token")
+		return nil, huma.Error500InternalServerError("Failed to sync cookies")
 	}
 	return &struct{ Body any }{Body: result}, nil
 }
 
-func HandleDeleteProfile(ctx context.Context, input *AuthenticatedProfileInput) (*struct{}, error) {
-	err := data.DeleteProfile(ctx, input.ProfileID, input.SecretToken)
+func HandleDeleteProfile(ctx context.Context, input *ProfileIDInput) (*struct {
+	SetCookies []http.Cookie `header:"Set-Cookie"`
+}, error) {
+	userID := GetUserIDFromContext(ctx)
+	if userID == "" {
+		return nil, huma.Error401Unauthorized("Authentication required")
+	}
+
+	if userID != input.ProfileID {
+		return nil, huma.Error403Forbidden("Access denied")
+	}
+
+	err := data.DeleteProfile(ctx, userID)
 	if err != nil {
-		if err.Error() == "invalid secret token" {
-			return nil, huma.Error403Forbidden("Invalid secret token")
-		}
 		return nil, huma.Error404NotFound("Profile not found")
 	}
-	return &struct{}{}, nil
+
+	cookie := http.Cookie{
+		Name:     SessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
+
+	return &struct {
+		SetCookies []http.Cookie `header:"Set-Cookie"`
+	}{
+		SetCookies: []http.Cookie{cookie},
+	}, nil
+}
+
+func HandleLogout(ctx context.Context, input *struct{}) (*struct {
+	Body       any
+	SetCookies []http.Cookie `header:"Set-Cookie"`
+}, error) {
+	cookie := http.Cookie{
+		Name:     SessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
+
+	return &struct {
+		Body       any
+		SetCookies []http.Cookie `header:"Set-Cookie"`
+	}{
+		Body:       map[string]string{"status": "logged out"},
+		SetCookies: []http.Cookie{cookie},
+	}, nil
 }
 
 func HandleGetComments(ctx context.Context, input *GetCommentsInput) (*struct{ Body any }, error) {
@@ -234,21 +324,24 @@ func HandleGetComments(ctx context.Context, input *GetCommentsInput) (*struct{ B
 }
 
 func HandleCreateComment(ctx context.Context, input *CreateCommentAPIInput) (*struct{ Body any }, error) {
+	userID := GetUserIDFromContext(ctx)
+	if userID == "" {
+		return nil, huma.Error401Unauthorized("Authentication required")
+	}
+
 	commentInput := models.CreateCommentInput{
 		ChapterID:      input.ChapterID,
 		Content:        input.Body.Content,
 		TurnstileToken: input.Body.TurnstileToken,
 	}
 
-	comment, err := data.CreateComment(ctx, input.ProfileID, input.SecretToken, commentInput)
+	comment, err := data.CreateComment(ctx, userID, commentInput)
 	if err != nil {
 		switch err.Error() {
 		case "rate limit exceeded":
 			return nil, huma.Error429TooManyRequests("Подождите 30 секунд перед отправкой следующего комментария")
 		case "captcha verification failed":
 			return nil, huma.Error400BadRequest("Captcha verification failed")
-		case "invalid secret token":
-			return nil, huma.Error403Forbidden("Invalid credentials")
 		case "invalid content length":
 			return nil, huma.Error400BadRequest("Comment must be 1-1000 characters")
 		case "chapter not found":
@@ -356,11 +449,17 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 }
 
 func HandleUpdateDisplayName(ctx context.Context, input *UpdateDisplayNameInput) (*struct{ Body any }, error) {
-	profile, err := data.UpdateDisplayName(ctx, input.ProfileID, input.SecretToken, input.Body.DisplayName)
+	userID := GetUserIDFromContext(ctx)
+	if userID == "" {
+		return nil, huma.Error401Unauthorized("Authentication required")
+	}
+
+	if userID != input.ProfileID {
+		return nil, huma.Error403Forbidden("Access denied")
+	}
+
+	profile, err := data.UpdateDisplayName(ctx, userID, input.Body.DisplayName)
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid secret token") {
-			return nil, huma.Error403Forbidden("Invalid credentials")
-		}
 		if strings.Contains(err.Error(), "invalid name") {
 			return nil, huma.Error400BadRequest("Invalid display name")
 		}
@@ -370,6 +469,15 @@ func HandleUpdateDisplayName(ctx context.Context, input *UpdateDisplayNameInput)
 }
 
 func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{ Body any }, error) {
+	userID := GetUserIDFromContext(ctx)
+	if userID == "" {
+		return nil, huma.Error401Unauthorized("Authentication required")
+	}
+
+	if userID != input.ProfileID {
+		return nil, huma.Error403Forbidden("Access denied")
+	}
+
 	imageData, err := base64.StdEncoding.DecodeString(input.Body.Image)
 	if err != nil {
 		return nil, huma.Error400BadRequest("Invalid base64 image")
@@ -379,15 +487,25 @@ func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{
 		return nil, huma.Error400BadRequest("Image too large (max 1MB)")
 	}
 
-	profile, err := data.UpdateAvatar(ctx, input.ProfileID, input.SecretToken, imageData)
+	profile, err := data.UpdateAvatar(ctx, userID, imageData)
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid secret token") {
-			return nil, huma.Error403Forbidden("Invalid credentials")
-		}
 		if strings.Contains(err.Error(), "unsupported format") {
 			return nil, huma.Error400BadRequest("Unsupported format")
 		}
 		return nil, huma.Error500InternalServerError("Upload failed")
+	}
+	return &struct{ Body any }{Body: profile}, nil
+}
+
+func HandleGetCurrentUser(ctx context.Context, input *struct{}) (*struct{ Body any }, error) {
+	userID := GetUserIDFromContext(ctx)
+	if userID == "" {
+		return nil, huma.Error401Unauthorized("Authentication required")
+	}
+
+	profile, err := data.GetProfile(ctx, userID)
+	if err != nil {
+		return nil, huma.Error404NotFound("Profile not found")
 	}
 	return &struct{ Body any }{Body: profile}, nil
 }

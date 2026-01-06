@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -126,11 +127,33 @@ func CorsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+var noCachePaths = []string{
+	"/api/profile/",
+	"/api/profile/me",
+	"/api/webhook/",
+}
+
+func shouldNotCache(path string) bool {
+	for _, p := range noCachePaths {
+		if strings.HasPrefix(path, p) || path == p {
+			return true
+		}
+	}
+	return false
+}
+
 func CacheMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.Header().Set("Cache-Control", "public, max-age=300")
+		path := r.URL.Path
+
+		if shouldNotCache(path) {
+			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, private")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
+		} else if r.Method == http.MethodGet {
+			w.Header().Set("Cache-Control", "public, max-age=600")
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }
