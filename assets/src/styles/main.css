@@ -2453,6 +2453,9 @@ html {
                 border-color: var(--tertiary);
                 box-shadow: var(--shadow-focus);
             }
+            &::placeholder {
+                color: var(--tertiary);
+            }
         }
     }
     & .pc-body {

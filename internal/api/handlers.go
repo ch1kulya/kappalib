@@ -35,6 +35,18 @@ func createSessionCookie(token string) http.Cookie {
 	}
 }
 
+func clearSessionCookie() http.Cookie {
+	return http.Cookie{
+		Name:     SessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
+}
+
 type GetNovelsInput struct {
 	Page int    `query:"page" default:"1" minimum:"1" maximum:"9999"`
 	Sort string `query:"sort" default:"oldest" enum:"newest,oldest,large,small,alphabet,created"`
@@ -109,6 +121,10 @@ type UploadAvatarInput struct {
 }
 
 type GetCurrentUserInput struct {
+	SessionToken string `cookie:"kpl_session"`
+}
+
+type LogoutInput struct {
 	SessionToken string `cookie:"kpl_session"`
 }
 
@@ -282,35 +298,19 @@ func HandleDeleteProfile(ctx context.Context, input *ProfileIDInput) (*struct {
 		return nil, huma.Error404NotFound("Profile not found")
 	}
 
-	cookie := http.Cookie{
-		Name:     SessionCookieName,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}
-
 	return &struct {
 		SetCookies []http.Cookie `header:"Set-Cookie"`
 	}{
-		SetCookies: []http.Cookie{cookie},
+		SetCookies: []http.Cookie{clearSessionCookie()},
 	}, nil
 }
 
-func HandleLogout(ctx context.Context, input *struct{}) (*struct {
+func HandleLogout(ctx context.Context, input *LogoutInput) (*struct {
 	Body       any
 	SetCookies []http.Cookie `header:"Set-Cookie"`
 }, error) {
-	cookie := http.Cookie{
-		Name:     SessionCookieName,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
+	if input.SessionToken != "" {
+		data.DeleteSession(ctx, input.SessionToken)
 	}
 
 	return &struct {
@@ -318,7 +318,7 @@ func HandleLogout(ctx context.Context, input *struct{}) (*struct {
 		SetCookies []http.Cookie `header:"Set-Cookie"`
 	}{
 		Body:       map[string]string{"status": "logged out"},
-		SetCookies: []http.Cookie{cookie},
+		SetCookies: []http.Cookie{clearSessionCookie()},
 	}, nil
 }
 

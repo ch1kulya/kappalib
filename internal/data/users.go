@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -29,8 +30,24 @@ import (
 	"github.com/ch1kulya/logger"
 )
 
+//go:embed sql/sessions_create.sql
+var querySessionsCreate string
+
+//go:embed sql/sessions_verify.sql
+var querySessionsVerify string
+
+//go:embed sql/sessions_delete.sql
+var querySessionsDelete string
+
+//go:embed sql/sessions_delete_all.sql
+var querySessionsDeleteAll string
+
+//go:embed sql/sessions_cleanup.sql
+var querySessionsCleanup string
+
 const (
-	TokenPrefix = "kpl_"
+	TokenPrefix        = "kpl_"
+	MaxSessionsPerUser = 10
 )
 
 var (
@@ -120,6 +137,33 @@ func verifyTurnstile(token string) bool {
 	return result.Success
 }
 
+func createSession(ctx context.Context, userID, token string) error {
+	tokenHash := hashToken(token)
+
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := database.DB.Exec(dbCtx, querySessionsCreate, userID, tokenHash)
+	if err != nil {
+		logger.Error("Failed to create session: %v", err)
+		return err
+	}
+
+	go cleanupOldSessions(context.Background(), userID)
+
+	return nil
+}
+
+func cleanupOldSessions(ctx context.Context, userID string) {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := database.DB.Exec(dbCtx, querySessionsCleanup, userID, MaxSessionsPerUser)
+	if err != nil {
+		logger.Warn("Failed to cleanup old sessions for user %s: %v", userID, err)
+	}
+}
+
 func VerifyToken(ctx context.Context, token string) (string, error) {
 	if token == "" {
 		return "", fmt.Errorf("empty token")
@@ -135,15 +179,34 @@ func VerifyToken(ctx context.Context, token string) (string, error) {
 	defer cancel()
 
 	var userID string
-	err := database.DB.QueryRow(dbCtx,
-		`SELECT id FROM users WHERE token_hash = $1`,
-		tokenHash).Scan(&userID)
-
+	err := database.DB.QueryRow(dbCtx, querySessionsVerify, tokenHash).Scan(&userID)
 	if err != nil {
 		return "", fmt.Errorf("invalid token")
 	}
 
 	return userID, nil
+}
+
+func DeleteSession(ctx context.Context, token string) error {
+	if token == "" {
+		return nil
+	}
+
+	tokenHash := hashToken(token)
+
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := database.DB.Exec(dbCtx, querySessionsDelete, tokenHash)
+	return err
+}
+
+func DeleteAllSessions(ctx context.Context, userID string) error {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := database.DB.Exec(dbCtx, querySessionsDeleteAll, userID)
+	return err
 }
 
 func validateCookies(cookies map[string]models.CookieValue) map[string]models.CookieValue {
@@ -184,18 +247,21 @@ func CreateProfile(ctx context.Context, turnstileToken string) (*models.ProfileW
 	displayName := generateRandomName()
 	avatarSeed := generateAvatarSeed()
 	token := generateToken()
-	tokenHash := hashToken(token)
 
 	var profile models.ProfileWithToken
 	err := database.DB.QueryRow(dbCtx,
-		`INSERT INTO users (token_hash, display_name, avatar_seed, cookies)
-		VALUES ($1, $2, $3, '{}')
+		`INSERT INTO users (display_name, avatar_seed, cookies)
+		VALUES ($1, $2, '{}')
 		RETURNING id, display_name, avatar_seed, created_at`,
-		tokenHash, displayName, avatarSeed).Scan(
+		displayName, avatarSeed).Scan(
 		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.CreatedAt)
 
 	if err != nil {
 		logger.Error("Failed to create profile: %v", err)
+		return nil, err
+	}
+
+	if err := createSession(ctx, profile.ID, token); err != nil {
 		return nil, err
 	}
 
@@ -268,14 +334,17 @@ func LoginWithSyncCode(ctx context.Context, syncCode string) (*models.LoginRespo
 	}
 
 	newToken := generateToken()
-	newTokenHash := hashToken(newToken)
 
 	_, err = database.DB.Exec(dbCtx,
-		`UPDATE users SET token_hash = $1, sync_code = NULL, sync_code_expires_at = NULL, last_active_at = now() WHERE id = $2`,
-		newTokenHash, userID)
+		`UPDATE users SET sync_code = NULL, sync_code_expires_at = NULL, last_active_at = now() WHERE id = $1`,
+		userID)
 
 	if err != nil {
-		logger.Error("Failed to update token on login: %v", err)
+		logger.Error("Failed to clear sync code on login: %v", err)
+		return nil, err
+	}
+
+	if err := createSession(ctx, userID, newToken); err != nil {
 		return nil, err
 	}
 
