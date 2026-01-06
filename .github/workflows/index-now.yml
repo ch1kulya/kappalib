@@ -1,5 +1,8 @@
 name: IndexNow
 
+permissions:
+  contents: read
+
 on:
   schedule:
     - cron: "0 2 * * *"
