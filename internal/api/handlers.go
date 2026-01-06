@@ -23,6 +23,18 @@ const (
 	CookieMaxAge      = 31536000
 )
 
+func createSessionCookie(token string) http.Cookie {
+	return http.Cookie{
+		Name:     SessionCookieName,
+		Value:    token,
+		Path:     "/",
+		MaxAge:   CookieMaxAge,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
+}
+
 type GetNovelsInput struct {
 	Page int    `query:"page" default:"1" minimum:"1" maximum:"9999"`
 	Sort string `query:"sort" default:"oldest" enum:"newest,oldest,large,small,alphabet,created"`
@@ -49,7 +61,8 @@ type LoginInput struct {
 }
 
 type SyncCookiesInput struct {
-	Body struct {
+	SessionToken string `cookie:"kpl_session"`
+	Body         struct {
 		Cookies map[string]models.CookieValue `json:"cookies"`
 	}
 }
@@ -93,6 +106,10 @@ type UploadAvatarInput struct {
 	Body      struct {
 		Image string `json:"image" minLength:"1"`
 	}
+}
+
+type GetCurrentUserInput struct {
+	SessionToken string `cookie:"kpl_session"`
 }
 
 func HandleStatus(ctx context.Context, input *struct{}) (*struct{ Body APIStatus }, error) {
@@ -173,22 +190,12 @@ func HandleCreateProfile(ctx context.Context, input *CreateProfileInput) (*struc
 		return nil, huma.Error400BadRequest("Captcha verification failed")
 	}
 
-	cookie := http.Cookie{
-		Name:     SessionCookieName,
-		Value:    profile.Token,
-		Path:     "/",
-		MaxAge:   CookieMaxAge,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}
-
 	return &struct {
 		Body       any
 		SetCookies []http.Cookie `header:"Set-Cookie"`
 	}{
 		Body:       profile,
-		SetCookies: []http.Cookie{cookie},
+		SetCookies: []http.Cookie{createSessionCookie(profile.Token)},
 	}, nil
 }
 
@@ -226,26 +233,19 @@ func HandleLogin(ctx context.Context, input *LoginInput) (*struct {
 		return nil, huma.Error404NotFound("Invalid or expired sync code")
 	}
 
-	cookie := http.Cookie{
-		Name:     SessionCookieName,
-		Value:    result.Token,
-		Path:     "/",
-		MaxAge:   CookieMaxAge,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}
-
 	return &struct {
 		Body       any
 		SetCookies []http.Cookie `header:"Set-Cookie"`
 	}{
 		Body:       result,
-		SetCookies: []http.Cookie{cookie},
+		SetCookies: []http.Cookie{createSessionCookie(result.Token)},
 	}, nil
 }
 
-func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct{ Body any }, error) {
+func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct {
+	Body       any
+	SetCookies []http.Cookie `header:"Set-Cookie"`
+}, error) {
 	userID := GetUserIDFromContext(ctx)
 	if userID == "" {
 		return nil, huma.Error401Unauthorized("Authentication required")
@@ -255,7 +255,14 @@ func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct{ B
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to sync cookies")
 	}
-	return &struct{ Body any }{Body: result}, nil
+
+	return &struct {
+		Body       any
+		SetCookies []http.Cookie `header:"Set-Cookie"`
+	}{
+		Body:       result,
+		SetCookies: []http.Cookie{createSessionCookie(input.SessionToken)},
+	}, nil
 }
 
 func HandleDeleteProfile(ctx context.Context, input *ProfileIDInput) (*struct {
@@ -497,7 +504,10 @@ func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{
 	return &struct{ Body any }{Body: profile}, nil
 }
 
-func HandleGetCurrentUser(ctx context.Context, input *struct{}) (*struct{ Body any }, error) {
+func HandleGetCurrentUser(ctx context.Context, input *GetCurrentUserInput) (*struct {
+	Body       any
+	SetCookies []http.Cookie `header:"Set-Cookie"`
+}, error) {
 	userID := GetUserIDFromContext(ctx)
 	if userID == "" {
 		return nil, huma.Error401Unauthorized("Authentication required")
@@ -507,5 +517,12 @@ func HandleGetCurrentUser(ctx context.Context, input *struct{}) (*struct{ Body a
 	if err != nil {
 		return nil, huma.Error404NotFound("Profile not found")
 	}
-	return &struct{ Body any }{Body: profile}, nil
+
+	return &struct {
+		Body       any
+		SetCookies []http.Cookie `header:"Set-Cookie"`
+	}{
+		Body:       profile,
+		SetCookies: []http.Cookie{createSessionCookie(input.SessionToken)},
+	}, nil
 }
