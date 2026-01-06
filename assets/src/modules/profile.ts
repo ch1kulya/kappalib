@@ -1,6 +1,5 @@
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
-const SECRET_TOKEN_KEY = "kappalib_secret_token";
 const TURNSTILE_SITE_KEY = process.env.TURNSTILE_SITE_KEY || "";
 const S3_URL = `${process.env.S3_USE_SSL !== "false" ? "https" : "http"}://${process.env.S3_ENDPOINT}/${process.env.S3_BUCKET}`;
 
@@ -18,12 +17,12 @@ interface ProfilePublic {
 }
 
 interface ProfileWithToken extends ProfilePublic {
-  secret_token: string;
+  token: string;
 }
 
 interface LoginResponse {
   profile: ProfilePublic;
-  secret_token: string;
+  token: string;
   cookies: Record<string, CookieValue>;
 }
 
@@ -40,23 +39,17 @@ export function getAvatarUrl(
 
 class ProfileManager {
   private profileId: string | null = null;
-  private secretToken: string | null = null;
 
   constructor() {
     this.profileId = localStorage.getItem(PROFILE_ID_KEY);
-    this.secretToken = localStorage.getItem(SECRET_TOKEN_KEY);
   }
 
   isLoggedIn(): boolean {
-    return this.profileId !== null && this.secretToken !== null;
+    return this.profileId !== null;
   }
 
   getProfileId(): string | null {
     return this.profileId;
-  }
-
-  getSecretToken(): string | null {
-    return this.secretToken;
   }
 
   getAvatarUrl(profile: ProfilePublic): string {
@@ -71,14 +64,13 @@ class ProfileManager {
       const res = await fetch(`${API_URL}/profile`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ turnstile_token: turnstileToken }),
       });
       if (res.ok) {
         const data: ProfileWithToken = await res.json();
         this.profileId = data.id;
-        this.secretToken = data.secret_token;
         localStorage.setItem(PROFILE_ID_KEY, data.id);
-        localStorage.setItem(SECRET_TOKEN_KEY, data.secret_token);
         this.syncCookiesToServer();
         return data;
       }
@@ -93,14 +85,13 @@ class ProfileManager {
       const res = await fetch(`${API_URL}/profile/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sync_code: syncCode }),
       });
       if (res.ok) {
         const data: LoginResponse = await res.json();
         this.profileId = data.profile.id;
-        this.secretToken = data.secret_token;
         localStorage.setItem(PROFILE_ID_KEY, data.profile.id);
-        localStorage.setItem(SECRET_TOKEN_KEY, data.secret_token);
         this.applyCookies(data.cookies);
         return data;
       }
@@ -113,10 +104,10 @@ class ProfileManager {
   async fetchProfile(): Promise<ProfilePublic | null> {
     if (!this.profileId) return null;
     try {
-      const url = `${API_URL}/profile/${this.profileId}?v=${Date.now()}`;
-      const res = await fetch(url);
+      const url = `${API_URL}/profile/me`;
+      const res = await fetch(url, { credentials: "include" });
       if (res.ok) return await res.json();
-      if (res.status === 404) this.logout();
+      if (res.status === 401 || res.status === 404) this.logout();
     } catch (err) {
       console.error("Fetch profile failed", err);
     }
@@ -127,17 +118,17 @@ class ProfileManager {
     sync_code: string;
     expires_at: string;
   } | null> {
-    if (!this.profileId || !this.secretToken) return null;
+    if (!this.profileId) return null;
     try {
       const res = await fetch(
         `${API_URL}/profile/${this.profileId}/sync-code`,
         {
           method: "POST",
-          headers: { "X-Secret-Token": this.secretToken },
+          credentials: "include",
         },
       );
       if (res.ok) return await res.json();
-      if (res.status === 403) this.logout();
+      if (res.status === 401 || res.status === 403) this.logout();
     } catch (err) {
       console.error("Generate sync code failed", err);
     }
@@ -145,16 +136,13 @@ class ProfileManager {
   }
 
   async syncCookiesToServer(): Promise<void> {
-    if (!this.profileId || !this.secretToken) return;
+    if (!this.profileId) return;
     const cookies = this.getKappalibCookies();
     try {
       const res = await fetch(`${API_URL}/profile/sync-cookies`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Profile-ID": this.profileId,
-          "X-Secret-Token": this.secretToken,
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ cookies }),
       });
       if (res.ok) {
@@ -167,14 +155,12 @@ class ProfileManager {
   }
 
   async updateDisplayName(newName: string): Promise<ProfilePublic | null> {
-    if (!this.profileId || !this.secretToken) return null;
+    if (!this.profileId) return null;
     try {
       const res = await fetch(`${API_URL}/profile/${this.profileId}/name`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Secret-Token": this.secretToken,
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ display_name: newName }),
       });
       if (res.ok) return await res.json();
@@ -185,16 +171,14 @@ class ProfileManager {
   }
 
   async uploadAvatar(file: File): Promise<ProfilePublic | null> {
-    if (!this.profileId || !this.secretToken) return null;
+    if (!this.profileId) return null;
     try {
       const base64 = await this.fileToBase64(file);
 
       const res = await fetch(`${API_URL}/profile/${this.profileId}/avatar`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Secret-Token": this.secretToken,
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ image: base64 }),
       });
 
@@ -225,17 +209,17 @@ class ProfileManager {
   }
 
   async deleteProfile(): Promise<boolean> {
-    if (!this.profileId || !this.secretToken) return false;
+    if (!this.profileId) return false;
     try {
       const res = await fetch(`${API_URL}/profile/${this.profileId}`, {
         method: "DELETE",
-        headers: { "X-Secret-Token": this.secretToken },
+        credentials: "include",
       });
       if (res.ok) {
         this.logout();
         return true;
       }
-      if (res.status === 403) this.logout();
+      if (res.status === 401 || res.status === 403) this.logout();
     } catch (err) {
       console.error("Delete profile failed", err);
     }
@@ -244,10 +228,13 @@ class ProfileManager {
 
   logout(): void {
     this.profileId = null;
-    this.secretToken = null;
     localStorage.removeItem(PROFILE_ID_KEY);
-    localStorage.removeItem(SECRET_TOKEN_KEY);
     localStorage.removeItem("kappalib_pending_comments");
+
+    fetch(`${API_URL}/profile/logout`, {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => {});
   }
 
   private getKappalibCookies(): Record<string, CookieValue> {
@@ -255,6 +242,7 @@ class ProfileManager {
     document.cookie.split(";").forEach((c) => {
       const [name, rawValue] = c.trim().split("=");
       if (name && name.startsWith("kappalib_") && rawValue) {
+        if (name === "kpl_session") return;
         const value = decodeURIComponent(rawValue);
         const timestampKey = `${name}_updated_at`;
         const storedTimestamp = localStorage.getItem(timestampKey);
@@ -273,7 +261,7 @@ class ProfileManager {
 
   private applyCookies(cookies: Record<string, CookieValue>): void {
     for (const [name, cv] of Object.entries(cookies)) {
-      if (name.startsWith("kappalib_")) {
+      if (name.startsWith("kappalib_") && name !== "kpl_session") {
         document.cookie = `${name}=${encodeURIComponent(cv.value)}; path=/; max-age=31536000; SameSite=Lax`;
         localStorage.setItem(`${name}_updated_at`, cv.updated_at.toString());
       }

@@ -1,6 +1,8 @@
 package web
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ch1kulya/kappalib/assets/templates"
 	"github.com/ch1kulya/kappalib/internal/data"
@@ -23,7 +24,7 @@ import (
 )
 
 type Handler struct {
-	assetVersion int64
+	assetVersion string
 }
 
 type NovelCookieData struct {
@@ -39,8 +40,12 @@ type HomeCookieData struct {
 }
 
 func NewHandler() *Handler {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
 	return &Handler{
-		assetVersion: time.Now().Unix(),
+		assetVersion: hex.EncodeToString(b)[:8],
 	}
 }
 

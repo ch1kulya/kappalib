@@ -240,7 +240,6 @@ async function loadComments(
     if (!res.ok) throw new Error("Failed to load comments");
 
     const data: CommentsPage = await res.json();
-    const pendingComments = getPendingComments();
 
     data.comments.forEach((c) => {
       removePendingComment(c.id);
@@ -502,16 +501,10 @@ function initFormHandlers(container: HTMLElement): void {
       submitBtn.textContent = "Отправка...";
 
       try {
-        const profileId = profileManager.getProfileId();
-        const secretToken = localStorage.getItem("kappalib_secret_token");
-
         const res = await fetch(`${API_URL}/chapters/${chapterId}/comments`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Profile-ID": profileId || "",
-            "X-Secret-Token": secretToken || "",
-          },
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             content: content,
             turnstile_token: token,
