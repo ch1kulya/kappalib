@@ -44,6 +44,11 @@ export function initSearch(): void {
     }
   };
 
+  const clearResults = () => {
+    results.innerHTML = "";
+    firstResultUrl = null;
+  };
+
   input.onfocus = () => {
     if (window.innerWidth <= 600 && header) {
       header.classList.add("search-expanded");
@@ -77,6 +82,7 @@ export function initSearch(): void {
         if (header) header.classList.remove("search-expanded");
         input.value = "";
         results.style.display = "none";
+        clearResults();
         hideBackdrop();
       }
     }, 150);
@@ -90,6 +96,7 @@ export function initSearch(): void {
     if (query.length < 2) {
       results.style.display = "none";
       firstResultUrl = null;
+      clearResults();
       hideBackdrop();
       return;
     }
@@ -101,16 +108,23 @@ export function initSearch(): void {
         console.info(`Searching for: "${query}"`);
         results.style.display = "block";
 
-        results.innerHTML = "";
-        const loadingDiv = document.createElement("div");
-        loadingDiv.className = "search-loading";
-        loadingDiv.textContent = "Поиск...";
-        results.appendChild(loadingDiv);
+        let loadingTimeout: number | null = setTimeout(() => {
+          loadingTimeout = null;
+          results.innerHTML = "";
+          const loadingDiv = document.createElement("div");
+          loadingDiv.className = "search-loading";
+          loadingDiv.textContent = "Поиск...";
+          results.appendChild(loadingDiv);
+        }, 150);
 
         const res = await fetch(
           `${API_URL}/novels/search?q=${encodeURIComponent(query)}`,
         );
         const data: SearchResponse = await res.json();
+
+        if (loadingTimeout !== null) {
+          clearTimeout(loadingTimeout);
+        }
 
         results.innerHTML = "";
         firstResultUrl = null;
@@ -205,6 +219,7 @@ export function initSearch(): void {
       results.style.display = "none";
       input.value = "";
       firstResultUrl = null;
+      clearResults();
       hideBackdrop();
       if (header) {
         header.classList.remove("search-expanded");
@@ -216,6 +231,7 @@ export function initSearch(): void {
     results.style.display = "none";
     input.value = "";
     firstResultUrl = null;
+    clearResults();
     hideBackdrop();
     if (header) {
       header.classList.remove("search-expanded");
