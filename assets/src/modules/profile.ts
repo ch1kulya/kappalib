@@ -419,11 +419,21 @@ function renderGuestView(): void {
   setupAgreementCheckboxes();
 
   document.getElementById("pc-create")?.addEventListener("click", async () => {
-    const ageCheckbox = document.getElementById("pc-agree-age") as HTMLInputElement;
-    const termsCheckbox = document.getElementById("pc-agree-terms") as HTMLInputElement;
-    const privacyCheckbox = document.getElementById("pc-agree-privacy") as HTMLInputElement;
+    const ageCheckbox = document.getElementById(
+      "pc-agree-age",
+    ) as HTMLInputElement;
+    const termsCheckbox = document.getElementById(
+      "pc-agree-terms",
+    ) as HTMLInputElement;
+    const privacyCheckbox = document.getElementById(
+      "pc-agree-privacy",
+    ) as HTMLInputElement;
 
-    if (!ageCheckbox?.checked || !termsCheckbox?.checked || !privacyCheckbox?.checked) {
+    if (
+      !ageCheckbox?.checked ||
+      !termsCheckbox?.checked ||
+      !privacyCheckbox?.checked
+    ) {
       showError("Необходимо принять все соглашения");
       return;
     }
@@ -473,10 +483,16 @@ function renderLoggedInView(): void {
   const content = document.getElementById("profile-card");
   if (!content) return;
 
-  content.innerHTML = "";
-  content.appendChild(cloneTemplate("tpl-pc-loading"));
+  let loadingTimeout: number | null = setTimeout(() => {
+    loadingTimeout = null;
+    content.innerHTML = "";
+    content.appendChild(cloneTemplate("tpl-pc-loading"));
+  }, 150);
 
   profileManager.fetchProfile().then((profile) => {
+    if (loadingTimeout !== null) {
+      clearTimeout(loadingTimeout);
+    }
     if (!profile) {
       renderGuestView();
       return;
@@ -660,13 +676,22 @@ function loadTurnstile(): void {
 }
 
 function setupAgreementCheckboxes(): void {
-  const ageCheckbox = document.getElementById("pc-agree-age") as HTMLInputElement;
-  const termsCheckbox = document.getElementById("pc-agree-terms") as HTMLInputElement;
-  const privacyCheckbox = document.getElementById("pc-agree-privacy") as HTMLInputElement;
+  const ageCheckbox = document.getElementById(
+    "pc-agree-age",
+  ) as HTMLInputElement;
+  const termsCheckbox = document.getElementById(
+    "pc-agree-terms",
+  ) as HTMLInputElement;
+  const privacyCheckbox = document.getElementById(
+    "pc-agree-privacy",
+  ) as HTMLInputElement;
   const createBtn = document.getElementById("pc-create") as HTMLButtonElement;
 
   const checkAllAgreed = () => {
-    const allChecked = ageCheckbox?.checked && termsCheckbox?.checked && privacyCheckbox?.checked;
+    const allChecked =
+      ageCheckbox?.checked &&
+      termsCheckbox?.checked &&
+      privacyCheckbox?.checked;
     const hasTurnstile = !!(window as any).turnstileToken;
 
     if (createBtn) {
