@@ -1365,27 +1365,27 @@ a:hover {
 
 /* Status States */
 .status-widget.operational .status-dot {
-    background-color: #10b981; /* Green */
-    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2);
+    background-color: var(--color-success);
+    box-shadow: 0 0 0 1px var(--color-success-glow);
 }
 .status-widget.operational {
-    color: #10b981;
+    color: var(--color-success);
 }
 
 .status-widget.degraded .status-dot {
-    background-color: #f59e0b; /* Orange/Yellow */
-    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2);
+    background-color: var(--color-warning);
+    box-shadow: 0 0 0 1px var(--color-warning-glow);
 }
 .status-widget.degraded {
-    color: #f59e0b;
+    color: var(--color-warning);
 }
 
 .status-widget.outage .status-dot {
-    background-color: #ef4444; /* Red */
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
+    background-color: var(--color-danger);
+    box-shadow: 0 0 0 1px var(--color-danger-glow);
 }
 .status-widget.outage {
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 /* Pulse Animation */
@@ -1505,8 +1505,8 @@ a:hover {
 
 .age-checkbox-label input:checked::after {
     content: "";
-    width: 6px;
-    height: 11px;
+    width: 5px;
+    height: 9px;
     border: solid var(--bg-primary);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
@@ -1662,8 +1662,8 @@ html {
         }
     }
     &.btn-confirm {
-        background: #be2626;
-        border-color: rgba(250, 100, 100, 0.6);
+        background: var(--color-danger-dark);
+        border-color: var(--color-danger-glow);
         color: var(--accent-text);
         box-shadow: var(--accent-shadow-primary);
         &:hover {
@@ -2398,7 +2398,7 @@ html {
         }
         &.pc-btn-danger-text {
             background: transparent;
-            color: #dc2626;
+            color: var(--color-danger-dark);
             padding: 0.4rem 0;
             font-size: 0.8rem;
             border: none;
@@ -2530,7 +2530,7 @@ html {
     & .pc-error {
         margin-top: 0.6rem;
         font-size: 0.8rem;
-        color: #dc2626;
+        color: var(--color-danger-dark);
         font-weight: 500;
     }
     & .pc-profile {
@@ -2609,7 +2609,7 @@ html {
     justify-content: center;
     opacity: 0;
     transition: opacity 0.15s;
-    color: white;
+    color: var(--accent-text);
     pointer-events: none;
 }
 
@@ -2730,8 +2730,8 @@ html {
         border-color: var(--primary);
         &::after {
             content: "";
-            width: 6px;
-            height: 11px;
+            width: 5px;
+            height: 9px;
             border: solid var(--bg-primary);
             border-width: 0 2px 2px 0;
             transform: rotate(45deg);
@@ -2847,11 +2847,10 @@ html {
 }
 
 .comment-char-counter.warning {
-    color: #f59e0b;
+    color: var(--color-warning);
 }
-
 .comment-char-counter.error {
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 .comment-submit-btn {
@@ -2992,8 +2991,8 @@ html {
 .comment-moderation-badge {
     font-size: 0.7rem;
     padding: 2px 6px;
-    background: #f59e0b;
-    color: white;
+    background: var(--color-warning);
+    color: var(--accent-text);
     border-radius: 4px;
     font-weight: 600;
 }

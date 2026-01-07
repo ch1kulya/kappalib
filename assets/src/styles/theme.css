@@ -29,6 +29,22 @@
     --accent-primary: #f97316;
     --accent-text: white;
     --accent-border: rgba(249, 115, 22, 0.1);
+    --color-success: light-dark(#059669, #10b981);
+    --color-success-glow: light-dark(
+        rgba(5, 150, 105, 0.2),
+        rgba(16, 185, 129, 0.2)
+    );
+    --color-warning: light-dark(#d97706, #f59e0b);
+    --color-warning-glow: light-dark(
+        rgba(217, 119, 6, 0.2),
+        rgba(245, 158, 11, 0.2)
+    );
+    --color-danger: light-dark(#dc2626, #ef4444);
+    --color-danger-glow: light-dark(
+        rgba(220, 38, 38, 0.2),
+        rgba(239, 68, 68, 0.2)
+    );
+    --color-danger-dark: light-dark(#b91c1c, #dc2626);
 }
 
 :root[data-scheme="catppuccin"] {
@@ -46,6 +62,22 @@
         rgba(254, 100, 11, 0.15),
         rgba(250, 179, 135, 0.15)
     );
+    --color-success: light-dark(#40a02b, #a6e3a1);
+    --color-success-glow: light-dark(
+        rgba(64, 160, 43, 0.2),
+        rgba(166, 227, 161, 0.2)
+    );
+    --color-warning: light-dark(#df8e1d, #f9e2af);
+    --color-warning-glow: light-dark(
+        rgba(223, 142, 29, 0.2),
+        rgba(249, 226, 175, 0.2)
+    );
+    --color-danger: light-dark(#d20f39, #f38ba8);
+    --color-danger-glow: light-dark(
+        rgba(210, 15, 57, 0.2),
+        rgba(243, 139, 168, 0.2)
+    );
+    --color-danger-dark: light-dark(#a60d2d, #e06486);
 }
 
 :root[data-scheme="gruvbox"] {
@@ -63,6 +95,22 @@
         rgba(214, 93, 14, 0.15),
         rgba(254, 128, 25, 0.15)
     );
+    --color-success: light-dark(#79740e, #b8bb26);
+    --color-success-glow: light-dark(
+        rgba(121, 116, 14, 0.2),
+        rgba(184, 187, 38, 0.2)
+    );
+    --color-warning: light-dark(#b57614, #fabd2f);
+    --color-warning-glow: light-dark(
+        rgba(181, 118, 20, 0.2),
+        rgba(250, 189, 47, 0.2)
+    );
+    --color-danger: light-dark(#9d0006, #fb4934);
+    --color-danger-glow: light-dark(
+        rgba(157, 0, 6, 0.2),
+        rgba(251, 73, 52, 0.2)
+    );
+    --color-danger-dark: light-dark(#7c0005, #cc241d);
 }
 
 :root[data-scheme="nord"] {
@@ -77,6 +125,22 @@
     --accent-primary: #d08770;
     --accent-text: #eceff4;
     --accent-border: rgba(208, 135, 112, 0.15);
+    --color-success: light-dark(#8aa873, #a3be8c);
+    --color-success-glow: light-dark(
+        rgba(138, 168, 115, 0.2),
+        rgba(163, 190, 140, 0.2)
+    );
+    --color-warning: light-dark(#d99d54, #ebcb8b);
+    --color-warning-glow: light-dark(
+        rgba(217, 157, 84, 0.2),
+        rgba(235, 203, 139, 0.2)
+    );
+    --color-danger: light-dark(#a5545a, #bf616a);
+    --color-danger-glow: light-dark(
+        rgba(165, 84, 90, 0.2),
+        rgba(191, 97, 106, 0.2)
+    );
+    --color-danger-dark: light-dark(#8a464b, #a5545a);
 }
 
 :root[data-scheme="rosepine"] {
@@ -94,6 +158,22 @@
         rgba(215, 130, 126, 0.15),
         rgba(234, 154, 151, 0.15)
     );
+    --color-success: light-dark(#56949f, #9ccfd8);
+    --color-success-glow: light-dark(
+        rgba(86, 148, 159, 0.2),
+        rgba(156, 207, 216, 0.2)
+    );
+    --color-warning: light-dark(#ea9d34, #f6c177);
+    --color-warning-glow: light-dark(
+        rgba(234, 157, 52, 0.2),
+        rgba(246, 193, 119, 0.2)
+    );
+    --color-danger: light-dark(#b4637a, #eb6f92);
+    --color-danger-glow: light-dark(
+        rgba(180, 99, 122, 0.2),
+        rgba(235, 111, 146, 0.2)
+    );
+    --color-danger-dark: light-dark(#944e62, #d25879);
 }
 
 :root {
