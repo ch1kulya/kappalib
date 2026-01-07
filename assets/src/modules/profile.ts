@@ -416,10 +416,23 @@ function renderGuestView(): void {
   content.appendChild(cloneTemplate("tpl-pc-guest"));
 
   loadTurnstile();
+  setupAgreementCheckboxes();
 
   document.getElementById("pc-create")?.addEventListener("click", async () => {
+    const ageCheckbox = document.getElementById("pc-agree-age") as HTMLInputElement;
+    const termsCheckbox = document.getElementById("pc-agree-terms") as HTMLInputElement;
+    const privacyCheckbox = document.getElementById("pc-agree-privacy") as HTMLInputElement;
+
+    if (!ageCheckbox?.checked || !termsCheckbox?.checked || !privacyCheckbox?.checked) {
+      showError("Необходимо принять все соглашения");
+      return;
+    }
+
     const token = (window as any).turnstileToken;
-    if (!token) return;
+    if (!token) {
+      showError("Пройдите проверку");
+      return;
+    }
 
     const btn = document.getElementById("pc-create") as HTMLButtonElement;
     btn.disabled = true;
@@ -646,6 +659,28 @@ function loadTurnstile(): void {
   }
 }
 
+function setupAgreementCheckboxes(): void {
+  const ageCheckbox = document.getElementById("pc-agree-age") as HTMLInputElement;
+  const termsCheckbox = document.getElementById("pc-agree-terms") as HTMLInputElement;
+  const privacyCheckbox = document.getElementById("pc-agree-privacy") as HTMLInputElement;
+  const createBtn = document.getElementById("pc-create") as HTMLButtonElement;
+
+  const checkAllAgreed = () => {
+    const allChecked = ageCheckbox?.checked && termsCheckbox?.checked && privacyCheckbox?.checked;
+    const hasTurnstile = !!(window as any).turnstileToken;
+
+    if (createBtn) {
+      createBtn.disabled = !(allChecked && hasTurnstile);
+    }
+  };
+
+  ageCheckbox?.addEventListener("change", checkAllAgreed);
+  termsCheckbox?.addEventListener("change", checkAllAgreed);
+  privacyCheckbox?.addEventListener("change", checkAllAgreed);
+
+  (window as any).checkAgreements = checkAllAgreed;
+}
+
 function renderTurnstile(): void {
   const container = document.getElementById("turnstile-container");
   const createBtn = document.getElementById("pc-create") as HTMLButtonElement;
@@ -655,7 +690,9 @@ function renderTurnstile(): void {
     sitekey: TURNSTILE_SITE_KEY,
     callback: (token: string) => {
       (window as any).turnstileToken = token;
-      createBtn.disabled = false;
+      if ((window as any).checkAgreements) {
+        (window as any).checkAgreements();
+      }
     },
     "expired-callback": () => {
       (window as any).turnstileToken = null;

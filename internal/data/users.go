@@ -39,9 +39,6 @@ var querySessionsVerify string
 //go:embed sql/sessions_delete.sql
 var querySessionsDelete string
 
-//go:embed sql/sessions_delete_all.sql
-var querySessionsDeleteAll string
-
 //go:embed sql/sessions_cleanup.sql
 var querySessionsCleanup string
 
@@ -198,14 +195,6 @@ func DeleteSession(ctx context.Context, token string) error {
 	defer cancel()
 
 	_, err := database.DB.Exec(dbCtx, querySessionsDelete, tokenHash)
-	return err
-}
-
-func DeleteAllSessions(ctx context.Context, userID string) error {
-	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	_, err := database.DB.Exec(dbCtx, querySessionsDeleteAll, userID)
 	return err
 }
 

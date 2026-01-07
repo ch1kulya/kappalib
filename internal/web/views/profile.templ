@@ -10,6 +10,20 @@ templ ProfileTemplates() {
 			<div class="pc-section">
 				<p class="pc-desc">Создать аккаунт? Ваш прогресс сохранится</p>
 				<div id="turnstile-container" class="pc-turnstile-container"></div>
+				<div class="pc-agreements">
+					<label class="pc-checkbox-label">
+						<input type="checkbox" id="pc-agree-age" class="pc-checkbox"/>
+						<span>Мне исполнилось 18 лет</span>
+					</label>
+					<label class="pc-checkbox-label">
+						<input type="checkbox" id="pc-agree-terms" class="pc-checkbox"/>
+						<span>Я принимаю <a href="/terms" target="_blank">Пользовательское соглашение</a></span>
+					</label>
+					<label class="pc-checkbox-label">
+						<input type="checkbox" id="pc-agree-privacy" class="pc-checkbox"/>
+						<span>Я согласен с <a href="/privacy" target="_blank">Политикой конфиденциальности</a></span>
+					</label>
+				</div>
 				<button class="pc-btn pc-btn-primary" id="pc-create" disabled>Создать аккаунт</button>
 			</div>
 			<div class="pc-divider"><span>или</span></div>
