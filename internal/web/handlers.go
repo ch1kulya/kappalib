@@ -123,6 +123,7 @@ func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
 		{Path: "copyright"},
 		{Path: "license"},
 		{Path: "terms"},
+		{Path: "markdown"},
 	}
 
 	content, err := templates.RenderSitemap(templates.SitemapData{
