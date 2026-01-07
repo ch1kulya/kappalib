@@ -211,29 +211,6 @@ a:hover {
     &:hover {
         cursor: pointer;
     }
-    &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--gradient-primary);
-        opacity: 0.6;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        pointer-events: none;
-        z-index: 1;
-    }
-    &:active::before {
-        opacity: 0.9;
-        background: var(--gradient-focus);
-    }
-    @media (hover: hover) {
-        &:hover::before {
-            opacity: 0.9;
-            background: var(--gradient-focus);
-        }
-    }
     & .header-profile-icon {
         width: 24px;
         min-width: 24px;
@@ -267,19 +244,6 @@ a:hover {
         right: 1.2rem;
         left: 1.2rem;
         width: auto;
-    }
-    &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        border-radius: 12px;
-        background: var(--gradient-secondary);
-        opacity: 0.6;
-        pointer-events: none;
-        z-index: 1;
     }
 }
 
@@ -340,19 +304,6 @@ a:hover {
     background: var(--bg-primary);
     box-shadow: var(--shadow-primary);
     overflow: visible;
-    &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        border-radius: 10px;
-        background: var(--gradient-primary);
-        opacity: 0.6;
-        pointer-events: none;
-        z-index: 0;
-    }
 }
 
 .settings-toggle-2 .settings-toggle-btn {
@@ -420,20 +371,6 @@ a:hover {
     border-radius: 0;
 }
 
-.settings-toggle-btn.active::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: inherit;
-    background: var(--gradient-focus);
-    opacity: 0.9;
-    pointer-events: none;
-    z-index: -1;
-}
-
 .settings-toggle-btn svg {
     flex-shrink: 0;
 }
@@ -468,29 +405,11 @@ a:hover {
     padding-bottom: 2px;
 }
 
-.settings-font-btn::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--gradient-primary);
-    opacity: 0.6;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: none;
-    z-index: 0;
-}
-
 @media (hover: hover) {
     .settings-font-btn:hover:not(:disabled) {
         color: var(--primary);
         border-color: var(--tertiary);
         box-shadow: var(--shadow-focus);
-    }
-    .settings-font-btn:hover:not(:disabled)::before {
-        opacity: 0.9;
-        background: var(--gradient-focus);
     }
 }
 
@@ -498,11 +417,6 @@ a:hover {
     color: var(--primary);
     border-color: var(--tertiary);
     box-shadow: var(--shadow-focus);
-}
-
-.settings-font-btn:active:not(:disabled)::before {
-    opacity: 0.9;
-    background: var(--gradient-focus);
 }
 
 .settings-font-btn:disabled {
@@ -687,24 +601,6 @@ a:hover {
             color: var(--tertiary);
             z-index: 10;
         }
-        &::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: 12px;
-            background: var(--gradient-input-primary);
-            opacity: 0.6;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            pointer-events: none;
-            z-index: 1;
-        }
-        &:focus-within::before {
-            opacity: 0.9;
-            background: var(--gradient-input-focus);
-        }
         & input#search-input {
             width: 100%;
             padding: 0.55rem 1rem 0.55rem 2.5rem;
@@ -770,25 +666,6 @@ a:hover {
             &:focus {
                 outline: none;
             }
-            &::before {
-                content: "";
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                border-radius: 12px;
-                background: var(--gradient-primary);
-                opacity: 0.6;
-                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                pointer-events: none;
-                z-index: 1;
-            }
-            &:hover::before,
-            &:focus::before {
-                opacity: 0.9;
-                background: var(--gradient-focus);
-            }
             & img {
                 width: 64px;
                 height: 96px;
@@ -827,7 +704,7 @@ a:hover {
                     & .badge {
                         font-size: 0.75rem;
                         padding: 2px 6px;
-                        background: var(--bg-primary);
+                        background: var(--outline);
                         border: 1px solid var(--border);
                         border-radius: 6px;
                         color: var(--secondary);
@@ -865,19 +742,6 @@ a:hover {
             border-radius: 12px;
             background: var(--bg-primary);
             box-shadow: var(--shadow-primary);
-            &::before {
-                content: "";
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                border-radius: 12px;
-                background: var(--gradient-primary);
-                opacity: 0.6;
-                pointer-events: none;
-                z-index: 1;
-            }
         }
     }
 }
@@ -995,25 +859,6 @@ a:hover {
     padding: 0;
     &:hover {
         cursor: pointer;
-    }
-    &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        border-radius: 10px;
-        background: var(--gradient-primary);
-        opacity: 0.6;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        pointer-events: none;
-        z-index: 1;
-    }
-    &:hover::before,
-    &:focus::before {
-        opacity: 0.9;
-        background: var(--gradient-focus);
     }
     &.prev-next {
         font-size: 19px;
@@ -1134,24 +979,12 @@ a:hover {
 
 .badge {
     position: relative;
-    background: var(--bg-primary);
+    background: var(--outline);
     border: 1px solid var(--border);
     padding: 2px 6px;
-    border-radius: 10px;
+    border-radius: 6px;
     overflow: hidden;
     box-shadow: var(--shadow-secondary);
-    &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--gradient-focus);
-        opacity: 0.6;
-        pointer-events: none;
-        z-index: 1;
-    }
 }
 
 /* Chapters */
@@ -1617,25 +1450,6 @@ html {
     background: var(--bg-primary);
     color: var(--primary);
     box-shadow: var(--shadow-primary);
-    &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        border-radius: 10px;
-        background: var(--gradient-primary);
-        opacity: 0.6;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        pointer-events: none;
-        z-index: 1;
-    }
-    &:hover::before,
-    &:focus::before {
-        opacity: 0.9;
-        background: var(--gradient-focus);
-    }
     &:hover,
     &:focus {
         box-shadow: var(--shadow-focus);
@@ -1643,19 +1457,15 @@ html {
     &:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+        &:hover {
+            box-shadow: var(--shadow-primary);
+        }
     }
     &.btn-primary {
         background: var(--primary);
         color: var(--bg-primary);
         border-color: var(--secondary);
         box-shadow: var(--shadow-inverted-primary);
-        &::before {
-            background: var(--gradient-inverted-primary);
-        }
-        &:hover::before,
-        &:focus::before {
-            background: var(--gradient-inverted-focus);
-        }
         &:hover,
         &:focus {
             box-shadow: var(--shadow-inverted-focus);
@@ -1713,13 +1523,13 @@ html {
     background-image: var(--bg-url);
     background-size: cover;
     background-position: center;
-    filter: blur(15px) saturate(180%);
-    opacity: 0.5;
-    transform: translateY(8px) scale(0.9);
+    filter: blur(10px) saturate(180%);
+    opacity: 0.4;
+    transform: translateY(3px) scale(1.01);
     border-radius: 12px;
     transition: opacity 0.3s;
     @media (prefers-color-scheme: dark) {
-        opacity: 0.6;
+        opacity: 0.3;
     }
 }
 
@@ -1847,30 +1657,6 @@ html {
     &:hover {
         cursor: pointer;
     }
-    &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--gradient-primary);
-        opacity: 0.6;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        pointer-events: none;
-        z-index: 1;
-    }
-    &:active::before,
-    &:focus-visible::before {
-        opacity: 0.9;
-        background: var(--gradient-focus);
-    }
-    @media (hover: hover) {
-        &:hover::before {
-            opacity: 0.9;
-            background: var(--gradient-focus);
-        }
-    }
 }
 
 .dropdown.active .dropdown-btn {
@@ -1902,6 +1688,8 @@ html {
     transform: translateY(-8px);
     pointer-events: none;
     visibility: hidden;
+    border-radius: 12px;
+    box-shadow: var(--shadow-primary);
     transition:
         opacity 0.15s ease,
         transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1915,20 +1703,6 @@ html {
     border-radius: 12px;
     padding: 6px;
     box-shadow: var(--shadow-primary);
-}
-
-.dropdown-menu-inner::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 12px;
-    background: var(--gradient-primary);
-    opacity: 0.6;
-    pointer-events: none;
-    z-index: 0;
 }
 
 .dropdown.active .dropdown-menu {
@@ -2117,19 +1891,6 @@ html {
     width: 0%;
     transition: width 0.5s ease-out;
     border-radius: 4px;
-    &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        border-radius: 10px;
-        background: var(--gradient-inverted-focus);
-        opacity: 0.6;
-        pointer-events: none;
-        z-index: 1;
-    }
 }
 
 .mobile-actions .reading-progress-container {
@@ -2306,19 +2067,6 @@ html {
         left: 1.2rem;
         width: auto;
     }
-    &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        border-radius: 12px;
-        background: var(--gradient-secondary);
-        opacity: 0.6;
-        pointer-events: none;
-        z-index: 1;
-    }
     & .pc-btn {
         position: relative;
         padding: 0.65rem 0.875rem;
@@ -2332,25 +2080,6 @@ html {
         box-shadow: var(--shadow-primary);
         overflow: hidden;
         transition: all 0.2s ease;
-        &::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: 10px;
-            background: var(--gradient-primary);
-            opacity: 0.6;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            pointer-events: none;
-            z-index: 1;
-        }
-        &:hover::before,
-        &:focus::before {
-            opacity: 0.9;
-            background: var(--gradient-focus);
-        }
         &:hover,
         &:focus {
             box-shadow: var(--shadow-focus);
@@ -2365,13 +2094,6 @@ html {
             width: 100%;
             border-color: var(--secondary);
             box-shadow: var(--shadow-inverted-primary);
-            &::before {
-                background: var(--gradient-inverted-primary);
-            }
-            &:hover::before,
-            &:focus::before {
-                background: var(--gradient-inverted-focus);
-            }
             &:hover,
             &:focus {
                 box-shadow: var(--shadow-inverted-focus);
@@ -2411,24 +2133,6 @@ html {
             position: relative;
             flex: 1;
             min-width: 0;
-            &::before {
-                content: "";
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                border-radius: 10px;
-                background: var(--gradient-input-primary);
-                opacity: 0.6;
-                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                pointer-events: none;
-                z-index: 1;
-            }
-            &:focus-within::before {
-                opacity: 0.9;
-                background: var(--gradient-input-focus);
-            }
         }
         & .pc-input {
             width: 100%;
@@ -2781,20 +2485,6 @@ html {
     box-shadow: var(--shadow-primary);
 }
 
-.comment-form::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 12px;
-    background: var(--gradient-primary);
-    opacity: 0.6;
-    pointer-events: none;
-    z-index: 1;
-}
-
 .comment-textarea {
     position: relative;
     z-index: 2;
@@ -2804,6 +2494,7 @@ html {
     padding: 0.75rem;
     border: 1px solid var(--border);
     border-radius: 8px;
+    box-shadow: var(--shadow-primary);
     background: var(--bg-primary);
     color: var(--primary);
     font-size: 0.95rem;
@@ -2885,20 +2576,6 @@ html {
     border-radius: 12px;
     box-shadow: var(--shadow-primary);
     position: relative;
-}
-
-.comment-item::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 12px;
-    background: var(--gradient-primary);
-    opacity: 0.4;
-    pointer-events: none;
-    z-index: 0;
 }
 
 .comment-item.comment-pending {
@@ -2989,7 +2666,7 @@ html {
     padding: 2px 6px;
     background: var(--color-warning);
     color: var(--accent-text);
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: 600;
 }
 
