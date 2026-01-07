@@ -109,8 +109,7 @@ function createCommentHTML(
       <div class="comment-body">
         <div class="comment-header">
           <span class="comment-author">${displayName}</span>
-          <span class="comment-date">${formatRelativeTime(createdAt)}</span>
-          ${isPending ? '<span class="comment-moderation-badge">На модерации</span>' : ""}
+          ${isPending ? '<span class="comment-moderation-badge">На модерации</span>' : `<span class="comment-date">${formatRelativeTime(createdAt)}</span>`}
         </div>
         <div class="comment-content">${contentHtml}</div>
       </div>
