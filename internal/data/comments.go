@@ -95,7 +95,7 @@ func init() {
 	markdownPolicy.AllowAttrs("href").OnElements("a")
 	markdownPolicy.AllowURLSchemes("http", "https")
 	markdownPolicy.AllowImages()
-	markdownPolicy.AllowAttrs("src", "alt", "title").OnElements("img")
+	markdownPolicy.AllowAttrs("src", "alt", "title", "loading").OnElements("img")
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute)
 		for range ticker.C {
@@ -162,7 +162,8 @@ func renderMarkdown(content string) string {
 		blackfriday.WithExtensions(blackfriday.CommonExtensions&^blackfriday.Tables&^blackfriday.FencedCode),
 	)
 	safe := markdownPolicy.SanitizeBytes(unsafe)
-	return strings.TrimSpace(string(safe))
+	result := strings.ReplaceAll(string(safe), "<img src=", `<img loading="lazy" src=`)
+	return strings.TrimSpace(result)
 }
 
 func CreateComment(ctx context.Context, userID string, input models.CreateCommentInput) (*models.Comment, error) {
