@@ -197,6 +197,7 @@ func main() {
 	r.Get("/copyright", h.StaticPage("copyright", "Правообладателям"))
 	r.Get("/license", h.StaticPage("license", "Лицензия MIT"))
 	r.Get("/terms", h.StaticPage("terms", "Пользовательское соглашение"))
+	r.Get("/markdown", h.StaticPage("markdown", "Памятка по Markdown"))
 	r.Get("/{id}", h.Novel)
 	r.Get("/{id}/chapter/{chapterId}", h.Chapter)
 	r.Get("/status", h.GetStatus)

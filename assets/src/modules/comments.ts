@@ -466,6 +466,7 @@ function renderCommentForm(container: HTMLElement): void {
         ></textarea>
         <div class="comment-form-footer">
           <span id="comment-char-counter" class="comment-char-counter">0/1000</span>
+          <a href="/markdown" target="_blank" class="comment-markdown-hint">Markdown</a>
           <div id="comments-turnstile-container"></div>
           <button id="comment-submit" class="action-btn btn-primary comment-submit-btn">Отправить</button>
         </div>
