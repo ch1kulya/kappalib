@@ -121,6 +121,8 @@ func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
 		{Path: "dmca"},
 		{Path: "privacy"},
 		{Path: "copyright"},
+		{Path: "license"},
+		{Path: "terms"},
 	}
 
 	content, err := templates.RenderSitemap(templates.SitemapData{

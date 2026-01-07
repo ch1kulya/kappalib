@@ -2680,6 +2680,75 @@ html {
     font-weight: 700;
 }
 
+/* Profile Agreements Checkboxes */
+.pc-agreements {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin-bottom: 1rem;
+}
+
+.pc-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    font-size: 0.8rem;
+    color: var(--secondary);
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+.pc-checkbox-label span {
+    flex: 1;
+}
+
+.pc-checkbox-label a {
+    color: var(--primary);
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.pc-checkbox-label a:hover {
+    opacity: 0.8;
+}
+
+.pc-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    min-width: 1.125rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-top: 1px;
+}
+
+.pc-checkbox:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.pc-checkbox:checked::after {
+    content: "";
+    width: 5px;
+    height: 9px;
+    border: solid var(--bg-primary);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-bottom: 2px;
+}
+
+.pc-checkbox:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--outline);
+}
+
 /* Comments Section */
 .comments-section {
     margin-top: 2rem;
