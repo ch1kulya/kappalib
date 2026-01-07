@@ -5,6 +5,8 @@ const TURNSTILE_COMMENTS_SITE_KEY =
   process.env.TURNSTILE_COMMENTS_SITE_KEY || "";
 const PENDING_COMMENTS_KEY = "kappalib_pending_comments";
 const PENDING_TTL = 3 * 60 * 60 * 1000;
+const COMMENT_COOLDOWN = 30 * 1000;
+const LAST_COMMENT_TIME_KEY = "kappalib_last_comment_time";
 
 interface PendingComment {
   id: string;
@@ -62,6 +64,35 @@ function addPendingComment(comment: PendingComment): void {
 function removePendingComment(id: string): void {
   const comments = getPendingComments().filter((c) => c.id !== id);
   localStorage.setItem(PENDING_COMMENTS_KEY, JSON.stringify(comments));
+}
+
+function getLastCommentTime(): number {
+  const stored = localStorage.getItem(LAST_COMMENT_TIME_KEY);
+  return stored ? parseInt(stored, 10) : 0;
+}
+
+function setLastCommentTime(): void {
+  localStorage.setItem(LAST_COMMENT_TIME_KEY, Date.now().toString());
+}
+
+function getRemainingCooldown(): number {
+  const elapsed = Date.now() - getLastCommentTime();
+  return Math.max(0, COMMENT_COOLDOWN - elapsed);
+}
+
+function startCooldownTimer(button: HTMLButtonElement): void {
+  const updateButton = () => {
+    const remaining = getRemainingCooldown();
+    if (remaining <= 0) {
+      button.disabled = false;
+      button.textContent = "Отправить";
+      return;
+    }
+    button.disabled = true;
+    button.textContent = `Кулдаун ${Math.ceil(remaining / 1000)} сек.`;
+    requestAnimationFrame(() => setTimeout(updateButton, 100));
+  };
+  updateButton();
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -461,6 +492,10 @@ function initFormHandlers(container: HTMLElement): void {
 
   if (!chapterId) return;
 
+  if (submitBtn && getRemainingCooldown() > 0) {
+    startCooldownTimer(submitBtn);
+  }
+
   if (textarea) {
     textarea.addEventListener("input", () => {
       updateCharCounter(textarea);
@@ -537,12 +572,16 @@ function initFormHandlers(container: HTMLElement): void {
         }
 
         await loadComments(container, chapterId);
+        setLastCommentTime();
+        startCooldownTimer(submitBtn);
       } catch (err) {
         console.error("Failed to submit comment", err);
         alert("Не удалось отправить комментарий. Попробуйте ещё раз.");
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Отправить";
+        if (!submitBtn.disabled) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Отправить";
+        }
       }
     });
   }
