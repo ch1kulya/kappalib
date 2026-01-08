@@ -392,8 +392,15 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isAdult := false
-	if novel.AgeRating != nil && *novel.AgeRating == "18+" && !isBot(r.UserAgent()) {
-		isAdult = true
+	isSevere := false
+	if novel.AgeRating != nil && !isBot(r.UserAgent()) {
+		switch *novel.AgeRating {
+		case "18+":
+			isAdult = true
+		case "19+":
+			isAdult = true
+			isSevere = true
+		}
 	}
 
 	var ogImage string
@@ -440,6 +447,7 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 			OGImage:        ogImage,
 			Version:        h.assetVersion,
 			IsAdult:        isAdult,
+			IsSevere:       isSevere,
 			Schema:         schema,
 			PrefetchURL:    prefetchURL,
 			ReaderSettings: h.getReaderSettings(r),
@@ -554,8 +562,15 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isAdult := false
-	if novel.AgeRating != nil && *novel.AgeRating == "18+" && !isBot(r.UserAgent()) {
-		isAdult = true
+	isSevere := false
+	if novel.AgeRating != nil && !isBot(r.UserAgent()) {
+		switch *novel.AgeRating {
+		case "18+":
+			isAdult = true
+		case "19+":
+			isAdult = true
+			isSevere = true
+		}
 	}
 
 	canonical := fmt.Sprintf("https://kappalib.ru/%s/chapter/%s", novelID, chapterID)
@@ -595,6 +610,7 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 			Version:        h.assetVersion,
 			IsChapterPage:  true,
 			IsAdult:        isAdult,
+			IsSevere:       isSevere,
 			Novel:          novel,
 			Schema:         schema,
 			PrefetchURL:    prefetchURL,
