@@ -14,6 +14,7 @@ type BaseProps struct {
 	Novel          *models.Novel
 	PrefetchURL    string
 	ReaderSettings ReaderSettings
+	IsSevere       bool
 }
 
 type LastReadWidgetData struct {

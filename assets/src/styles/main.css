@@ -1389,6 +1389,45 @@ a:hover {
     margin-left: 1px;
 }
 
+/* Novel Page Content Warning */
+.content-warning-banner {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    background: var(--outline);
+    border: 1px solid var(--color-danger-glow);
+    border-left: 3px solid var(--color-danger);
+    border-radius: 0 8px 8px 0;
+    text-align: left;
+}
+
+.content-warning-banner .warning-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--color-danger);
+    margin-top: 2px;
+}
+
+.content-warning-content {
+    flex: 1;
+}
+
+.content-warning-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.25rem;
+}
+
+.content-warning-text {
+    font-size: 0.85rem;
+    color: var(--secondary);
+    line-height: 1.4;
+    margin: 0;
+}
+
 /* Scroll bar */
 html {
     scrollbar-width: thin;
@@ -1629,14 +1668,16 @@ html {
 
 /* Hyphens */
 .description,
-.chapter-content {
+.chapter-content,
+.content-warning-text {
     overflow-wrap: break-word;
     word-wrap: break-word;
 }
 
 @supports (hyphenate-limit-chars: 9 4 4) {
     .chapter-content,
-    .description {
+    .description,
+    .content-warning-text {
         hyphens: auto;
         -webkit-hyphens: auto;
         -ms-hyphens: auto;
@@ -1647,7 +1688,8 @@ html {
 @supports (-webkit-hyphenate-limit-before: 4) and
     (-webkit-hyphenate-limit-after: 4) {
     .chapter-content,
-    .description {
+    .description,
+    .content-warning-text {
         hyphens: auto;
         -webkit-hyphens: auto;
         -ms-hyphens: auto;
@@ -1660,7 +1702,8 @@ html {
     (not (-webkit-hyphenate-limit-before: 4)) and
     (not (-webkit-hyphenate-limit-after: 4)) {
     .chapter-content,
-    .description {
+    .description,
+    .content-warning-text {
         hyphens: none;
         -webkit-hyphens: none;
         -ms-hyphens: none;
