@@ -76,7 +76,7 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 			}, nil
 		}
 
-		baseQuery := `SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at FROM novels`
+		baseQuery := `SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at FROM novels WHERE age_rating IS DISTINCT FROM '19+'`
 
 		var orderByClause string
 		switch sort {
