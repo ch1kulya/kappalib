@@ -1057,6 +1057,10 @@ a:hover {
     -webkit-transform: translateZ(0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    & .no-results {
+        padding: 2rem 1rem;
+        text-align: center;
+    }
 }
 
 .chapters-list.is-sorting {
