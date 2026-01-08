@@ -1,0 +1,1 @@
+ALTER TABLE novels ADD COLUMN parsing_shift INT DEFAULT 0;
