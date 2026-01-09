@@ -2285,13 +2285,6 @@ html {
             & .pc-turnstile-container {
                 margin-bottom: 0.875rem;
                 min-height: 65px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                overflow: visible;
-                & > div {
-                    transform-origin: center center;
-                }
             }
         }
         & .pc-divider {
@@ -2358,9 +2351,6 @@ html {
     @media (max-width: 440px) {
         .pc-body {
             padding: 1rem;
-        }
-        .pc-turnstile-container > div {
-            transform: scale(0.85);
         }
     }
 }

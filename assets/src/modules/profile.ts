@@ -714,6 +714,7 @@ function renderTurnstile(): void {
 
   (window as any).turnstile.render(container, {
     sitekey: TURNSTILE_SITE_KEY,
+    size: "flexible",
     callback: (token: string) => {
       (window as any).turnstileToken = token;
       if ((window as any).checkAgreements) {
