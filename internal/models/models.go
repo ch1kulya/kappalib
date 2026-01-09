@@ -25,8 +25,9 @@ type NovelsPage struct {
 }
 
 type Source struct {
-	Name    string  `json:"name"`
-	LogoURL *string `json:"logo_url"`
+	Name         string  `json:"name"`
+	LogoURL      *string `json:"logo_url"`
+	IsTranslator bool    `json:"is_translator"`
 }
 
 type ChapterSummary struct {

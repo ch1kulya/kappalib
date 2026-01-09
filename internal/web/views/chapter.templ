@@ -34,7 +34,11 @@ templ Chapter(props ChapterProps) {
                         </div>
 					}
 					<div class="source-info">
-						<span class="source-label">Источник перевода</span>
+						if props.Chapter.Source.IsTranslator {
+							<span class="source-label">Автор перевода</span>
+						} else {
+							<span class="source-label">Источник перевода</span>
+						}
 						<span class="source-name">{ props.Chapter.Source.Name }</span>
 					</div>
 					<div class="source-date">
