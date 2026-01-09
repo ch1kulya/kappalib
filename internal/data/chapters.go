@@ -64,18 +64,19 @@ func GetChapter(ctx context.Context, id string) (*models.Chapter, error) {
 
 		var c models.Chapter
 		var sourceName, sourceLogo *string
+		var sourceIsTranslator *bool
 
 		err := database.DB.QueryRow(dbCtx, queryChaptersGetOne, id).Scan(
 			&c.ID, &c.NovelID, &c.ChapterNum,
 			&c.Title, &c.TitleEn, &c.Content, &c.CreatedAt,
-			&sourceName, &sourceLogo,
+			&sourceName, &sourceLogo, &sourceIsTranslator,
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		if sourceName != nil {
-			c.Source = &models.Source{Name: *sourceName, LogoURL: sourceLogo}
+			c.Source = &models.Source{Name: *sourceName, LogoURL: sourceLogo, IsTranslator: *sourceIsTranslator}
 		}
 
 		return &c, nil

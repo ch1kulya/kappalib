@@ -1335,7 +1335,18 @@ a:hover {
 .modal-content h3 {
     font-size: 1.25rem;
     font-weight: 800;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.modal-content p {
+    font-size: 0.9rem;
+    color: var(--secondary);
+    line-height: 1.5;
+}
+
+.text-danger {
+    color: var(--color-danger-dark);
+    font-weight: 600;
 }
 
 .modal-actions {
@@ -1354,7 +1365,7 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-top: 2rem;
+    margin-top: 1.25rem;
     margin-bottom: 0.5rem;
     font-weight: 500;
     font-size: 0.9rem;
@@ -1371,26 +1382,24 @@ a:hover {
     border-radius: 4px;
     background: var(--bg-primary);
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: all 0.2s;
+    box-shadow: var(--shadow-primary);
 }
 
 .age-checkbox-label input:checked {
-    background: var(--primary);
+    background-color: var(--primary);
     border-color: var(--primary);
+    box-shadow: var(--shadow-focus);
 }
 
 .age-checkbox-label input:checked::after {
     content: "";
-    width: 5px;
-    height: 9px;
-    border: solid var(--bg-primary);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-    margin-bottom: 3px;
-    margin-left: 1px;
+    display: block;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-primary);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E")
+        center/85% no-repeat;
 }
 
 /* Novel Page Content Warning */
@@ -2276,13 +2285,6 @@ html {
             & .pc-turnstile-container {
                 margin-bottom: 0.875rem;
                 min-height: 65px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                overflow: visible;
-                & > div {
-                    transform-origin: center center;
-                }
             }
         }
         & .pc-divider {
@@ -2349,9 +2351,6 @@ html {
     @media (max-width: 440px) {
         .pc-body {
             padding: 1rem;
-        }
-        .pc-turnstile-container > div {
-            transform: scale(0.85);
         }
     }
 }
@@ -2560,23 +2559,19 @@ html {
     border-radius: 4px;
     background: var(--bg-primary);
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: all 0.2s;
     margin-top: 1px;
     &:checked {
-        background: var(--primary);
+        background-color: var(--primary);
         border-color: var(--primary);
         &::after {
             content: "";
-            width: 5px;
-            height: 9px;
-            border: solid var(--bg-primary);
-            border-width: 0 2px 2px 0;
-            transform: rotate(45deg);
-            margin-bottom: 3px;
-            margin-left: 1px;
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-primary);
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E")
+                center/85% no-repeat;
         }
     }
     &:active,
