@@ -3,6 +3,8 @@ const PROFILE_ID_KEY = "kappalib_profile_id";
 const TURNSTILE_SITE_KEY = process.env.TURNSTILE_SITE_KEY || "";
 const S3_URL = `${process.env.S3_USE_SSL !== "false" ? "https" : "http"}://${process.env.S3_ENDPOINT}/${process.env.S3_BUCKET}`;
 
+let avatarCacheBuster = Date.now();
+
 interface CookieValue {
   value: string;
   updated_at: number;
@@ -32,7 +34,7 @@ export function getAvatarUrl(
   avatarSeed: string,
 ): string {
   if (hasCustomAvatar) {
-    return `${S3_URL}/avatars/${userId}.jpg?v=${Date.now()}`;
+    return `${S3_URL}/avatars/${userId}.jpg?v=${avatarCacheBuster}`;
   }
   return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${avatarSeed}&backgroundType=solid,gradientLinear`;
 }
@@ -54,7 +56,7 @@ class ProfileManager {
 
   getAvatarUrl(profile: ProfilePublic): string {
     if (profile.has_custom_avatar) {
-      return `${S3_URL}/avatars/${profile.id}.jpg?v=${Date.now()}`;
+      return `${S3_URL}/avatars/${profile.id}.jpg?v=${avatarCacheBuster}`;
     }
     return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${profile.avatar_seed}&backgroundType=solid,gradientLinear`;
   }
@@ -182,7 +184,10 @@ class ProfileManager {
         body: JSON.stringify({ image: base64 }),
       });
 
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        avatarCacheBuster = Date.now();
+        return await res.json();
+      }
 
       const error = await res.json().catch(() => null);
       if (error?.detail) {
@@ -483,16 +488,12 @@ function renderLoggedInView(): void {
   const content = document.getElementById("profile-card");
   if (!content) return;
 
-  let loadingTimeout: number | null = setTimeout(() => {
-    loadingTimeout = null;
+  if (content.innerHTML == "") {
     content.innerHTML = "";
-    content.appendChild(cloneTemplate("tpl-pc-loading"));
-  }, 150);
+    content.appendChild(cloneTemplate("tpl-pc-skeleton"));
+  }
 
   profileManager.fetchProfile().then((profile) => {
-    if (loadingTimeout !== null) {
-      clearTimeout(loadingTimeout);
-    }
     if (!profile) {
       renderGuestView();
       return;
