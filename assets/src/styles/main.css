@@ -1371,26 +1371,21 @@ a:hover {
     border-radius: 4px;
     background: var(--bg-primary);
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: all 0.2s;
 }
 
 .age-checkbox-label input:checked {
-    background: var(--primary);
+    background-color: var(--primary);
     border-color: var(--primary);
 }
 
 .age-checkbox-label input:checked::after {
     content: "";
-    width: 5px;
-    height: 9px;
-    border: solid var(--bg-primary);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-    margin-bottom: 3px;
-    margin-left: 1px;
+    display: block;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-primary);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/85% no-repeat;
 }
 
 /* Novel Page Content Warning */
@@ -2560,23 +2555,18 @@ html {
     border-radius: 4px;
     background: var(--bg-primary);
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: all 0.2s;
     margin-top: 1px;
     &:checked {
-        background: var(--primary);
+        background-color: var(--primary);
         border-color: var(--primary);
         &::after {
             content: "";
-            width: 5px;
-            height: 9px;
-            border: solid var(--bg-primary);
-            border-width: 0 2px 2px 0;
-            transform: rotate(45deg);
-            margin-bottom: 3px;
-            margin-left: 1px;
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-primary);
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/85% no-repeat;
         }
     }
     &:active,
