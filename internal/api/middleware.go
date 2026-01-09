@@ -151,7 +151,7 @@ func CacheMiddleware(next http.Handler) http.Handler {
 			w.Header().Set("Pragma", "no-cache")
 			w.Header().Set("Expires", "0")
 		} else if r.Method == http.MethodGet {
-			w.Header().Set("Cache-Control", "public, max-age=600")
+			w.Header().Set("Cache-Control", "public, max-age=6000")
 		}
 
 		next.ServeHTTP(w, r)
