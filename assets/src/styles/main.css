@@ -2252,20 +2252,6 @@ html {
         padding: 1.25rem;
         position: relative;
         z-index: 2;
-        &.pc-loading {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100px;
-            & .pc-loader {
-                width: 28px;
-                height: 28px;
-                border: 3px solid var(--outline);
-                border-top-color: var(--primary);
-                border-radius: 50%;
-                animation: spin 0.8s linear infinite;
-            }
-        }
         & .pc-section {
             margin-bottom: 0;
             & .pc-desc {
