@@ -1108,6 +1108,10 @@ a:hover {
     display: block;
 }
 
+.volume-tag {
+    color: var(--accent-primary);
+}
+
 /* Reader */
 .chapter-reader h1 {
     font-size: 1.5rem;
