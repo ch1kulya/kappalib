@@ -68,7 +68,7 @@ type CreateProfileInput struct {
 
 type LoginInput struct {
 	Body struct {
-		SyncCode string `json:"sync_code" minLength:"8" maxLength:"8"`
+		SyncCode string `json:"sync_code" minLength:"8" maxLength:"24"`
 	}
 }
 
@@ -126,6 +126,13 @@ type GetCurrentUserInput struct {
 
 type LogoutInput struct {
 	SessionToken string `cookie:"kpl_session"`
+}
+
+type GenerateSyncCodeInput struct {
+	ProfileID string `path:"id"`
+	Body      struct {
+		TTL string `json:"ttl" default:"15m"`
+	}
 }
 
 func HandleStatus(ctx context.Context, input *struct{}) (*struct{ Body APIStatus }, error) {
@@ -223,7 +230,7 @@ func HandleGetProfile(ctx context.Context, input *ProfileIDInput) (*struct{ Body
 	return &struct{ Body any }{Body: profile}, nil
 }
 
-func HandleGenerateSyncCode(ctx context.Context, input *ProfileIDInput) (*struct{ Body any }, error) {
+func HandleGenerateSyncCode(ctx context.Context, input *GenerateSyncCodeInput) (*struct{ Body any }, error) {
 	userID := GetUserIDFromContext(ctx)
 	if userID == "" {
 		return nil, huma.Error401Unauthorized("Authentication required")
@@ -233,7 +240,12 @@ func HandleGenerateSyncCode(ctx context.Context, input *ProfileIDInput) (*struct
 		return nil, huma.Error403Forbidden("Access denied")
 	}
 
-	result, err := data.GenerateSyncCode(ctx, userID)
+	ttl := input.Body.TTL
+	if ttl == "" {
+		ttl = "15m"
+	}
+
+	result, err := data.GenerateSyncCode(ctx, userID, ttl)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to generate sync code")
 	}
