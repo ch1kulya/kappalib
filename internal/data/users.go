@@ -97,16 +97,6 @@ func hashToken(token string) string {
 	return hex.EncodeToString(h[:])
 }
 
-func generateSyncCode() string {
-	chars := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-	code := make([]byte, 8)
-	for i := range code {
-		idx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
-		code[i] = chars[idx.Int64()]
-	}
-	return string(code)
-}
-
 func verifyTurnstile(token string) bool {
 	if turnstileSecret == "" {
 		logger.Warn("TURNSTILE_SECRET not set")
@@ -276,81 +266,6 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 	database.DB.Exec(dbCtx, `UPDATE users SET last_active_at = now() WHERE id = $1`, profileID)
 
 	return &profile, nil
-}
-
-func GenerateSyncCode(ctx context.Context, userID string) (*models.SyncCodeResponse, error) {
-	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	syncCode := generateSyncCode()
-	expiresAt := time.Now().Add(15 * time.Minute)
-
-	_, err := database.DB.Exec(dbCtx,
-		`UPDATE users SET sync_code = $1, sync_code_expires_at = $2, last_active_at = now() WHERE id = $3`,
-		syncCode, expiresAt, userID)
-
-	if err != nil {
-		logger.Error("Failed to generate sync code: %v", err)
-		return nil, err
-	}
-
-	logger.Info("Sync code generated for %s", userID)
-	return &models.SyncCodeResponse{
-		SyncCode:  syncCode,
-		ExpiresAt: expiresAt.Format(time.RFC3339),
-	}, nil
-}
-
-func LoginWithSyncCode(ctx context.Context, syncCode string) (*models.LoginResponse, error) {
-	syncCode = strings.ToUpper(strings.TrimSpace(syncCode))
-	if len(syncCode) != 8 {
-		return nil, fmt.Errorf("invalid sync code format")
-	}
-
-	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	var userID string
-	var cookiesJSON []byte
-	err := database.DB.QueryRow(dbCtx, `
-		SELECT id, cookies
-		FROM users
-		WHERE sync_code = $1 AND sync_code_expires_at > now()`,
-		syncCode).Scan(&userID, &cookiesJSON)
-
-	if err != nil {
-		return nil, fmt.Errorf("invalid or expired sync code")
-	}
-
-	newToken := generateToken()
-
-	_, err = database.DB.Exec(dbCtx,
-		`UPDATE users SET sync_code = NULL, sync_code_expires_at = NULL, last_active_at = now() WHERE id = $1`,
-		userID)
-
-	if err != nil {
-		logger.Error("Failed to clear sync code on login: %v", err)
-		return nil, err
-	}
-
-	if err := createSession(ctx, userID, newToken); err != nil {
-		return nil, err
-	}
-
-	var profile models.ProfilePublic
-	database.DB.QueryRow(dbCtx,
-		`SELECT id, display_name, avatar_seed, has_custom_avatar, created_at FROM users WHERE id = $1`,
-		userID).Scan(&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &profile.CreatedAt)
-
-	var cookies map[string]models.CookieValue
-	json.Unmarshal(cookiesJSON, &cookies)
-
-	logger.Info("Login via sync code: %s", profile.ID)
-	return &models.LoginResponse{
-		Profile: profile,
-		Token:   newToken,
-		Cookies: cookies,
-	}, nil
 }
 
 func SyncCookies(ctx context.Context, userID string, cookies map[string]models.CookieValue) (map[string]models.CookieValue, error) {

@@ -1,3 +1,5 @@
+import Dropdown from "./dropdown";
+
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
 const TURNSTILE_SITE_KEY = process.env.TURNSTILE_SITE_KEY || "";
@@ -88,7 +90,7 @@ class ProfileManager {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ sync_code: syncCode }),
+        body: JSON.stringify({ sync_code: encodeURIComponent(syncCode) }),
       });
       if (res.ok) {
         const data: LoginResponse = await res.json();
@@ -116,7 +118,7 @@ class ProfileManager {
     return null;
   }
 
-  async generateSyncCode(): Promise<{
+  async generateSyncCode(ttl: string = "15m"): Promise<{
     sync_code: string;
     expires_at: string;
   } | null> {
@@ -126,7 +128,9 @@ class ProfileManager {
         `${API_URL}/profile/${this.profileId}/sync-code`,
         {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
+          body: JSON.stringify({ ttl }),
         },
       );
       if (res.ok) return await res.json();
@@ -465,9 +469,9 @@ function renderGuestView(): void {
 
   document.getElementById("pc-login")?.addEventListener("click", async () => {
     const input = document.getElementById("pc-sync-input") as HTMLInputElement;
-    const code = input.value.trim().toUpperCase();
-    if (code.length !== 8) {
-      showError("Введите 8-символьный код");
+    const code = input.value.trim();
+    if (code.length < 8 || code.length > 24) {
+      showError("Введите код от 8 до 24 символов");
       return;
     }
 
@@ -620,26 +624,57 @@ function initProfileInteractions(profile: any): void {
     nameEdit.style.display = "inline-flex";
   }
 
+  let selectedTTL = "15m";
+
+  const ttlDropdownEl = document.getElementById("pc-ttl-dropdown");
+  if (ttlDropdownEl) {
+    new Dropdown(ttlDropdownEl);
+    ttlDropdownEl.addEventListener("change", (e: Event) => {
+      const customEvent = e as CustomEvent<{ value: string }>;
+      selectedTTL = customEvent.detail.value;
+    });
+  }
+
   document
     .getElementById("pc-get-code")
     ?.addEventListener("click", async () => {
       const btn = document.getElementById("pc-get-code") as HTMLButtonElement;
-      btn.disabled = true;
-      btn.textContent = "Генерация...";
+      const controls = document.getElementById("pc-code-controls");
+      const codeRow = document.getElementById("pc-code-row");
+      const codeText = document.getElementById("pc-code-text");
+      const codeHint = document.getElementById("pc-code-hint");
+      const copyBtn = document.getElementById("pc-code-copy");
 
-      const result = await profileManager.generateSyncCode();
+      btn.disabled = true;
+      btn.textContent = "...";
+
+      const result = await profileManager.generateSyncCode(selectedTTL);
       if (result) {
-        const area = document.getElementById("pc-code-area");
-        if (area) {
-          const codeEl = document.createElement("div");
-          codeEl.className = "pc-code";
-          codeEl.textContent = result.sync_code;
-          area.appendChild(codeEl);
+        if (codeText) codeText.textContent = result.sync_code;
+        if (codeHint) {
+          const expiresDate = new Date(result.expires_at);
+          codeHint.textContent = `Одноразовый. Действует до ${expiresDate.toLocaleString("ru-RU")}`;
+          codeHint.style.display = "block";
         }
-        btn.style.display = "none";
+        if (codeRow) codeRow.style.display = "flex";
+        if (controls) controls.style.display = "none";
+
+        if (copyBtn) {
+          const syncCode = result.sync_code;
+          copyBtn.onclick = (e) => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(syncCode);
+            copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+            copyBtn.classList.add("copied");
+            setTimeout(() => {
+              copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+              copyBtn.classList.remove("copied");
+            }, 2000);
+          };
+        }
       } else {
         btn.disabled = false;
-        btn.textContent = "Получить код";
+        btn.textContent = "Получить";
       }
     });
 
