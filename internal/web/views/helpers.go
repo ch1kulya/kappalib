@@ -2,7 +2,9 @@ package views
 
 import (
 	"fmt"
+	"html"
 	"math"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -265,4 +267,21 @@ func chapterTitleClasses(settings ReaderSettings) string {
 		return "justify-text"
 	}
 	return ""
+}
+
+var volumeTagRe = regexp.MustCompile(`\[((?:Начало|Конец)(?:\s+\d+\s+тома)?)\]`)
+
+func FormatTitle(title string) string {
+	if !strings.Contains(title, "[") {
+		return html.EscapeString(title)
+	}
+	return volumeTagRe.ReplaceAllString(html.EscapeString(title), `<span class="volume-tag">[$1]</span>`)
+}
+
+func FormatChapterHeading(num int, title string) string {
+	prefix := fmt.Sprintf("Глава %d", num)
+	if title == "Без названия" {
+		return prefix
+	}
+	return prefix + ": " + FormatTitle(title)
 }

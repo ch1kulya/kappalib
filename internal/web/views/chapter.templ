@@ -14,11 +14,7 @@ templ Chapter(props ChapterProps) {
 				style="display: none;">
 			</div>
 			<h1 class={ chapterTitleClasses(props.ReaderSettings) } style={ chapterTitleStyle(props.ReaderSettings) }>
-				if props.Chapter.Title != "Без названия" {
-					Глава { fmt.Sprintf("%d", props.Chapter.ChapterNum) }: { props.Chapter.Title }
-				} else {
-					Глава { fmt.Sprintf("%d", props.Chapter.ChapterNum) }
-				}
+				@templ.Raw(FormatChapterHeading(props.Chapter.ChapterNum, props.Chapter.Title))
 			</h1>
 			<div class={ chapterContentClasses(props.ReaderSettings) } style={ chapterContentStyle(props.ReaderSettings) }>
 				@templ.Raw(props.Chapter.Content)
