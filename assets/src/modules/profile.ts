@@ -471,7 +471,7 @@ function renderGuestView(): void {
     const input = document.getElementById("pc-sync-input") as HTMLInputElement;
     const code = input.value.trim();
     if (code.length < 8 || code.length > 24) {
-      showError("Введите код от 8 до 24 символов включительно");
+      showError("Введите код от 8 до 24 символов");
       return;
     }
 
