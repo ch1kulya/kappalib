@@ -374,8 +374,12 @@ func HandleCreateComment(ctx context.Context, input *CreateCommentAPIInput) (*st
 
 func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*struct{}, error) {
 	expectedSecret := data.GetTelegramWebhookSecret()
-	if expectedSecret != "" && input.WebhookSecret != expectedSecret {
-		logger.Warn("Telegram Webhook: Invalid secret token. Got: %s", input.WebhookSecret)
+	if expectedSecret == "" {
+		logger.Error("Telegram webhook secret not configured")
+		return nil, huma.Error500InternalServerError("Webhook not configured")
+	}
+	if input.WebhookSecret != expectedSecret {
+		logger.Warn("Telegram Webhook: Invalid secret token")
 		return nil, huma.Error403Forbidden("Invalid webhook secret")
 	}
 
@@ -410,6 +414,12 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 
 	if callback.Message == nil {
 		logger.Warn("CallbackQuery received without Message field")
+		return &struct{}{}, nil
+	}
+
+	expectedChatID := data.GetTelegramChatID()
+	if expectedChatID != "" && fmt.Sprintf("%d", callback.Message.Chat.ID) != expectedChatID {
+		logger.Warn("Telegram Webhook: Invalid chat ID")
 		return &struct{}{}, nil
 	}
 

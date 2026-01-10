@@ -452,6 +452,18 @@ func GetTelegramWebhookSecret() string {
 	return telegramWebhookSecret
 }
 
+func GetTelegramChatID() string {
+	return telegramChatID
+}
+
+func SetTelegramWebhookSecret(secret string) {
+	telegramWebhookSecret = secret
+}
+
+func SetTelegramChatID(chatID string) {
+	telegramChatID = chatID
+}
+
 func chapterExists(ctx context.Context, chapterID string) bool {
 	var exists bool
 	err := database.DB.QueryRow(ctx,
