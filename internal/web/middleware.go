@@ -57,8 +57,9 @@ func (rl *RateLimiter) getVisitor(ip string) *rate.Limiter {
 }
 
 func (rl *RateLimiter) cleanupLoop() {
-	for {
-		time.Sleep(2 * time.Minute)
+	ticker := time.NewTicker(2 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
 		rl.mu.Lock()
 		for ip, v := range rl.visitors {
 			if time.Since(v.lastSeen) > 5*time.Minute {
