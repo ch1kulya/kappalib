@@ -98,6 +98,7 @@ func init() {
 	markdownPolicy.AllowAttrs("src", "alt", "title", "loading").OnElements("img")
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
 		for range ticker.C {
 			userCommentLimiter.Lock()
 			now := time.Now()

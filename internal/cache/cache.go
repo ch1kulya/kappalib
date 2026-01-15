@@ -19,6 +19,31 @@ var C = &Cache{
 	items: make(map[string]item),
 }
 
+func init() {
+	C.startCleanup(5 * time.Minute)
+}
+
+func (c *Cache) startCleanup(interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for range ticker.C {
+			c.deleteExpired()
+		}
+	}()
+}
+
+func (c *Cache) deleteExpired() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	now := time.Now().UnixNano()
+	for key, it := range c.items {
+		if now >= it.expiration {
+			delete(c.items, key)
+		}
+	}
+}
+
 func (c *Cache) Get(key string) (any, bool) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
