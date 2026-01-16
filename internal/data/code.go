@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -16,6 +17,15 @@ import (
 	"github.com/ch1kulya/kappalib/internal/models"
 	"github.com/ch1kulya/logger"
 )
+
+//go:embed sql/users_set_sync_code.sql
+var queryUsersSetSyncCode string
+
+//go:embed sql/users_login_by_sync_code.sql
+var queryUsersLoginBySyncCode string
+
+//go:embed sql/users_clear_sync_code.sql
+var queryUsersClearSyncCode string
 
 var syncCodeConfigs = map[string]struct {
 	Length   int
@@ -37,7 +47,10 @@ func generateSyncCodeWithConfig(config struct {
 }) string {
 	code := make([]byte, config.Length)
 	for i := range code {
-		idx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(config.Charset))))
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(config.Charset))))
+		if err != nil {
+			panic("crypto/rand failed: " + err.Error())
+		}
 		code[i] = config.Charset[idx.Int64()]
 	}
 	return string(code)
@@ -61,9 +74,7 @@ func GenerateSyncCode(ctx context.Context, userID string, ttlKey string) (*model
 	codeHash := hashSyncCode(syncCode)
 	expiresAt := time.Now().Add(config.Duration)
 
-	_, err := database.DB.Exec(dbCtx,
-		`UPDATE users SET sync_code_hash = $1, sync_code_expires_at = $2, last_active_at = now() WHERE id = $3`,
-		codeHash, expiresAt, userID)
+	_, err := database.DB.Exec(dbCtx, queryUsersSetSyncCode, codeHash, expiresAt, userID)
 
 	if err != nil {
 		logger.Error("Failed to generate sync code: %v", err)
@@ -95,11 +106,7 @@ func LoginWithSyncCode(ctx context.Context, syncCode string) (*models.LoginRespo
 
 	var userID string
 	var cookiesJSON []byte
-	err = database.DB.QueryRow(dbCtx, `
-		SELECT id, cookies
-		FROM users
-		WHERE sync_code_hash = $1 AND sync_code_expires_at > now()`,
-		codeHash).Scan(&userID, &cookiesJSON)
+	err = database.DB.QueryRow(dbCtx, queryUsersLoginBySyncCode, codeHash).Scan(&userID, &cookiesJSON)
 
 	if err != nil {
 		return nil, fmt.Errorf("invalid or expired sync code")
@@ -107,9 +114,7 @@ func LoginWithSyncCode(ctx context.Context, syncCode string) (*models.LoginRespo
 
 	newToken := generateToken()
 
-	_, err = database.DB.Exec(dbCtx,
-		`UPDATE users SET sync_code_hash = NULL, sync_code_expires_at = NULL, last_active_at = now() WHERE id = $1`,
-		userID)
+	_, err = database.DB.Exec(dbCtx, queryUsersClearSyncCode, userID)
 
 	if err != nil {
 		logger.Error("Failed to clear sync code on login: %v", err)
@@ -121,9 +126,8 @@ func LoginWithSyncCode(ctx context.Context, syncCode string) (*models.LoginRespo
 	}
 
 	var profile models.ProfilePublic
-	database.DB.QueryRow(dbCtx,
-		`SELECT id, display_name, avatar_seed, has_custom_avatar, created_at FROM users WHERE id = $1`,
-		userID).Scan(&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &profile.CreatedAt)
+	database.DB.QueryRow(dbCtx, queryUsersGet, userID).Scan(
+		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &profile.CreatedAt)
 
 	var cookies map[string]models.CookieValue
 	json.Unmarshal(cookiesJSON, &cookies)

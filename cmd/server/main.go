@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -24,9 +23,6 @@ import (
 	esbuild "github.com/evanw/esbuild/pkg/api"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/joho/godotenv/autoload"
 )
 
@@ -49,38 +45,6 @@ var requiredEnvVars = []string{
 	"S3_SECRET_KEY",
 	"S3_USE_SSL",
 	"INDEX_NOW_KEY",
-}
-
-func runMigrations() {
-	logger.Info("Starting database migrations...")
-	databaseURL := os.Getenv("DATABASE_URL")
-
-	m, err := migrate.New("file://migrations", databaseURL)
-	if err != nil {
-		logger.Error("Migration initialization failed: %v", err)
-		os.Exit(1)
-	}
-
-	defer func() {
-		srcErr, dbErr := m.Close()
-		if srcErr != nil {
-			logger.Warn("Migration source close error: %v", srcErr)
-		}
-		if dbErr != nil {
-			logger.Warn("Migration db close error: %v", dbErr)
-		}
-	}()
-
-	if err := m.Up(); err != nil {
-		if errors.Is(err, migrate.ErrNoChange) {
-			logger.Info("Already up to date.")
-			return
-		}
-		logger.Error("Migration failed: %v", err)
-		os.Exit(1)
-	}
-
-	logger.Info("Migrations applied successfully")
 }
 
 func buildAssets() {
@@ -158,7 +122,9 @@ func main() {
 	}
 	logger.Info("Templates initialized")
 
-	runMigrations()
+	if err := database.RunMigrations(os.Getenv("DATABASE_URL"), "file://migrations"); err != nil {
+		os.Exit(1)
+	}
 
 	if err := database.Init(); err != nil {
 		logger.Error("Database initialization failed: %v", err)

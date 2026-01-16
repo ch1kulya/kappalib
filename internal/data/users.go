@@ -42,6 +42,18 @@ var querySessionsDelete string
 //go:embed sql/sessions_cleanup.sql
 var querySessionsCleanup string
 
+//go:embed sql/users_create.sql
+var queryUsersCreate string
+
+//go:embed sql/users_get.sql
+var queryUsersGet string
+
+//go:embed sql/users_update_avatar.sql
+var queryUsersUpdateAvatar string
+
+//go:embed sql/users_update_display_name.sql
+var queryUsersUpdateDisplayName string
+
 const (
 	TokenPrefix        = "kpl_"
 	MaxSessionsPerUser = 10
@@ -75,20 +87,30 @@ var (
 var ErrUnsupportedFormat = fmt.Errorf("unsupported image format")
 
 func generateRandomName() string {
-	adjIdx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(adjectives))))
-	animalIdx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(animals))))
+	adjIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(adjectives))))
+	if err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
+	animalIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(animals))))
+	if err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
 	return fmt.Sprintf("%s %s", adjectives[adjIdx.Int64()], animals[animalIdx.Int64()])
 }
 
 func generateAvatarSeed() string {
-	bytes := make([]byte, 8)
-	rand.Read(bytes)
-	return hex.EncodeToString(bytes)
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
+	return hex.EncodeToString(b)
 }
 
 func generateToken() string {
 	b := make([]byte, 32)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
 	return TokenPrefix + hex.EncodeToString(b)
 }
 
@@ -228,11 +250,7 @@ func CreateProfile(ctx context.Context, turnstileToken string) (*models.ProfileW
 	token := generateToken()
 
 	var profile models.ProfileWithToken
-	err := database.DB.QueryRow(dbCtx,
-		`INSERT INTO users (display_name, avatar_seed, cookies)
-		VALUES ($1, $2, '{}')
-		RETURNING id, display_name, avatar_seed, created_at`,
-		displayName, avatarSeed).Scan(
+	err := database.DB.QueryRow(dbCtx, queryUsersCreate, displayName, avatarSeed).Scan(
 		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.CreatedAt)
 
 	if err != nil {
@@ -255,9 +273,8 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 	defer cancel()
 
 	var profile models.ProfilePublic
-	err := database.DB.QueryRow(dbCtx,
-		`SELECT id, display_name, avatar_seed, has_custom_avatar, created_at FROM users WHERE id = $1`,
-		profileID).Scan(&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &profile.CreatedAt)
+	err := database.DB.QueryRow(dbCtx, queryUsersGet, profileID).Scan(
+		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &profile.CreatedAt)
 
 	if err != nil {
 		return nil, err
@@ -281,7 +298,9 @@ func SyncCookies(ctx context.Context, userID string, cookies map[string]models.C
 	}
 
 	var existing map[string]models.CookieValue
-	json.Unmarshal(existingJSON, &existing)
+	if err := json.Unmarshal(existingJSON, &existing); err != nil {
+		existing = make(map[string]models.CookieValue)
+	}
 
 	merged := mergeCookies(existing, validCookies)
 	mergedJSON, _ := json.Marshal(merged)
@@ -348,9 +367,7 @@ func UpdateDisplayName(ctx context.Context, userID, newName string) (*models.Pro
 		return nil, fmt.Errorf("invalid name: %w", err)
 	}
 
-	_, err = database.DB.Exec(dbCtx,
-		`UPDATE users SET display_name = $1, last_active_at = now() WHERE id = $2`,
-		validName, userID)
+	_, err = database.DB.Exec(dbCtx, queryUsersUpdateDisplayName, validName, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -394,9 +411,7 @@ func UpdateAvatar(ctx context.Context, userID string, imageData []byte) (*models
 		return nil, fmt.Errorf("s3 upload failed: %w", err)
 	}
 
-	_, err = database.DB.Exec(dbCtx,
-		`UPDATE users SET has_custom_avatar = true, last_active_at = now() WHERE id = $1`,
-		userID)
+	_, err = database.DB.Exec(dbCtx, queryUsersUpdateAvatar, userID)
 	if err != nil {
 		return nil, err
 	}

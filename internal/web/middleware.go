@@ -1,6 +1,7 @@
 package web
 
 import (
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -73,9 +74,9 @@ func (rl *RateLimiter) cleanupLoop() {
 func RateLimitMiddleware(rl *RateLimiter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip := r.RemoteAddr
-			if strings.Contains(ip, ":") {
-				ip = strings.Split(ip, ":")[0]
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				ip = r.RemoteAddr
 			}
 			limiter := rl.getVisitor(ip)
 			if !limiter.Allow() {

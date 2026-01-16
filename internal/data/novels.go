@@ -26,6 +26,9 @@ var queryNovelsSearch string
 //go:embed sql/novels_get_one.sql
 var queryNovelsGetOne string
 
+//go:embed sql/novels_increment_views.sql
+var queryNovelsIncrementViews string
+
 func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 	key := fmt.Sprintf("novel:%s", id)
 
@@ -195,4 +198,11 @@ func GetSitemapData(ctx context.Context) ([]models.SitemapItem, error) {
 		return nil, err
 	}
 	return value.([]models.SitemapItem), nil
+}
+
+func IncrementNovelViews(ctx context.Context, novelID string) {
+	dbCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	database.DB.Exec(dbCtx, queryNovelsIncrementViews, novelID)
 }
