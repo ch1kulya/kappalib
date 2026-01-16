@@ -1,0 +1,2 @@
+ALTER TABLE novels DROP COLUMN IF EXISTS last_parsed_at;
+ALTER TABLE novels DROP COLUMN IF EXISTS source_url;

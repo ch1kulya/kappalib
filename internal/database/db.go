@@ -23,6 +23,8 @@ func Init() error {
 	dbConfig.MinConns = 5
 	dbConfig.MaxConnLifetime = time.Hour
 	dbConfig.MaxConnIdleTime = 30 * time.Minute
+	dbConfig.HealthCheckPeriod = time.Minute
+	dbConfig.ConnConfig.ConnectTimeout = 5 * time.Second
 
 	DB, err = pgxpool.NewWithConfig(context.Background(), dbConfig)
 	if err != nil {
