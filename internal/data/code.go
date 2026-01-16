@@ -47,7 +47,10 @@ func generateSyncCodeWithConfig(config struct {
 }) string {
 	code := make([]byte, config.Length)
 	for i := range code {
-		idx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(config.Charset))))
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(config.Charset))))
+		if err != nil {
+			panic("crypto/rand failed: " + err.Error())
+		}
 		code[i] = config.Charset[idx.Int64()]
 	}
 	return string(code)

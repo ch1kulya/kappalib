@@ -87,20 +87,30 @@ var (
 var ErrUnsupportedFormat = fmt.Errorf("unsupported image format")
 
 func generateRandomName() string {
-	adjIdx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(adjectives))))
-	animalIdx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(animals))))
+	adjIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(adjectives))))
+	if err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
+	animalIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(animals))))
+	if err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
 	return fmt.Sprintf("%s %s", adjectives[adjIdx.Int64()], animals[animalIdx.Int64()])
 }
 
 func generateAvatarSeed() string {
-	bytes := make([]byte, 8)
-	rand.Read(bytes)
-	return hex.EncodeToString(bytes)
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
+	return hex.EncodeToString(b)
 }
 
 func generateToken() string {
 	b := make([]byte, 32)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
 	return TokenPrefix + hex.EncodeToString(b)
 }
 
@@ -288,7 +298,9 @@ func SyncCookies(ctx context.Context, userID string, cookies map[string]models.C
 	}
 
 	var existing map[string]models.CookieValue
-	json.Unmarshal(existingJSON, &existing)
+	if err := json.Unmarshal(existingJSON, &existing); err != nil {
+		existing = make(map[string]models.CookieValue)
+	}
 
 	merged := mergeCookies(existing, validCookies)
 	mergedJSON, _ := json.Marshal(merged)
