@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -355,6 +356,10 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Header.Get("Purpose") != "prefetch" && r.Header.Get("Sec-Purpose") != "prefetch" {
+		go data.IncrementNovelViews(context.Background(), id)
+	}
+
 	chapters, err := data.GetChapters(r.Context(), id)
 	if err != nil || chapters == nil {
 		chapters = &models.ChaptersList{Chapters: []models.ChapterSummary{}}
@@ -533,6 +538,10 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.renderError(w, r, http.StatusNotFound, "Глава не найдена", "Запрашиваемая глава не существует или была удалена.")
 		return
+	}
+
+	if r.Header.Get("Purpose") != "prefetch" && r.Header.Get("Sec-Purpose") != "prefetch" {
+		go data.IncrementNovelViews(context.Background(), novelID)
 	}
 
 	allChapters, _ := data.GetChapters(r.Context(), novelID)
