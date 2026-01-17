@@ -200,10 +200,12 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 	}
 
 	var user models.ProfilePublic
-	database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar)
+	var avatarUpdatedAt time.Time
+	database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar, avatar_updated_at FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar, &avatarUpdatedAt)
 	comment.UserDisplayName = user.DisplayName
 	comment.UserAvatarSeed = user.AvatarSeed
 	comment.UserHasCustomAvatar = user.HasCustomAvatar
+	comment.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
 
 	go sendCommentToTelegram(context.Background(), &comment)
 
@@ -246,10 +248,12 @@ func GetApprovedComments(ctx context.Context, chapterID string, page int) (*mode
 	comments := make([]models.Comment, 0)
 	for rows.Next() {
 		var c models.Comment
-		if err := rows.Scan(&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed, &c.UserHasCustomAvatar); err != nil {
+		var avatarUpdatedAt time.Time
+		if err := rows.Scan(&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed, &c.UserHasCustomAvatar, &avatarUpdatedAt); err != nil {
 			logger.Warn("Comment row scan error: %v", err)
 			continue
 		}
+		c.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
 		comments = append(comments, c)
 	}
 

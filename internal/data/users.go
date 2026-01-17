@@ -273,12 +273,15 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 	defer cancel()
 
 	var profile models.ProfilePublic
+	var avatarUpdatedAt time.Time
 	err := database.DB.QueryRow(dbCtx, queryUsersGet, profileID).Scan(
-		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &profile.CreatedAt)
+		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &avatarUpdatedAt, &profile.CreatedAt)
 
 	if err != nil {
 		return nil, err
 	}
+
+	profile.AvatarUpdatedAt = avatarUpdatedAt.Unix()
 
 	database.DB.Exec(dbCtx, `UPDATE users SET last_active_at = now() WHERE id = $1`, profileID)
 
@@ -405,7 +408,7 @@ func UpdateAvatar(ctx context.Context, userID string, imageData []byte) (*models
 
 	_, err = minioClient.PutObject(ctx, s3Bucket, key, reader, int64(len(imgData)), minio.PutObjectOptions{
 		ContentType:  "image/jpeg",
-		CacheControl: "public, max-age=6000",
+		CacheControl: "public, max-age=31536000, immutable",
 	})
 	if err != nil {
 		return nil, fmt.Errorf("s3 upload failed: %w", err)

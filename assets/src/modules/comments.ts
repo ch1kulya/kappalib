@@ -17,6 +17,7 @@ interface PendingComment {
   userDisplayName: string;
   userAvatarSeed: string;
   userHasCustomAvatar: boolean;
+  userAvatarUpdatedAt: number;
 }
 
 interface Comment {
@@ -29,6 +30,7 @@ interface Comment {
   user_display_name: string;
   user_avatar_seed: string;
   user_has_custom_avatar: boolean;
+  user_avatar_updated_at: number;
 }
 
 interface CommentsPage {
@@ -127,12 +129,15 @@ function createCommentHTML(
   const hasCustomAvatar = isApiComment
     ? comment.user_has_custom_avatar
     : comment.userHasCustomAvatar;
+  const avatarUpdatedAt = isApiComment
+    ? comment.user_avatar_updated_at
+    : comment.userAvatarUpdatedAt;
   const contentHtml = isApiComment ? comment.content_html : comment.contentHtml;
   const createdAt = isApiComment
     ? comment.created_at
     : new Date(comment.createdAt).toISOString();
 
-  const avatarUrl = getAvatarUrl(userId, hasCustomAvatar, avatarSeed);
+  const avatarUrl = getAvatarUrl(userId, hasCustomAvatar, avatarSeed, avatarUpdatedAt);
 
   return `
     <div class="comment-item${isPending ? " comment-pending" : ""}" data-comment-id="${comment.id}">
@@ -562,6 +567,7 @@ function initFormHandlers(container: HTMLElement): void {
           userDisplayName: comment.user_display_name,
           userAvatarSeed: comment.user_avatar_seed,
           userHasCustomAvatar: comment.user_has_custom_avatar,
+          userAvatarUpdatedAt: comment.user_avatar_updated_at,
         });
 
         textarea.value = "";
