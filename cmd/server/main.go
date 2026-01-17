@@ -109,6 +109,10 @@ func validateEnv() error {
 }
 
 func main() {
+	if os.Getenv("FORCE_COLOR") == "1" {
+		logger.SetForceColor(true)
+	}
+
 	logger.Info("Initializing application...")
 
 	if err := validateEnv(); err != nil {
