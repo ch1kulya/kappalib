@@ -69,6 +69,7 @@ type ProfilePublic struct {
 	DisplayName     string    `json:"display_name"`
 	AvatarSeed      string    `json:"avatar_seed"`
 	HasCustomAvatar bool      `json:"has_custom_avatar"`
+	AvatarUpdatedAt int64     `json:"avatar_updated_at"`
 	CreatedAt       time.Time `json:"created_at"`
 }
 
@@ -78,6 +79,7 @@ type ProfileWithToken struct {
 	DisplayName     string    `json:"display_name"`
 	AvatarSeed      string    `json:"avatar_seed"`
 	HasCustomAvatar bool      `json:"has_custom_avatar"`
+	AvatarUpdatedAt int64     `json:"avatar_updated_at"`
 	CreatedAt       time.Time `json:"created_at"`
 }
 
@@ -93,16 +95,17 @@ type LoginResponse struct {
 }
 
 type Comment struct {
-	ID                  string    `json:"id"`
-	ChapterID           string    `json:"chapter_id"`
-	UserID              string    `json:"user_id"`
-	ContentHTML         string    `json:"content_html"`
-	Status              string    `json:"status"`
-	TelegramMessageID   *int64    `json:"telegram_message_id,omitempty"`
-	CreatedAt           time.Time `json:"created_at"`
-	UserDisplayName     string    `json:"user_display_name,omitempty"`
-	UserAvatarSeed      string    `json:"user_avatar_seed,omitempty"`
-	UserHasCustomAvatar bool      `json:"user_has_custom_avatar,omitempty"`
+	ID                    string    `json:"id"`
+	ChapterID             string    `json:"chapter_id"`
+	UserID                string    `json:"user_id"`
+	ContentHTML           string    `json:"content_html"`
+	Status                string    `json:"status"`
+	TelegramMessageID     *int64    `json:"telegram_message_id,omitempty"`
+	CreatedAt             time.Time `json:"created_at"`
+	UserDisplayName       string    `json:"user_display_name,omitempty"`
+	UserAvatarSeed        string    `json:"user_avatar_seed,omitempty"`
+	UserHasCustomAvatar   bool      `json:"user_has_custom_avatar,omitempty"`
+	UserAvatarUpdatedAt   int64     `json:"user_avatar_updated_at,omitempty"`
 }
 
 type CommentsPage struct {

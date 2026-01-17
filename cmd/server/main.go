@@ -112,23 +112,20 @@ func main() {
 	logger.Info("Initializing application...")
 
 	if err := validateEnv(); err != nil {
-		logger.Error("Configuration error: %v", err)
-		os.Exit(1)
+		logger.Fatal("Configuration error: %v", err)
 	}
 
 	if err := templates.Init(); err != nil {
-		logger.Error("Failed to initialize templates: %v", err)
-		os.Exit(1)
+		logger.Fatal("Failed to initialize templates: %v", err)
 	}
 	logger.Info("Templates initialized")
 
 	if err := database.RunMigrations(os.Getenv("DATABASE_URL"), "file://migrations"); err != nil {
-		os.Exit(1)
+		logger.Fatal("Database migrations failed: %v", err)
 	}
 
 	if err := database.Init(); err != nil {
-		logger.Error("Database initialization failed: %v", err)
-		os.Exit(1)
+		logger.Fatal("Database initialization failed: %v", err)
 	}
 	defer database.Close()
 
@@ -353,8 +350,7 @@ func main() {
 	go func() {
 		logger.Info("Server listening on port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("Server failed to listen: %s", err)
-			os.Exit(1)
+			logger.Fatal("Server failed to listen: %s", err)
 		}
 	}()
 

@@ -5,8 +5,6 @@ const PROFILE_ID_KEY = "kappalib_profile_id";
 const TURNSTILE_SITE_KEY = process.env.TURNSTILE_SITE_KEY || "";
 const S3_URL = `${process.env.S3_USE_SSL !== "false" ? "https" : "http"}://${process.env.S3_ENDPOINT}/${process.env.S3_BUCKET}`;
 
-let avatarCacheBuster = Date.now();
-
 interface CookieValue {
   value: string;
   updated_at: number;
@@ -17,6 +15,7 @@ interface ProfilePublic {
   display_name: string;
   avatar_seed: string;
   has_custom_avatar: boolean;
+  avatar_updated_at: number;
   created_at: string;
 }
 
@@ -34,9 +33,10 @@ export function getAvatarUrl(
   userId: string,
   hasCustomAvatar: boolean,
   avatarSeed: string,
+  avatarUpdatedAt: number = 0,
 ): string {
   if (hasCustomAvatar) {
-    return `${S3_URL}/avatars/${userId}.jpg?v=${avatarCacheBuster}`;
+    return `${S3_URL}/avatars/${userId}.jpg?v=${avatarUpdatedAt}`;
   }
   return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${avatarSeed}&backgroundType=solid,gradientLinear`;
 }
@@ -58,7 +58,7 @@ class ProfileManager {
 
   getAvatarUrl(profile: ProfilePublic): string {
     if (profile.has_custom_avatar) {
-      return `${S3_URL}/avatars/${profile.id}.jpg?v=${avatarCacheBuster}`;
+      return `${S3_URL}/avatars/${profile.id}.jpg?v=${profile.avatar_updated_at}`;
     }
     return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${profile.avatar_seed}&backgroundType=solid,gradientLinear`;
   }
@@ -189,7 +189,6 @@ class ProfileManager {
       });
 
       if (res.ok) {
-        avatarCacheBuster = Date.now();
         return await res.json();
       }
 
