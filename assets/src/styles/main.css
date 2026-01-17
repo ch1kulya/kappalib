@@ -2703,7 +2703,7 @@ html {
 }
 
 .update-log-text {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--secondary);
     font-weight: 500;
     min-width: 0;
@@ -2727,7 +2727,7 @@ html {
 }
 
 .update-log-time {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--tertiary);
     font-weight: 500;
     white-space: nowrap;
@@ -2741,11 +2741,11 @@ html {
     }
 
     .update-log-text {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }
 
     .update-log-time {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
 }
 
