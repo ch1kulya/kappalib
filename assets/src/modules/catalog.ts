@@ -6,7 +6,10 @@ export async function loadCatalogPage(
   if (!container) return;
 
   const urlObj = new URL(url, window.location.origin);
-  if (urlObj.searchParams.get("page") === "1") {
+  const pageParam = urlObj.searchParams.get("page");
+  const isFirstPage = !pageParam || pageParam === "1";
+
+  if (isFirstPage) {
     urlObj.searchParams.delete("page");
   }
   const finalUrl = urlObj.toString();
@@ -29,6 +32,18 @@ export async function loadCatalogPage(
 
     if (newContent) {
       container.innerHTML = newContent.innerHTML;
+
+      const updatesSection = document.querySelector(".updates-section");
+      const newUpdatesSection = doc.querySelector(".updates-section");
+
+      if (isFirstPage && newUpdatesSection && !updatesSection) {
+        const catalogHeader = document.querySelector("#catalog-title")?.closest(".chapters-header");
+        if (catalogHeader) {
+          catalogHeader.insertAdjacentElement("beforebegin", newUpdatesSection);
+        }
+      } else if (!isFirstPage && updatesSection) {
+        updatesSection.remove();
+      }
 
       if (isHistoryPush) {
         window.history.pushState({}, "", finalUrl);

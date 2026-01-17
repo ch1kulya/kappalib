@@ -285,3 +285,10 @@ func FormatChapterHeading(num int, title string) string {
 	}
 	return prefix + ": " + FormatTitle(title)
 }
+
+func FormatUpdateActionHTML(min, max, count int) string {
+	if count == 1 {
+		return fmt.Sprintf(`+<span class="update-log-num">%d</span> `, min)
+	}
+	return fmt.Sprintf(`+<span class="update-log-num">%d-%d</span> `, min, max)
+}

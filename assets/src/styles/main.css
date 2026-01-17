@@ -2673,6 +2673,82 @@ html {
     }
 }
 
+/* Latest Updates */
+.updates-section {
+    margin-bottom: 1.5rem;
+}
+
+.updates-log {
+    display: flex;
+    flex-direction: column;
+}
+
+.update-log-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--border);
+}
+
+.update-log-item:last-child {
+    border-bottom: none;
+}
+
+.update-log-item:active {
+    opacity: 0.6;
+}
+
+.update-log-text {
+    font-size: 0.9rem;
+    color: var(--secondary);
+    font-weight: 500;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.update-log-num {
+    color: var(--primary);
+}
+
+.update-log-novel {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.update-log-app {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.update-log-time {
+    font-size: 0.8rem;
+    color: var(--tertiary);
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+@media (max-width: 500px) {
+    .update-log-item {
+        padding: 0.4rem 0;
+        gap: 0.75rem;
+    }
+
+    .update-log-text {
+        font-size: 0.85rem;
+    }
+
+    .update-log-time {
+        font-size: 0.75rem;
+    }
+}
+
 /* Comments Section */
 .comments-section {
     margin-top: 2rem;
