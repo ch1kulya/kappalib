@@ -48,33 +48,6 @@ templ Home(props HomeProps) {
 			</div>
 		}
 
-		if len(props.LatestUpdates) > 0 {
-			<div class="updates-section">
-				<div class="chapters-header" style="margin-bottom: 0.75rem;">
-					<h2 style="margin: 0;">Последние обновления</h2>
-				</div>
-				<div class="updates-log">
-					for _, update := range props.LatestUpdates {
-						if update.Type == "chapter" && update.ChapterUpdate != nil {
-							<a href={ templ.SafeURL("/" + update.ChapterUpdate.NovelID) } class="update-log-item">
-								<span class="update-log-text">
-									@templ.Raw(FormatUpdateActionHTML(update.ChapterUpdate.ChapterMin, update.ChapterUpdate.ChapterMax, update.ChapterUpdate.ChapterCount)) для <span class="update-log-novel">{ update.ChapterUpdate.NovelTitle }</span>
-								</span>
-								<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
-							</a>
-						} else if update.Type == "app" && update.AppUpdate != nil {
-							<a href={ templ.SafeURL(update.AppUpdate.URL) } class="update-log-item" target="_blank" rel="noopener">
-								<span class="update-log-text">
-									<span class="update-log-app">Обновление сайта</span> под номером <span class="update-log-app">#{ update.AppUpdate.PRNumber }</span> ({ update.AppUpdate.Title })
-								</span>
-								<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
-							</a>
-						}
-					}
-				</div>
-			</div>
-		}
-
 		<div class="chapters-header" style="margin-bottom: 1.5rem;">
 			<h2 id="catalog-title" style="margin-bottom: 0;">Каталог</h2>
 			<div class="dropdown" id="catalog-sort">
@@ -146,5 +119,32 @@ templ Home(props HomeProps) {
 				</div>
 			}
 		</div>
+
+		if len(props.LatestUpdates) > 0 {
+			<div class="updates-section">
+				<div class="chapters-header" style="margin-bottom: 0.75rem;">
+					<h2 class="catalog-title">Последние обновления</h2>
+				</div>
+				<div class="updates-log">
+					for _, update := range props.LatestUpdates {
+						if update.Type == "chapter" && update.ChapterUpdate != nil {
+							<a href={ templ.SafeURL("/" + update.ChapterUpdate.NovelID) } class="update-log-item">
+								<span class="update-log-text">
+									@templ.Raw(FormatUpdateActionHTML(update.ChapterUpdate.ChapterMin, update.ChapterUpdate.ChapterMax, update.ChapterUpdate.ChapterCount)) для <span class="update-log-novel">{ update.ChapterUpdate.NovelTitle }</span>
+								</span>
+								<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+							</a>
+						} else if update.Type == "app" && update.AppUpdate != nil {
+							<a href={ templ.SafeURL(update.AppUpdate.URL) } class="update-log-item" target="_blank" rel="noopener">
+								<span class="update-log-text">
+									<span class="update-log-app">Обновление сайта</span> под номером <span class="update-log-app">#{ update.AppUpdate.PRNumber }</span> ({ update.AppUpdate.Title })
+								</span>
+								<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+							</a>
+						}
+					}
+				</div>
+			</div>
+		}
 	}
 }
