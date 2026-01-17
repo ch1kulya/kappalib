@@ -48,6 +48,24 @@ templ Home(props HomeProps) {
 			</div>
 		}
 
+		if len(props.LatestUpdates) > 0 {
+			<div class="updates-section">
+				<div class="chapters-header" style="margin-bottom: 0.75rem;">
+					<h2 style="margin: 0;">Последние обновления</h2>
+				</div>
+				<div class="updates-log">
+					for _, update := range props.LatestUpdates {
+						<a href={ templ.SafeURL("/" + update.NovelID) } class="update-log-item">
+							<span class="update-log-text">
+								@templ.Raw(FormatUpdateActionHTML(update.ChapterMin, update.ChapterMax, update.ChapterCount)) для <span class="update-log-novel">{ update.NovelTitle }</span>
+							</span>
+							<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+						</a>
+					}
+				</div>
+			</div>
+		}
+
 		<div class="chapters-header" style="margin-bottom: 1.5rem;">
 			<h2 id="catalog-title" style="margin-bottom: 0;">Каталог</h2>
 			<div class="dropdown" id="catalog-sort">

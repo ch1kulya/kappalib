@@ -125,3 +125,13 @@ type CreateCommentInput struct {
 type UpdateProfileInput struct {
 	DisplayName *string `json:"display_name,omitempty"`
 }
+
+type NovelUpdate struct {
+	NovelID      string    `json:"novel_id"`
+	NovelTitle   string    `json:"novel_title"`
+	NovelCoverURL *string  `json:"novel_cover_url"`
+	ChapterMin   int       `json:"chapter_min"`
+	ChapterMax   int       `json:"chapter_max"`
+	ChapterCount int       `json:"chapter_count"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
