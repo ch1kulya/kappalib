@@ -32,7 +32,7 @@ type HomeProps struct {
 	TotalPages    int
 	SortOrder     string
 	LastRead      *LastReadWidgetData
-	LatestUpdates []models.NovelUpdate
+	LatestUpdates []models.HomeUpdateItem
 }
 
 type NovelProps struct {

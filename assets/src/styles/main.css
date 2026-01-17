@@ -2721,6 +2721,11 @@ html {
     font-weight: 600;
 }
 
+.update-log-app {
+    color: var(--primary);
+    font-weight: 600;
+}
+
 .update-log-time {
     font-size: 0.8rem;
     color: var(--tertiary);
