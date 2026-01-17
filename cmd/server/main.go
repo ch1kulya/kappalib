@@ -47,7 +47,7 @@ var requiredEnvVars = []string{
 	"INDEX_NOW_KEY",
 }
 
-func buildAssets() {
+func buildAssets() error {
 	logger.Info("Building assets...")
 
 	apiUrl := "/api"
@@ -79,19 +79,19 @@ func buildAssets() {
 	})
 
 	if len(result.Errors) > 0 {
+		var errMsgs []string
 		for _, e := range result.Errors {
-			logger.Error("Build error: %s", e.Text)
+			errMsgs = append(errMsgs, e.Text)
 		}
-		return
+		return fmt.Errorf("build errors: %s", strings.Join(errMsgs, "; "))
 	}
 
-	if len(result.Warnings) > 0 {
-		for _, warn := range result.Warnings {
-			logger.Warn("Build warning: %s", warn.Text)
-		}
+	for _, warn := range result.Warnings {
+		logger.Warn("Build warning: %s", warn.Text)
 	}
 
 	logger.Info("Assets built successfully")
+	return nil
 }
 
 func validateEnv() error {
@@ -108,11 +108,11 @@ func validateEnv() error {
 	return nil
 }
 
-func main() {
+func init() {
 	if os.Getenv("FORCE_COLOR") == "1" {
 		logger.SetForceColor(true)
+		logger.Debug("Forced to use truecolor.")
 	}
-
 	logger.Info("Initializing application...")
 
 	if err := validateEnv(); err != nil {
@@ -131,9 +131,14 @@ func main() {
 	if err := database.Init(); err != nil {
 		logger.Fatal("Database initialization failed: %v", err)
 	}
-	defer database.Close()
 
-	buildAssets()
+	if err := buildAssets(); err != nil {
+		logger.Fatal("Assets build failed: %v", err)
+	}
+}
+
+func main() {
+	defer database.Close()
 
 	r := chi.NewRouter()
 
