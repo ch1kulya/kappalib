@@ -187,7 +187,12 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	r.Mount("/auth", authService.AuthRoutes)
+	r.Route("/auth", func(r chi.Router) {
+		r.Use(middleware.RealIP)
+		r.Use(web.RateLimitMiddleware(webRateLimiter))
+		r.Use(web.SecurityHeadersMiddleware)
+		r.Mount("/", authService.AuthRoutes)
+	})
 
 	apiRateLimiter := api.NewRateLimiter()
 	r.Route("/api", func(r chi.Router) {
