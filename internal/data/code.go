@@ -126,8 +126,10 @@ func LoginWithSyncCode(ctx context.Context, syncCode string) (*models.LoginRespo
 	}
 
 	var profile models.ProfilePublic
+	var avatarUpdatedAt time.Time
 	database.DB.QueryRow(dbCtx, queryUsersGet, userID).Scan(
-		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &profile.CreatedAt)
+		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &avatarUpdatedAt, &profile.CreatedAt)
+	profile.AvatarUpdatedAt = avatarUpdatedAt.Unix()
 
 	var cookies map[string]models.CookieValue
 	json.Unmarshal(cookiesJSON, &cookies)

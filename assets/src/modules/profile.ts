@@ -49,7 +49,7 @@ class ProfileManager {
   }
 
   isLoggedIn(): boolean {
-    return this.profileId !== null;
+    return !!this.profileId;
   }
 
   getProfileId(): string | null {
