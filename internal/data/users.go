@@ -3,19 +3,13 @@ package data
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
 	_ "embed"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
 	"image/jpeg"
-	"io"
 	"maps"
-	"math/big"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -30,21 +24,6 @@ import (
 	"github.com/ch1kulya/logger"
 )
 
-//go:embed sql/sessions_create.sql
-var querySessionsCreate string
-
-//go:embed sql/sessions_verify.sql
-var querySessionsVerify string
-
-//go:embed sql/sessions_delete.sql
-var querySessionsDelete string
-
-//go:embed sql/sessions_cleanup.sql
-var querySessionsCleanup string
-
-//go:embed sql/users_create.sql
-var queryUsersCreate string
-
 //go:embed sql/users_get.sql
 var queryUsersGet string
 
@@ -54,25 +33,9 @@ var queryUsersUpdateAvatar string
 //go:embed sql/users_update_display_name.sql
 var queryUsersUpdateDisplayName string
 
-const (
-	TokenPrefix        = "kpl_"
-	MaxSessionsPerUser = 10
-)
-
 var (
-	adjectives = []string{
-		"Неопознанный", "Загадочный", "Мистический", "Древний", "Теневой",
-		"Странный", "Забытый", "Одинокий", "Тихий", "Быстрый",
-		"Мудрый", "Храбрый", "Дикий", "Свободный", "Гордый",
-	}
-	animals = []string{
-		"Шакал", "Волк", "Ворон", "Сокол", "Медведь",
-		"Лис", "Ёж", "Барсук", "Рысь", "Сыч",
-		"Филин", "Хорёк", "Енот", "Суслик", "Бобр",
-	}
 	cookieNameRegex  = regexp.MustCompile(`^kappalib_[a-z0-9_]{1,50}$`)
 	cookieValueRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-{}\[\]":,.\s]{1,500}$`)
-	turnstileSecret  = os.Getenv("TURNSTILE_SECRET")
 )
 
 var (
@@ -85,130 +48,6 @@ var (
 )
 
 var ErrUnsupportedFormat = fmt.Errorf("unsupported image format")
-
-func generateRandomName() string {
-	adjIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(adjectives))))
-	if err != nil {
-		panic("crypto/rand failed: " + err.Error())
-	}
-	animalIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(animals))))
-	if err != nil {
-		panic("crypto/rand failed: " + err.Error())
-	}
-	return fmt.Sprintf("%s %s", adjectives[adjIdx.Int64()], animals[animalIdx.Int64()])
-}
-
-func generateAvatarSeed() string {
-	b := make([]byte, 8)
-	if _, err := rand.Read(b); err != nil {
-		panic("crypto/rand failed: " + err.Error())
-	}
-	return hex.EncodeToString(b)
-}
-
-func generateToken() string {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		panic("crypto/rand failed: " + err.Error())
-	}
-	return TokenPrefix + hex.EncodeToString(b)
-}
-
-func hashToken(token string) string {
-	h := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(h[:])
-}
-
-func verifyTurnstile(token string) bool {
-	if turnstileSecret == "" {
-		logger.Warn("TURNSTILE_SECRET not set")
-		return false
-	}
-
-	resp, err := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify",
-		map[string][]string{
-			"secret":   {turnstileSecret},
-			"response": {token},
-		})
-	if err != nil {
-		logger.Error("Turnstile verification failed: %v", err)
-		return false
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	var result struct {
-		Success bool `json:"success"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return false
-	}
-	return result.Success
-}
-
-func createSession(ctx context.Context, userID, token string) error {
-	tokenHash := hashToken(token)
-
-	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	_, err := database.DB.Exec(dbCtx, querySessionsCreate, userID, tokenHash)
-	if err != nil {
-		logger.Error("Failed to create session: %v", err)
-		return err
-	}
-
-	go cleanupOldSessions(context.Background(), userID)
-
-	return nil
-}
-
-func cleanupOldSessions(ctx context.Context, userID string) {
-	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	_, err := database.DB.Exec(dbCtx, querySessionsCleanup, userID, MaxSessionsPerUser)
-	if err != nil {
-		logger.Warn("Failed to cleanup old sessions for user %s: %v", userID, err)
-	}
-}
-
-func VerifyToken(ctx context.Context, token string) (string, error) {
-	if token == "" {
-		return "", fmt.Errorf("empty token")
-	}
-
-	if !strings.HasPrefix(token, TokenPrefix) {
-		return "", fmt.Errorf("invalid token format")
-	}
-
-	tokenHash := hashToken(token)
-
-	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	var userID string
-	err := database.DB.QueryRow(dbCtx, querySessionsVerify, tokenHash).Scan(&userID)
-	if err != nil {
-		return "", fmt.Errorf("invalid token")
-	}
-
-	return userID, nil
-}
-
-func DeleteSession(ctx context.Context, token string) error {
-	if token == "" {
-		return nil
-	}
-
-	tokenHash := hashToken(token)
-
-	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	_, err := database.DB.Exec(dbCtx, querySessionsDelete, tokenHash)
-	return err
-}
 
 func validateCookies(cookies map[string]models.CookieValue) map[string]models.CookieValue {
 	valid := make(map[string]models.CookieValue)
@@ -235,37 +74,6 @@ func mergeCookies(existing, incoming map[string]models.CookieValue) map[string]m
 	}
 
 	return result
-}
-
-func CreateProfile(ctx context.Context, turnstileToken string) (*models.ProfileWithToken, error) {
-	if !verifyTurnstile(turnstileToken) {
-		return nil, fmt.Errorf("captcha verification failed")
-	}
-
-	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	displayName := generateRandomName()
-	avatarSeed := generateAvatarSeed()
-	token := generateToken()
-
-	var profile models.ProfileWithToken
-	err := database.DB.QueryRow(dbCtx, queryUsersCreate, displayName, avatarSeed).Scan(
-		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.CreatedAt)
-
-	if err != nil {
-		logger.Error("Failed to create profile: %v", err)
-		return nil, err
-	}
-
-	if err := createSession(ctx, profile.ID, token); err != nil {
-		return nil, err
-	}
-
-	profile.Token = token
-
-	logger.Info("Profile created: %s (%s)", profile.DisplayName, profile.ID)
-	return &profile, nil
 }
 
 func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, error) {

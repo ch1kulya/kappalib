@@ -108,12 +108,12 @@ func RateLimitMiddleware(rl *RateLimiter) func(next http.Handler) http.Handler {
 
 func CorsMiddleware(next http.Handler) http.Handler {
 	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
-	if allowedOrigin == "" {
-		logger.Warn("ALLOWED_ORIGIN is not set!")
-		allowedOrigin = "*"
-	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if allowedOrigin == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Service-Token, X-Profile-ID, X-Secret-Token")

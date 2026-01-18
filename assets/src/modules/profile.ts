@@ -1,8 +1,5 @@
-import Dropdown from "./dropdown";
-
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
-const TURNSTILE_SITE_KEY = process.env.TURNSTILE_SITE_KEY || "";
 const S3_URL = `${process.env.S3_USE_SSL !== "false" ? "https" : "http"}://${process.env.S3_ENDPOINT}/${process.env.S3_BUCKET}`;
 
 interface CookieValue {
@@ -17,16 +14,6 @@ interface ProfilePublic {
   has_custom_avatar: boolean;
   avatar_updated_at: number;
   created_at: string;
-}
-
-interface ProfileWithToken extends ProfilePublic {
-  token: string;
-}
-
-interface LoginResponse {
-  profile: ProfilePublic;
-  token: string;
-  cookies: Record<string, CookieValue>;
 }
 
 export function getAvatarUrl(
@@ -63,80 +50,21 @@ class ProfileManager {
     return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${profile.avatar_seed}&backgroundType=solid,gradientLinear`;
   }
 
-  async createProfile(turnstileToken: string): Promise<ProfilePublic | null> {
-    try {
-      const res = await fetch(`${API_URL}/profile`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ turnstile_token: turnstileToken }),
-      });
-      if (res.ok) {
-        const data: ProfileWithToken = await res.json();
-        this.profileId = data.id;
-        localStorage.setItem(PROFILE_ID_KEY, data.id);
-        this.syncCookiesToServer();
-        return data;
-      }
-    } catch (err) {
-      console.error("Create profile failed", err);
-    }
-    return null;
-  }
-
-  async login(syncCode: string): Promise<LoginResponse | null> {
-    try {
-      const res = await fetch(`${API_URL}/profile/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ sync_code: encodeURIComponent(syncCode) }),
-      });
-      if (res.ok) {
-        const data: LoginResponse = await res.json();
-        this.profileId = data.profile.id;
-        localStorage.setItem(PROFILE_ID_KEY, data.profile.id);
-        this.applyCookies(data.cookies);
-        return data;
-      }
-    } catch (err) {
-      console.error("Login failed", err);
-    }
-    return null;
-  }
-
   async fetchProfile(): Promise<ProfilePublic | null> {
-    if (!this.profileId) return null;
     try {
       const url = `${API_URL}/profile/me`;
       const res = await fetch(url, { credentials: "include" });
-      if (res.ok) return await res.json();
-      if (res.status === 401 || res.status === 404) this.logout();
+      if (res.ok) {
+        const profile = await res.json();
+        this.profileId = profile.id;
+        localStorage.setItem(PROFILE_ID_KEY, profile.id);
+        return profile;
+      }
+      if (res.status === 401 || res.status === 404) {
+        this.clearLocal();
+      }
     } catch (err) {
       console.error("Fetch profile failed", err);
-    }
-    return null;
-  }
-
-  async generateSyncCode(ttl: string = "15m"): Promise<{
-    sync_code: string;
-    expires_at: string;
-  } | null> {
-    if (!this.profileId) return null;
-    try {
-      const res = await fetch(
-        `${API_URL}/profile/${this.profileId}/sync-code`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ ttl }),
-        },
-      );
-      if (res.ok) return await res.json();
-      if (res.status === 401 || res.status === 403) this.logout();
-    } catch (err) {
-      console.error("Generate sync code failed", err);
     }
     return null;
   }
@@ -224,25 +152,32 @@ class ProfileManager {
         credentials: "include",
       });
       if (res.ok) {
-        this.logout();
+        this.clearLocal();
         return true;
       }
-      if (res.status === 401 || res.status === 403) this.logout();
+      if (res.status === 401 || res.status === 403) this.clearLocal();
     } catch (err) {
       console.error("Delete profile failed", err);
     }
     return false;
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
+    try {
+      await fetch(`${API_URL}/profile/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // ignore errors
+    }
+    this.clearLocal();
+  }
+
+  private clearLocal(): void {
     this.profileId = null;
     localStorage.removeItem(PROFILE_ID_KEY);
     localStorage.removeItem("kappalib_pending_comments");
-
-    fetch(`${API_URL}/profile/logout`, {
-      method: "POST",
-      credentials: "include",
-    }).catch(() => {});
   }
 
   private getKappalibCookies(): Record<string, CookieValue> {
@@ -280,9 +215,11 @@ class ProfileManager {
 export const profileManager = new ProfileManager();
 
 export function initProfile(): void {
-  if (profileManager.isLoggedIn()) {
-    profileManager.syncCookiesToServer();
-  }
+  profileManager.fetchProfile().then((profile) => {
+    if (profile) {
+      profileManager.syncCookiesToServer();
+    }
+  });
 }
 
 export function setKappalibCookie(name: string, value: string): void {
@@ -381,11 +318,7 @@ function openProfileCard(): void {
   backdrop?.classList.add("active");
   document.body.style.overflow = "hidden";
 
-  if (profileManager.isLoggedIn()) {
-    renderLoggedInView();
-  } else {
-    renderGuestView();
-  }
+  renderProfileCard();
 }
 
 function closeProfileCard(): void {
@@ -400,9 +333,6 @@ function closeProfileCard(): void {
     backdrop?.classList.remove("active");
     document.body.style.overflow = "";
   }
-
-  const container = document.getElementById("turnstile-container");
-  if (container) container.innerHTML = "";
 }
 
 export function setBackdropActive(active: boolean): void {
@@ -416,85 +346,12 @@ export function setBackdropActive(active: boolean): void {
   }
 }
 
-function renderGuestView(): void {
+function renderProfileCard(): void {
   const content = document.getElementById("profile-card");
   if (!content) return;
 
   content.innerHTML = "";
-  content.appendChild(cloneTemplate("tpl-pc-guest"));
-
-  loadTurnstile();
-  setupAgreementCheckboxes();
-
-  document.getElementById("pc-create")?.addEventListener("click", async () => {
-    const ageCheckbox = document.getElementById(
-      "pc-agree-age",
-    ) as HTMLInputElement;
-    const termsCheckbox = document.getElementById(
-      "pc-agree-terms",
-    ) as HTMLInputElement;
-    const privacyCheckbox = document.getElementById(
-      "pc-agree-privacy",
-    ) as HTMLInputElement;
-
-    if (
-      !ageCheckbox?.checked ||
-      !termsCheckbox?.checked ||
-      !privacyCheckbox?.checked
-    ) {
-      showError("Необходимо принять все соглашения");
-      return;
-    }
-
-    const token = (window as any).turnstileToken;
-    if (!token) {
-      showError("Пройдите проверку");
-      return;
-    }
-
-    const btn = document.getElementById("pc-create") as HTMLButtonElement;
-    btn.disabled = true;
-    btn.textContent = "Создание...";
-
-    const profile = await profileManager.createProfile(token);
-    if (profile) {
-      renderLoggedInView();
-    } else {
-      btn.disabled = false;
-      btn.textContent = "Создать аккаунт";
-      showError("Ошибка создания аккаунта");
-    }
-  });
-
-  document.getElementById("pc-login")?.addEventListener("click", async () => {
-    const input = document.getElementById("pc-sync-input") as HTMLInputElement;
-    const code = input.value.trim();
-    if (code.length < 8 || code.length > 24) {
-      showError("Введите код от 8 до 24 символов");
-      return;
-    }
-
-    const btn = document.getElementById("pc-login") as HTMLButtonElement;
-    btn.disabled = true;
-
-    const result = await profileManager.login(code);
-    if (result) {
-      renderLoggedInView();
-    } else {
-      btn.disabled = false;
-      showError("Неверный или просроченный код");
-    }
-  });
-}
-
-function renderLoggedInView(): void {
-  const content = document.getElementById("profile-card");
-  if (!content) return;
-
-  if (content.innerHTML == "") {
-    content.innerHTML = "";
-    content.appendChild(cloneTemplate("tpl-pc-skeleton"));
-  }
+  content.appendChild(cloneTemplate("tpl-pc-skeleton"));
 
   profileManager.fetchProfile().then((profile) => {
     if (!profile) {
@@ -502,23 +359,47 @@ function renderLoggedInView(): void {
       return;
     }
 
-    const avatarUrl = profileManager.getAvatarUrl(profile);
-
-    content.innerHTML = "";
-    content.appendChild(
-      fillTemplate("tpl-pc-profile", {
-        avatarUrl,
-        displayName: profile.display_name,
-        profileId: profile.id,
-        createdAt: formatDate(profile.created_at),
-      }),
-    );
-
-    initProfileInteractions(profile);
+    renderLoggedInView(profile);
   });
 }
 
-function initProfileInteractions(profile: any): void {
+function renderGuestView(): void {
+  const content = document.getElementById("profile-card");
+  if (!content) return;
+
+  content.innerHTML = "";
+  content.appendChild(cloneTemplate("tpl-pc-guest"));
+
+  const currentPath = window.location.pathname;
+  const oauthLinks = content.querySelectorAll(".pc-btn-oauth");
+  oauthLinks.forEach((link) => {
+    const href = link.getAttribute("href");
+    if (href) {
+      link.setAttribute("href", `${href}?from=${encodeURIComponent(currentPath)}`);
+    }
+  });
+}
+
+function renderLoggedInView(profile: ProfilePublic): void {
+  const content = document.getElementById("profile-card");
+  if (!content) return;
+
+  const avatarUrl = profileManager.getAvatarUrl(profile);
+
+  content.innerHTML = "";
+  content.appendChild(
+    fillTemplate("tpl-pc-profile", {
+      avatarUrl,
+      displayName: profile.display_name,
+      profileId: profile.id,
+      createdAt: formatDate(profile.created_at),
+    }),
+  );
+
+  initProfileInteractions(profile);
+}
+
+function initProfileInteractions(profile: ProfilePublic): void {
   const avatarWrapper = document.getElementById("pc-avatar-img")?.parentElement;
   const avatarInput = document.getElementById(
     "pc-avatar-input",
@@ -530,6 +411,7 @@ function initProfileInteractions(profile: any): void {
   ) as HTMLInputElement;
 
   let isSavingName = false;
+  let currentProfile = profile;
 
   avatarWrapper?.addEventListener("click", () => {
     avatarInput?.click();
@@ -569,7 +451,7 @@ function initProfileInteractions(profile: any): void {
     nameEdit.style.display = "none";
     nameInput.style.display = "block";
     nameInput.value = "";
-    nameInput.placeholder = profile.display_name;
+    nameInput.placeholder = currentProfile.display_name;
     nameInput.focus();
   });
 
@@ -594,7 +476,7 @@ function initProfileInteractions(profile: any): void {
 
     const newName = nameInput.value.trim();
 
-    if (!newName || newName === profile.display_name) {
+    if (!newName || newName === currentProfile.display_name) {
       cancelNameEdit();
       return;
     }
@@ -608,7 +490,7 @@ function initProfileInteractions(profile: any): void {
     isSavingName = false;
 
     if (result) {
-      profile.display_name = result.display_name;
+      currentProfile.display_name = result.display_name;
       nameText.textContent = result.display_name;
     }
 
@@ -623,62 +505,8 @@ function initProfileInteractions(profile: any): void {
     nameEdit.style.display = "inline-flex";
   }
 
-  let selectedTTL = "15m";
-
-  const ttlDropdownEl = document.getElementById("pc-ttl-dropdown");
-  if (ttlDropdownEl) {
-    new Dropdown(ttlDropdownEl);
-    ttlDropdownEl.addEventListener("change", (e: Event) => {
-      const customEvent = e as CustomEvent<{ value: string }>;
-      selectedTTL = customEvent.detail.value;
-    });
-  }
-
-  document
-    .getElementById("pc-get-code")
-    ?.addEventListener("click", async () => {
-      const btn = document.getElementById("pc-get-code") as HTMLButtonElement;
-      const controls = document.getElementById("pc-code-controls");
-      const codeRow = document.getElementById("pc-code-row");
-      const codeText = document.getElementById("pc-code-text");
-      const codeHint = document.getElementById("pc-code-hint");
-      const copyBtn = document.getElementById("pc-code-copy");
-
-      btn.disabled = true;
-      btn.textContent = "...";
-
-      const result = await profileManager.generateSyncCode(selectedTTL);
-      if (result) {
-        if (codeText) codeText.textContent = result.sync_code;
-        if (codeHint) {
-          const expiresDate = new Date(result.expires_at);
-          codeHint.textContent = `Одноразовый. Действует до ${expiresDate.toLocaleString("ru-RU")}`;
-          codeHint.style.display = "block";
-        }
-        if (codeRow) codeRow.style.display = "flex";
-        if (controls) controls.style.display = "none";
-
-        if (copyBtn) {
-          const syncCode = result.sync_code;
-          copyBtn.onclick = (e) => {
-            e.stopPropagation();
-            navigator.clipboard.writeText(syncCode);
-            copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-            copyBtn.classList.add("copied");
-            setTimeout(() => {
-              copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
-              copyBtn.classList.remove("copied");
-            }, 2000);
-          };
-        }
-      } else {
-        btn.disabled = false;
-        btn.textContent = "Получить";
-      }
-    });
-
-  document.getElementById("pc-logout")?.addEventListener("click", () => {
-    profileManager.logout();
+  document.getElementById("pc-logout")?.addEventListener("click", async () => {
+    await profileManager.logout();
     renderGuestView();
   });
 
@@ -689,82 +517,6 @@ function initProfileInteractions(profile: any): void {
       renderGuestView();
     }
   });
-}
-
-function loadTurnstile(): void {
-  const container = document.getElementById("turnstile-container");
-  const createBtn = document.getElementById("pc-create") as HTMLButtonElement;
-  if (!container || !createBtn) return;
-
-  (window as any).turnstileToken = null;
-
-  if ((window as any).turnstile) {
-    renderTurnstile();
-  } else {
-    const script = document.createElement("script");
-    script.src =
-      "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad";
-    script.async = true;
-    (window as any).onTurnstileLoad = renderTurnstile;
-    document.head.appendChild(script);
-  }
-}
-
-function setupAgreementCheckboxes(): void {
-  const ageCheckbox = document.getElementById(
-    "pc-agree-age",
-  ) as HTMLInputElement;
-  const termsCheckbox = document.getElementById(
-    "pc-agree-terms",
-  ) as HTMLInputElement;
-  const privacyCheckbox = document.getElementById(
-    "pc-agree-privacy",
-  ) as HTMLInputElement;
-  const createBtn = document.getElementById("pc-create") as HTMLButtonElement;
-
-  const checkAllAgreed = () => {
-    const allChecked =
-      ageCheckbox?.checked &&
-      termsCheckbox?.checked &&
-      privacyCheckbox?.checked;
-    const hasTurnstile = !!(window as any).turnstileToken;
-
-    if (createBtn) {
-      createBtn.disabled = !(allChecked && hasTurnstile);
-    }
-  };
-
-  ageCheckbox?.addEventListener("change", checkAllAgreed);
-  termsCheckbox?.addEventListener("change", checkAllAgreed);
-  privacyCheckbox?.addEventListener("change", checkAllAgreed);
-
-  (window as any).checkAgreements = checkAllAgreed;
-}
-
-function renderTurnstile(): void {
-  const container = document.getElementById("turnstile-container");
-  const createBtn = document.getElementById("pc-create") as HTMLButtonElement;
-  if (!container || !createBtn || !TURNSTILE_SITE_KEY) return;
-
-  (window as any).turnstile.render(container, {
-    sitekey: TURNSTILE_SITE_KEY,
-    size: "flexible",
-    callback: (token: string) => {
-      (window as any).turnstileToken = token;
-      if ((window as any).checkAgreements) {
-        (window as any).checkAgreements();
-      }
-    },
-    "expired-callback": () => {
-      (window as any).turnstileToken = null;
-      createBtn.disabled = true;
-    },
-  });
-}
-
-function showError(msg: string): void {
-  const el = document.getElementById("pc-error");
-  if (el) el.textContent = msg;
 }
 
 function formatDate(dateStr: string): string {

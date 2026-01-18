@@ -73,27 +73,6 @@ type ProfilePublic struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
-type ProfileWithToken struct {
-	ID              string    `json:"id"`
-	Token           string    `json:"token"`
-	DisplayName     string    `json:"display_name"`
-	AvatarSeed      string    `json:"avatar_seed"`
-	HasCustomAvatar bool      `json:"has_custom_avatar"`
-	AvatarUpdatedAt int64     `json:"avatar_updated_at"`
-	CreatedAt       time.Time `json:"created_at"`
-}
-
-type SyncCodeResponse struct {
-	SyncCode  string `json:"sync_code"`
-	ExpiresAt string `json:"expires_at"`
-}
-
-type LoginResponse struct {
-	Profile ProfilePublic          `json:"profile"`
-	Token   string                 `json:"token"`
-	Cookies map[string]CookieValue `json:"cookies"`
-}
-
 type Comment struct {
 	ID                  string    `json:"id"`
 	ChapterID           string    `json:"chapter_id"`
@@ -144,9 +123,21 @@ type AppUpdate struct {
 	MergedAt time.Time `json:"merged_at"`
 }
 
+type NovelAddition struct {
+	ID          string    `json:"id"`
+	Title       string    `json:"title"`
+	Author      string    `json:"author"`
+	YearStart   int       `json:"year_start"`
+	Status      string    `json:"status"`
+	Description string    `json:"description"`
+	CoverURL    *string   `json:"cover_url"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type HomeUpdateItem struct {
 	Type          string
 	ChapterUpdate *NovelUpdate
 	AppUpdate     *AppUpdate
+	NovelAddition *NovelAddition
 	UpdatedAt     time.Time
 }
