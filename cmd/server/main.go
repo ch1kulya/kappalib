@@ -13,6 +13,7 @@ import (
 
 	"github.com/ch1kulya/kappalib/assets/templates"
 	"github.com/ch1kulya/kappalib/internal/api"
+	"github.com/ch1kulya/kappalib/internal/auth"
 	"github.com/ch1kulya/kappalib/internal/data"
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/web"
@@ -32,8 +33,6 @@ var docsHTML string
 var requiredEnvVars = []string{
 	"DATABASE_URL",
 	"BETTERSTACK_TOKEN",
-	"TURNSTILE_SITE_KEY",
-	"TURNSTILE_SECRET",
 	"TURNSTILE_COMMENTS_SITE_KEY",
 	"TURNSTILE_COMMENTS_SECRET",
 	"TELEGRAM_BOT_TOKEN",
@@ -45,6 +44,9 @@ var requiredEnvVars = []string{
 	"S3_SECRET_KEY",
 	"S3_USE_SSL",
 	"INDEX_NOW_KEY",
+	"AUTH_SECRET",
+	"AUTH_URL",
+	"AUTH_SECURE",
 }
 
 func buildAssets() error {
@@ -70,7 +72,6 @@ func buildAssets() error {
 		TreeShaking:       esbuild.TreeShakingTrue,
 		Define: map[string]string{
 			"process.env.API_URL":                     fmt.Sprintf("\"%s\"", apiUrl),
-			"process.env.TURNSTILE_SITE_KEY":          fmt.Sprintf("\"%s\"", os.Getenv("TURNSTILE_SITE_KEY")),
 			"process.env.TURNSTILE_COMMENTS_SITE_KEY": fmt.Sprintf("\"%s\"", os.Getenv("TURNSTILE_COMMENTS_SITE_KEY")),
 			"process.env.S3_ENDPOINT":                 fmt.Sprintf("\"%s\"", os.Getenv("S3_ENDPOINT")),
 			"process.env.S3_BUCKET":                   fmt.Sprintf("\"%s\"", os.Getenv("S3_BUCKET")),
@@ -140,6 +141,14 @@ func init() {
 func main() {
 	defer database.Close()
 
+	authURL := os.Getenv("AUTH_URL")
+	userStore := auth.NewUserStore()
+	authService := auth.NewService(auth.Config{
+		Secret: os.Getenv("AUTH_SECRET"),
+		URL:    authURL,
+		Secure: os.Getenv("AUTH_SECURE") == "true",
+	}, userStore)
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP)
@@ -177,12 +186,15 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	r.Mount("/auth", authService.AuthRoutes)
+
 	apiRateLimiter := api.NewRateLimiter()
 	r.Route("/api", func(r chi.Router) {
 		r.Use(api.CorsMiddleware)
 		r.Use(api.RateLimitMiddleware(apiRateLimiter))
 		r.Use(api.CacheMiddleware)
-		r.Use(api.AuthMiddleware)
+		r.Use(authService.Middleware())
+		r.Use(auth.BridgeMiddleware)
 
 		config := huma.DefaultConfig("kappalib", "stable")
 		config.Info.Description = "Public API for accessing kappalib services."
@@ -246,13 +258,6 @@ func main() {
 		}, api.HandleGetChapter)
 
 		huma.Register(humaApi, huma.Operation{
-			OperationID: "create-profile",
-			Method:      http.MethodPost,
-			Path:        "/profile",
-			Summary:     "Create user profile",
-		}, api.HandleCreateProfile)
-
-		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-current-user",
 			Method:      http.MethodGet,
 			Path:        "/profile/me",
@@ -272,20 +277,6 @@ func main() {
 			Path:        "/profile/{id}",
 			Summary:     "Delete user profile",
 		}, api.HandleDeleteProfile)
-
-		huma.Register(humaApi, huma.Operation{
-			OperationID: "generate-sync-code",
-			Method:      http.MethodPost,
-			Path:        "/profile/{id}/sync-code",
-			Summary:     "Generate sync code",
-		}, api.HandleGenerateSyncCode)
-
-		huma.Register(humaApi, huma.Operation{
-			OperationID: "login-profile",
-			Method:      http.MethodPost,
-			Path:        "/profile/login",
-			Summary:     "Login with sync code",
-		}, api.HandleLogin)
 
 		huma.Register(humaApi, huma.Operation{
 			OperationID: "logout",

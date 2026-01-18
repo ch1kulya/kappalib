@@ -73,27 +73,6 @@ type ProfilePublic struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
-type ProfileWithToken struct {
-	ID              string    `json:"id"`
-	Token           string    `json:"token"`
-	DisplayName     string    `json:"display_name"`
-	AvatarSeed      string    `json:"avatar_seed"`
-	HasCustomAvatar bool      `json:"has_custom_avatar"`
-	AvatarUpdatedAt int64     `json:"avatar_updated_at"`
-	CreatedAt       time.Time `json:"created_at"`
-}
-
-type SyncCodeResponse struct {
-	SyncCode  string `json:"sync_code"`
-	ExpiresAt string `json:"expires_at"`
-}
-
-type LoginResponse struct {
-	Profile ProfilePublic          `json:"profile"`
-	Token   string                 `json:"token"`
-	Cookies map[string]CookieValue `json:"cookies"`
-}
-
 type Comment struct {
 	ID                  string    `json:"id"`
 	ChapterID           string    `json:"chapter_id"`

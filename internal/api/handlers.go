@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ch1kulya/kappalib/internal/auth"
 	"github.com/ch1kulya/kappalib/internal/data"
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/models"
@@ -18,22 +19,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-const (
-	SessionCookieName = "kpl_session"
-	CookieMaxAge      = 31536000
-)
-
-func createSessionCookie(token string) http.Cookie {
-	return http.Cookie{
-		Name:     SessionCookieName,
-		Value:    token,
-		Path:     "/",
-		MaxAge:   CookieMaxAge,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}
-}
+const SessionCookieName = "kpl_session"
 
 func clearSessionCookie() http.Cookie {
 	return http.Cookie{
@@ -60,21 +46,8 @@ type IDInput struct {
 	ID string `path:"id"`
 }
 
-type CreateProfileInput struct {
-	Body struct {
-		TurnstileToken string `json:"turnstile_token" minLength:"1"`
-	}
-}
-
-type LoginInput struct {
-	Body struct {
-		SyncCode string `json:"sync_code" minLength:"8" maxLength:"24"`
-	}
-}
-
 type SyncCookiesInput struct {
-	SessionToken string `cookie:"kpl_session"`
-	Body         struct {
+	Body struct {
 		Cookies map[string]models.CookieValue `json:"cookies"`
 	}
 }
@@ -120,20 +93,9 @@ type UploadAvatarInput struct {
 	}
 }
 
-type GetCurrentUserInput struct {
-	SessionToken string `cookie:"kpl_session"`
-}
+type GetCurrentUserInput struct{}
 
-type LogoutInput struct {
-	SessionToken string `cookie:"kpl_session"`
-}
-
-type GenerateSyncCodeInput struct {
-	ProfileID string `path:"id"`
-	Body      struct {
-		TTL string `json:"ttl" default:"15m"`
-	}
-}
+type LogoutInput struct{}
 
 func HandleStatus(ctx context.Context, input *struct{}) (*struct{ Body APIStatus }, error) {
 	dbStatus := "connected"
@@ -204,24 +166,6 @@ func HandleGetChapter(ctx context.Context, input *IDInput) (*struct{ Body any },
 	return &struct{ Body any }{Body: chapter}, nil
 }
 
-func HandleCreateProfile(ctx context.Context, input *CreateProfileInput) (*struct {
-	Body       any
-	SetCookies []http.Cookie `header:"Set-Cookie"`
-}, error) {
-	profile, err := data.CreateProfile(ctx, input.Body.TurnstileToken)
-	if err != nil {
-		return nil, huma.Error400BadRequest("Captcha verification failed")
-	}
-
-	return &struct {
-		Body       any
-		SetCookies []http.Cookie `header:"Set-Cookie"`
-	}{
-		Body:       profile,
-		SetCookies: []http.Cookie{createSessionCookie(profile.Token)},
-	}, nil
-}
-
 func HandleGetProfile(ctx context.Context, input *ProfileIDInput) (*struct{ Body any }, error) {
 	profile, err := data.GetProfile(ctx, input.ProfileID)
 	if err != nil {
@@ -230,51 +174,8 @@ func HandleGetProfile(ctx context.Context, input *ProfileIDInput) (*struct{ Body
 	return &struct{ Body any }{Body: profile}, nil
 }
 
-func HandleGenerateSyncCode(ctx context.Context, input *GenerateSyncCodeInput) (*struct{ Body any }, error) {
-	userID := GetUserIDFromContext(ctx)
-	if userID == "" {
-		return nil, huma.Error401Unauthorized("Authentication required")
-	}
-
-	if userID != input.ProfileID {
-		return nil, huma.Error403Forbidden("Access denied")
-	}
-
-	ttl := input.Body.TTL
-	if ttl == "" {
-		ttl = "15m"
-	}
-
-	result, err := data.GenerateSyncCode(ctx, userID, ttl)
-	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to generate sync code")
-	}
-	return &struct{ Body any }{Body: result}, nil
-}
-
-func HandleLogin(ctx context.Context, input *LoginInput) (*struct {
-	Body       any
-	SetCookies []http.Cookie `header:"Set-Cookie"`
-}, error) {
-	result, err := data.LoginWithSyncCode(ctx, input.Body.SyncCode)
-	if err != nil {
-		return nil, huma.Error404NotFound("Invalid or expired sync code")
-	}
-
-	return &struct {
-		Body       any
-		SetCookies []http.Cookie `header:"Set-Cookie"`
-	}{
-		Body:       result,
-		SetCookies: []http.Cookie{createSessionCookie(result.Token)},
-	}, nil
-}
-
-func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct {
-	Body       any
-	SetCookies []http.Cookie `header:"Set-Cookie"`
-}, error) {
-	userID := GetUserIDFromContext(ctx)
+func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct{ Body any }, error) {
+	userID := auth.GetUserIDFromContext(ctx)
 	if userID == "" {
 		return nil, huma.Error401Unauthorized("Authentication required")
 	}
@@ -284,19 +185,13 @@ func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct {
 		return nil, huma.Error500InternalServerError("Failed to sync cookies")
 	}
 
-	return &struct {
-		Body       any
-		SetCookies []http.Cookie `header:"Set-Cookie"`
-	}{
-		Body:       result,
-		SetCookies: []http.Cookie{createSessionCookie(input.SessionToken)},
-	}, nil
+	return &struct{ Body any }{Body: result}, nil
 }
 
 func HandleDeleteProfile(ctx context.Context, input *ProfileIDInput) (*struct {
 	SetCookies []http.Cookie `header:"Set-Cookie"`
 }, error) {
-	userID := GetUserIDFromContext(ctx)
+	userID := auth.GetUserIDFromContext(ctx)
 	if userID == "" {
 		return nil, huma.Error401Unauthorized("Authentication required")
 	}
@@ -321,8 +216,9 @@ func HandleLogout(ctx context.Context, input *LogoutInput) (*struct {
 	Body       any
 	SetCookies []http.Cookie `header:"Set-Cookie"`
 }, error) {
-	if input.SessionToken != "" {
-		data.DeleteSession(ctx, input.SessionToken)
+	userID := auth.GetUserIDFromContext(ctx)
+	if userID == "" {
+		return nil, huma.Error401Unauthorized("Authentication required")
 	}
 
 	return &struct {
@@ -343,7 +239,7 @@ func HandleGetComments(ctx context.Context, input *GetCommentsInput) (*struct{ B
 }
 
 func HandleCreateComment(ctx context.Context, input *CreateCommentAPIInput) (*struct{ Body any }, error) {
-	userID := GetUserIDFromContext(ctx)
+	userID := auth.GetUserIDFromContext(ctx)
 	if userID == "" {
 		return nil, huma.Error401Unauthorized("Authentication required")
 	}
@@ -478,7 +374,7 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 }
 
 func HandleUpdateDisplayName(ctx context.Context, input *UpdateDisplayNameInput) (*struct{ Body any }, error) {
-	userID := GetUserIDFromContext(ctx)
+	userID := auth.GetUserIDFromContext(ctx)
 	if userID == "" {
 		return nil, huma.Error401Unauthorized("Authentication required")
 	}
@@ -498,7 +394,7 @@ func HandleUpdateDisplayName(ctx context.Context, input *UpdateDisplayNameInput)
 }
 
 func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{ Body any }, error) {
-	userID := GetUserIDFromContext(ctx)
+	userID := auth.GetUserIDFromContext(ctx)
 	if userID == "" {
 		return nil, huma.Error401Unauthorized("Authentication required")
 	}
@@ -526,11 +422,8 @@ func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{
 	return &struct{ Body any }{Body: profile}, nil
 }
 
-func HandleGetCurrentUser(ctx context.Context, input *GetCurrentUserInput) (*struct {
-	Body       any
-	SetCookies []http.Cookie `header:"Set-Cookie"`
-}, error) {
-	userID := GetUserIDFromContext(ctx)
+func HandleGetCurrentUser(ctx context.Context, input *GetCurrentUserInput) (*struct{ Body any }, error) {
+	userID := auth.GetUserIDFromContext(ctx)
 	if userID == "" {
 		return nil, huma.Error401Unauthorized("Authentication required")
 	}
@@ -540,11 +433,5 @@ func HandleGetCurrentUser(ctx context.Context, input *GetCurrentUserInput) (*str
 		return nil, huma.Error404NotFound("Profile not found")
 	}
 
-	return &struct {
-		Body       any
-		SetCookies []http.Cookie `header:"Set-Cookie"`
-	}{
-		Body:       profile,
-		SetCookies: []http.Cookie{createSessionCookie(input.SessionToken)},
-	}, nil
+	return &struct{ Body any }{Body: profile}, nil
 }
