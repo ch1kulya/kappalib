@@ -490,6 +490,7 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	if page == 1 {
 		chapterUpdates, _ := data.GetLatestUpdates(r.Context(), 12)
 		appUpdates, _ := data.GetAppUpdates(r.Context(), 5)
+		novelAdditions, _ := data.GetRecentlyAddedNovels(r.Context(), 5)
 
 		for _, cu := range chapterUpdates {
 			cu := cu
@@ -505,6 +506,14 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 				Type:      "app",
 				AppUpdate: &au,
 				UpdatedAt: au.MergedAt,
+			})
+		}
+		for _, na := range novelAdditions {
+			na := na
+			latestUpdates = append(latestUpdates, models.HomeUpdateItem{
+				Type:          "novel",
+				NovelAddition: &na,
+				UpdatedAt:     na.CreatedAt,
 			})
 		}
 

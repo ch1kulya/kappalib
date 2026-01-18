@@ -144,9 +144,21 @@ type AppUpdate struct {
 	MergedAt time.Time `json:"merged_at"`
 }
 
+type NovelAddition struct {
+	ID          string    `json:"id"`
+	Title       string    `json:"title"`
+	Author      string    `json:"author"`
+	YearStart   int       `json:"year_start"`
+	Status      string    `json:"status"`
+	Description string    `json:"description"`
+	CoverURL    *string   `json:"cover_url"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type HomeUpdateItem struct {
 	Type          string
 	ChapterUpdate *NovelUpdate
 	AppUpdate     *AppUpdate
+	NovelAddition *NovelAddition
 	UpdatedAt     time.Time
 }

@@ -2749,6 +2749,130 @@ html {
     }
 }
 
+/* Novel Update Items */
+.update-novel-item {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.update-novel-item:last-child {
+    border-bottom: none;
+}
+
+.update-novel-item:active {
+    opacity: 0.6;
+}
+
+.update-novel-item .update-log-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+}
+
+.update-novel-content {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    align-items: flex-start;
+}
+
+.update-novel-content > img {
+    width: 56px;
+    height: 84px;
+    object-fit: cover;
+    border-radius: 7px;
+    flex-shrink: 0;
+    background: var(--outline);
+}
+
+.update-novel-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.update-novel-info h3 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0;
+    overflow: hidden;
+    color: var(--primary);
+    line-height: 1.3;
+    display: -webkit-box;
+    line-clamp: 1;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+
+.update-novel-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    align-items: center;
+}
+
+.update-novel-meta .badge {
+    font-size: 0.7rem;
+    padding: 1px 5px;
+    background: var(--outline);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--secondary);
+    font-weight: 500;
+}
+
+.update-novel-desc {
+    font-size: 0.8rem;
+    color: var(--secondary);
+    line-height: 1.35;
+    margin: 0;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+@media (max-width: 500px) {
+    .update-novel-item {
+        padding: 0.4rem 0;
+    }
+
+    .update-novel-item .update-log-row {
+        gap: 0.75rem;
+    }
+
+    .update-novel-content {
+        gap: 0.5rem;
+        margin-top: 0.4rem;
+    }
+
+    .update-novel-content > img {
+        width: 48px;
+        height: 72px;
+        border-radius: 6px;
+    }
+
+    .update-novel-info h3 {
+        font-size: 0.85rem;
+    }
+
+    .update-novel-meta .badge {
+        font-size: 0.65rem;
+        padding: 1px 4px;
+    }
+
+    .update-novel-desc {
+        font-size: 0.75rem;
+    }
+}
+
 /* Comments Section */
 .comments-section {
     margin-top: 2rem;
