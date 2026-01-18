@@ -45,6 +45,13 @@
         rgba(239, 68, 68, 0.2)
     );
     --color-danger-dark: light-dark(#b91c1c, #dc2626);
+    --oauth-google: #4285f4;
+    --oauth-google-hover: #3367d6;
+    --oauth-github: light-dark(#24292e, #f0f6fc);
+    --oauth-github-hover: light-dark(#1b1f23, #d0d7de);
+    --oauth-github-text: light-dark(#ffffff, #24292e);
+    --oauth-yandex: #fc3f1d;
+    --oauth-yandex-hover: #e53600;
 }
 
 :root[data-scheme="catppuccin"] {
@@ -78,6 +85,13 @@
         rgba(243, 139, 168, 0.2)
     );
     --color-danger-dark: light-dark(#a60d2d, #e06486);
+    --oauth-google: light-dark(#1e66f5, #89b4fa);
+    --oauth-google-hover: light-dark(#1859d6, #74a8f7);
+    --oauth-github: light-dark(#4c4f69, #cdd6f4);
+    --oauth-github-hover: light-dark(#3c3f56, #bac2de);
+    --oauth-github-text: light-dark(#eff1f5, #1e1e2e);
+    --oauth-yandex: light-dark(#fe640b, #fab387);
+    --oauth-yandex-hover: light-dark(#e55800, #f9a56f);
 }
 
 :root[data-scheme="gruvbox"] {
@@ -111,6 +125,13 @@
         rgba(251, 73, 52, 0.2)
     );
     --color-danger-dark: light-dark(#7c0005, #cc241d);
+    --oauth-google: light-dark(#076678, #83a598);
+    --oauth-google-hover: light-dark(#055564, #6d9486);
+    --oauth-github: light-dark(#3c3836, #ebdbb2);
+    --oauth-github-hover: light-dark(#2c2826, #d5c4a1);
+    --oauth-github-text: light-dark(#fbf1c7, #282828);
+    --oauth-yandex: light-dark(#d65d0e, #fe8019);
+    --oauth-yandex-hover: light-dark(#b84c00, #e87000);
 }
 
 :root[data-scheme="nord"] {
@@ -141,6 +162,13 @@
         rgba(191, 97, 106, 0.2)
     );
     --color-danger-dark: light-dark(#8a464b, #a5545a);
+    --oauth-google: light-dark(#5e81ac, #88c0d0);
+    --oauth-google-hover: light-dark(#4e6f96, #72b0c0);
+    --oauth-github: light-dark(#3b4252, #eceff4);
+    --oauth-github-hover: light-dark(#2e3440, #d8dee9);
+    --oauth-github-text: light-dark(#eceff4, #2e3440);
+    --oauth-yandex: light-dark(#d08770, #d08770);
+    --oauth-yandex-hover: light-dark(#bf7560, #bf7560);
 }
 
 :root[data-scheme="rosepine"] {
@@ -174,6 +202,13 @@
         rgba(235, 111, 146, 0.2)
     );
     --color-danger-dark: light-dark(#944e62, #d25879);
+    --oauth-google: light-dark(#286983, #9ccfd8);
+    --oauth-google-hover: light-dark(#1d5566, #86bfcc);
+    --oauth-github: light-dark(#575279, #e0def4);
+    --oauth-github-hover: light-dark(#464264, #cccae8);
+    --oauth-github-text: light-dark(#faf4ed, #232136);
+    --oauth-yandex: light-dark(#d7827e, #ea9a97);
+    --oauth-yandex-hover: light-dark(#c76e6a, #d88885);
 }
 
 :root {
