@@ -491,10 +491,8 @@ function renderLoggedInView(): void {
   const content = document.getElementById("profile-card");
   if (!content) return;
 
-  if (content.innerHTML == "") {
-    content.innerHTML = "";
-    content.appendChild(cloneTemplate("tpl-pc-skeleton"));
-  }
+  content.innerHTML = "";
+  content.appendChild(cloneTemplate("tpl-pc-skeleton"));
 
   profileManager.fetchProfile().then((profile) => {
     if (!profile) {
