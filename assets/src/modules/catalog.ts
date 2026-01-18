@@ -33,16 +33,17 @@ export async function loadCatalogPage(
     if (newContent) {
       container.innerHTML = newContent.innerHTML;
 
-      const updatesSection = document.querySelector(".updates-section");
-      const newUpdatesSection = doc.querySelector(".updates-section");
+      const currentUpdates = container.querySelector(".updates-section");
+      const incomingUpdates = newContent.querySelector(".updates-section");
 
-      if (isFirstPage && newUpdatesSection && !updatesSection) {
-        const catalogHeader = document.querySelector("#catalog-title")?.closest(".chapters-header");
-        if (catalogHeader) {
-          catalogHeader.insertAdjacentElement("beforebegin", newUpdatesSection);
+      if (isFirstPage) {
+        if (incomingUpdates && !currentUpdates) {
+          container.appendChild(incomingUpdates);
         }
-      } else if (!isFirstPage && updatesSection) {
-        updatesSection.remove();
+      } else {
+        if (currentUpdates) {
+          currentUpdates.remove();
+        }
       }
 
       if (isHistoryPush) {

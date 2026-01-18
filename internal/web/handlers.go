@@ -487,43 +487,38 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var latestUpdates []models.HomeUpdateItem
-	if page == 1 {
-		chapterUpdates, _ := data.GetLatestUpdates(r.Context(), 12)
-		appUpdates, _ := data.GetAppUpdates(r.Context(), 5)
-		novelAdditions, _ := data.GetRecentlyAddedNovels(r.Context(), 5)
+	chapterUpdates, _ := data.GetLatestUpdates(r.Context(), 12)
+	appUpdates, _ := data.GetAppUpdates(r.Context(), 5)
+	novelAdditions, _ := data.GetRecentlyAddedNovels(r.Context(), 5)
 
-		for _, cu := range chapterUpdates {
-			cu := cu
-			latestUpdates = append(latestUpdates, models.HomeUpdateItem{
-				Type:          "chapter",
-				ChapterUpdate: &cu,
-				UpdatedAt:     cu.UpdatedAt,
-			})
-		}
-		for _, au := range appUpdates {
-			au := au
-			latestUpdates = append(latestUpdates, models.HomeUpdateItem{
-				Type:      "app",
-				AppUpdate: &au,
-				UpdatedAt: au.MergedAt,
-			})
-		}
-		for _, na := range novelAdditions {
-			na := na
-			latestUpdates = append(latestUpdates, models.HomeUpdateItem{
-				Type:          "novel",
-				NovelAddition: &na,
-				UpdatedAt:     na.CreatedAt,
-			})
-		}
-
-		sort.Slice(latestUpdates, func(i, j int) bool {
-			return latestUpdates[i].UpdatedAt.After(latestUpdates[j].UpdatedAt)
+	for _, cu := range chapterUpdates {
+		latestUpdates = append(latestUpdates, models.HomeUpdateItem{
+			Type:          "chapter",
+			ChapterUpdate: &cu,
+			UpdatedAt:     cu.UpdatedAt,
 		})
+	}
+	for _, au := range appUpdates {
+		latestUpdates = append(latestUpdates, models.HomeUpdateItem{
+			Type:      "app",
+			AppUpdate: &au,
+			UpdatedAt: au.MergedAt,
+		})
+	}
+	for _, na := range novelAdditions {
+		latestUpdates = append(latestUpdates, models.HomeUpdateItem{
+			Type:          "novel",
+			NovelAddition: &na,
+			UpdatedAt:     na.CreatedAt,
+		})
+	}
 
-		if len(latestUpdates) > 15 {
-			latestUpdates = latestUpdates[:15]
-		}
+	sort.Slice(latestUpdates, func(i, j int) bool {
+		return latestUpdates[i].UpdatedAt.After(latestUpdates[j].UpdatedAt)
+	})
+
+	if len(latestUpdates) > 15 {
+		latestUpdates = latestUpdates[:15]
 	}
 
 	canonical := "https://kappalib.ru"
