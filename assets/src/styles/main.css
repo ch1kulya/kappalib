@@ -2256,9 +2256,9 @@ html {
         width: 100%;
         padding: 0.7rem 1rem;
         font-size: 0.9rem;
-        color: var(--accent-text);
-        border: none;
         text-decoration: none;
+        border-radius: 10px;
+        transition: all 0.2s ease;
         & svg {
             flex-shrink: 0;
         }
@@ -2267,24 +2267,36 @@ html {
         }
     }
     & .pc-btn-google {
-        background: #4285f4;
+        background: var(--oauth-google);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: var(--accent-shadow-primary);
         &:hover,
         &:focus {
-            background: #3367d6;
+            background: var(--oauth-google-hover);
+            box-shadow: var(--accent-shadow-focus);
         }
     }
     & .pc-btn-github {
-        background: #24292e;
+        background: var(--oauth-github);
+        color: var(--oauth-github-text);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: var(--accent-shadow-primary);
         &:hover,
         &:focus {
-            background: #1b1f23;
+            background: var(--oauth-github-hover);
+            box-shadow: var(--accent-shadow-focus);
         }
     }
     & .pc-btn-yandex {
-        background: #fc3f1d;
+        background: var(--oauth-yandex);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: var(--accent-shadow-primary);
         &:hover,
         &:focus {
-            background: #e53600;
+            background: var(--oauth-yandex-hover);
+            box-shadow: var(--accent-shadow-focus);
         }
     }
     & .pc-legal-note {

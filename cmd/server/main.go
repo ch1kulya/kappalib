@@ -47,6 +47,7 @@ var requiredEnvVars = []string{
 	"AUTH_SECRET",
 	"AUTH_URL",
 	"AUTH_SECURE",
+	"ALLOWED_ORIGIN",
 }
 
 func buildAssets() error {

@@ -221,6 +221,11 @@ func HandleLogout(ctx context.Context, input *LogoutInput) (*struct {
 		return nil, huma.Error401Unauthorized("Authentication required")
 	}
 
+	sessionID := auth.GetSessionIDFromContext(ctx)
+	if err := auth.DeleteSession(ctx, sessionID); err != nil {
+		logger.Warn("Failed to delete session on logout: %v", err)
+	}
+
 	return &struct {
 		Body       any
 		SetCookies []http.Cookie `header:"Set-Cookie"`

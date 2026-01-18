@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
 	"math/big"
@@ -20,7 +21,17 @@ var queryUsersGetByOAuth string
 //go:embed sql/users_create_oauth.sql
 var queryUsersCreateOAuth string
 
+//go:embed sql/session_create.sql
+var querySessionCreate string
+
+//go:embed sql/session_validate.sql
+var querySessionValidate string
+
+//go:embed sql/session_delete.sql
+var querySessionDelete string
+
 const KplUserIDKey = "kpl_user_id"
+const SessionIDKey = "session_id"
 
 var (
 	adjectives = []string{
@@ -74,6 +85,20 @@ func (us *UserStore) Update(claims token.Claims) token.Claims {
 	}
 	claims.User.Attributes[KplUserIDKey] = kplUserID
 
+	sessionID, ok := claims.User.Attributes[SessionIDKey].(string)
+	if !ok || sessionID == "" {
+		sessionID = generateSessionID()
+		claims.User.Attributes[SessionIDKey] = sessionID
+
+		tokenHash := hashSessionID(sessionID)
+		var sessID string
+		if err := database.DB.QueryRow(ctx, querySessionCreate, kplUserID, tokenHash).Scan(&sessID); err != nil {
+			logger.Error("Failed to create session: %v", err)
+		} else {
+			logger.Debug("Created session %s for user %s", sessID, kplUserID)
+		}
+	}
+
 	return claims
 }
 
@@ -121,4 +146,40 @@ func generateAvatarSeed() string {
 		return "default"
 	}
 	return hex.EncodeToString(b)
+}
+
+func generateSessionID() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b)
+}
+
+func hashSessionID(sessionID string) string {
+	hash := sha256.Sum256([]byte(sessionID))
+	return hex.EncodeToString(hash[:])
+}
+
+func ValidateSession(ctx context.Context, sessionID string) (string, bool) {
+	if sessionID == "" {
+		return "", false
+	}
+
+	tokenHash := hashSessionID(sessionID)
+	var userID string
+	err := database.DB.QueryRow(ctx, querySessionValidate, tokenHash).Scan(&userID)
+	if err != nil {
+		return "", false
+	}
+	return userID, true
+}
+
+func DeleteSession(ctx context.Context, sessionID string) error {
+	if sessionID == "" {
+		return nil
+	}
+	tokenHash := hashSessionID(sessionID)
+	_, err := database.DB.Exec(ctx, querySessionDelete, tokenHash)
+	return err
 }

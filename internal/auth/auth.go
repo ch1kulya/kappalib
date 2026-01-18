@@ -26,8 +26,8 @@ func NewService(cfg Config, userStore *UserStore) *Service {
 		SecretReader: token.SecretFunc(func(string) (string, error) {
 			return cfg.Secret, nil
 		}),
-		TokenDuration:  90 * 24 * time.Hour,
-		CookieDuration: 360 * 24 * time.Hour,
+		TokenDuration:  7 * 24 * time.Hour,
+		CookieDuration: 30 * 24 * time.Hour,
 		ClaimsUpd:      token.ClaimsUpdFunc(userStore.Update),
 		SecureCookies:  cfg.Secure,
 		DisableXSRF:    true,
