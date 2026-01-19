@@ -2374,11 +2374,57 @@ html {
             gap: 0.25rem;
             & .pc-meta {
                 display: flex;
+                align-items: baseline;
                 flex-wrap: wrap;
                 gap: 0.4rem;
                 font-size: 0.7rem;
                 color: var(--tertiary);
-                align-items: center;
+                & .pc-provider {
+                    padding: 1px 4px;
+                    border-radius: 4px;
+                    border: 1px solid var(--border);
+                    font-size: 0.65rem;
+                    font-family: "IBM Plex Mono", monospace;
+                    &:empty {
+                        display: none;
+                    }
+                    &[data-provider="google"] {
+                        color: color-mix(
+                            in srgb,
+                            var(--oauth-google),
+                            transparent 15%
+                        );
+                        border-color: color-mix(
+                            in srgb,
+                            var(--oauth-google),
+                            transparent 45%
+                        );
+                    }
+                    &[data-provider="github"] {
+                        color: color-mix(
+                            in srgb,
+                            var(--oauth-github),
+                            transparent 15%
+                        );
+                        border-color: color-mix(
+                            in srgb,
+                            var(--oauth-github),
+                            transparent 45%
+                        );
+                    }
+                    &[data-provider="yandex"] {
+                        color: color-mix(
+                            in srgb,
+                            var(--oauth-yandex),
+                            transparent 15%
+                        );
+                        border-color: color-mix(
+                            in srgb,
+                            var(--oauth-yandex),
+                            transparent 45%
+                        );
+                    }
+                }
                 & .pc-id {
                     font-family: "IBM Plex Mono", monospace;
                     padding: 1px 4px;
