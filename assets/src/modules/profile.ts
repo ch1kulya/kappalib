@@ -1,5 +1,6 @@
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
+const PROFILE_PROVIDER_KEY = "kappalib_oauth_provider";
 const S3_URL = `${process.env.S3_USE_SSL !== "false" ? "https" : "http"}://${process.env.S3_ENDPOINT}/${process.env.S3_BUCKET}`;
 
 interface CookieValue {
@@ -41,6 +42,14 @@ class ProfileManager {
 
   getProfileId(): string | null {
     return this.profileId;
+  }
+
+  getProvider(): string | null {
+    return localStorage.getItem(PROFILE_PROVIDER_KEY);
+  }
+
+  setProvider(provider: string): void {
+    localStorage.setItem(PROFILE_PROVIDER_KEY, provider);
   }
 
   getAvatarUrl(profile: ProfilePublic): string {
@@ -177,6 +186,7 @@ class ProfileManager {
   private clearLocal(): void {
     this.profileId = null;
     localStorage.removeItem(PROFILE_ID_KEY);
+    localStorage.removeItem(PROFILE_PROVIDER_KEY);
     localStorage.removeItem("kappalib_pending_comments");
   }
 
@@ -375,9 +385,27 @@ function renderGuestView(): void {
   oauthLinks.forEach((link) => {
     const href = link.getAttribute("href");
     if (href) {
-      link.setAttribute("href", `${href}?from=${encodeURIComponent(currentPath)}`);
+      link.setAttribute(
+        "href",
+        `${href}?from=${encodeURIComponent(currentPath)}`,
+      );
+      link.addEventListener("click", () => {
+        const provider = href.split("/auth/")[1]?.split("/")[0];
+        if (provider) {
+          profileManager.setProvider(provider);
+        }
+      });
     }
   });
+}
+
+function getProviderLabel(provider: string | null): string {
+  const labels: Record<string, string> = {
+    google: "Google",
+    github: "GitHub",
+    yandex: "Yandex",
+  };
+  return provider ? labels[provider] || provider : "";
 }
 
 function renderLoggedInView(profile: ProfilePublic): void {
@@ -385,6 +413,7 @@ function renderLoggedInView(profile: ProfilePublic): void {
   if (!content) return;
 
   const avatarUrl = profileManager.getAvatarUrl(profile);
+  const provider = profileManager.getProvider();
 
   content.innerHTML = "";
   content.appendChild(
@@ -392,9 +421,15 @@ function renderLoggedInView(profile: ProfilePublic): void {
       avatarUrl,
       displayName: profile.display_name,
       profileId: profile.id,
+      provider: getProviderLabel(provider),
       createdAt: formatDate(profile.created_at),
     }),
   );
+
+  if (provider) {
+    const providerEl = content.querySelector(".pc-provider");
+    providerEl?.setAttribute("data-provider", provider);
+  }
 
   initProfileInteractions(profile);
 }
