@@ -2394,10 +2394,15 @@ html {
                             var(--oauth-google),
                             transparent 15%
                         );
+                        background-color: color-mix(
+                            in srgb,
+                            var(--oauth-google),
+                            transparent 85%
+                        );
                         border-color: color-mix(
                             in srgb,
                             var(--oauth-google),
-                            transparent 45%
+                            transparent 55%
                         );
                     }
                     &[data-provider="github"] {
@@ -2406,10 +2411,15 @@ html {
                             var(--oauth-github),
                             transparent 15%
                         );
+                        background-color: color-mix(
+                            in srgb,
+                            var(--oauth-github),
+                            transparent 85%
+                        );
                         border-color: color-mix(
                             in srgb,
                             var(--oauth-github),
-                            transparent 45%
+                            transparent 55%
                         );
                     }
                     &[data-provider="yandex"] {
@@ -2418,10 +2428,15 @@ html {
                             var(--oauth-yandex),
                             transparent 15%
                         );
+                        background-color: color-mix(
+                            in srgb,
+                            var(--oauth-yandex),
+                            transparent 85%
+                        );
                         border-color: color-mix(
                             in srgb,
                             var(--oauth-yandex),
-                            transparent 45%
+                            transparent 55%
                         );
                     }
                 }
