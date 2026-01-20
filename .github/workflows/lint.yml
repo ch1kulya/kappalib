@@ -1,4 +1,4 @@
-name: Test
+name: Lint
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  golangci:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,11 +23,7 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install templ
-        run: go install github.com/a-h/templ/cmd/templ@v0.3.960
-
-      - name: Generate templ
-        run: templ generate
-
-      - name: Run tests
-        run: go test -v -race ./...
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.6
