@@ -68,7 +68,7 @@ func GetAppUpdates(ctx context.Context, limit int) ([]models.AppUpdate, error) {
 			logger.Error("GetAppUpdates: Failed to fetch PRs: %v", err)
 			return nil, err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			logger.Error("GetAppUpdates: GitHub API returned status %d", resp.StatusCode)

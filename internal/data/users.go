@@ -91,7 +91,9 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 
 	profile.AvatarUpdatedAt = avatarUpdatedAt.Unix()
 
-	database.DB.Exec(dbCtx, `UPDATE users SET last_active_at = now() WHERE id = $1`, profileID)
+	if _, err := database.DB.Exec(dbCtx, `UPDATE users SET last_active_at = now() WHERE id = $1`, profileID); err != nil {
+		logger.Warn("Failed to update last_active_at for user %s: %v", profileID, err)
+	}
 
 	return &profile, nil
 }
