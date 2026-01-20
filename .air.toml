@@ -2,25 +2,30 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "templ fmt .; templ generate; golangci-lint run; go build -o tmp\\main.exe .\\cmd\\server"
-  bin = "tmp\\main.exe"
-  delay = 1000
-  stop_on_error = true
-  exclude_dir = ["tmp", "assets\\static\\dist"]
-  exclude_regex = ["_templ\\.go"]
-  include_ext = ["go", "templ", "css", "ts", "json", "sql", "html", "tmpl"]
+pre_cmd = ["templ fmt .", "templ generate"]
+cmd = "go build -o tmp\\main.exe .\\cmd\\server"
+entrypoint = [".\\tmp\\main.exe"]
+exclude_dir = ["tmp", "assets\\static\\dist"]
+exclude_regex = ["_templ\\.go"]
+include_ext = ["go", "templ", "css", "ts", "sql", "html", "tmpl"]
+delay = 1000
+stop_on_error = true
 
 [log]
-  time = true
+main_only = true
 
 [color]
-  main = "magenta"
-  watcher = "cyan"
-  build = "yellow"
-  runner = "green"
+main = "cyan"
 
 [misc]
-  clean_on_exit = true
+clean_on_exit = true
 
 [screen]
-  clear_on_rebuild = true
+clear_on_rebuild = true
+keep_scroll = true
+
+[proxy]
+enabled = true
+proxy_port = 80
+app_port = 8080
+app_start_timeout = 15000
