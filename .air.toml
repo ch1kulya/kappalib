@@ -2,7 +2,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "templ fmt .; templ generate; go build -o tmp\\main.exe .\\cmd\\server"
+  cmd = "templ fmt .; templ generate; golangci-lint run; go build -o tmp\\main.exe .\\cmd\\server"
   bin = "tmp\\main.exe"
   delay = 1000
   stop_on_error = true

@@ -211,7 +211,7 @@ func main() {
 
 		r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
-			w.Write([]byte(docsHTML))
+			_, _ = w.Write([]byte(docsHTML))
 		})
 
 		huma.Register(humaApi, huma.Operation{
@@ -343,7 +343,7 @@ func main() {
 		}
 	}()
 
-	var port string = "8080"
+	port := "8080"
 
 	srv := &http.Server{
 		Addr:         ":" + port,

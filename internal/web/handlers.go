@@ -52,7 +52,7 @@ func NewHandler() *Handler {
 
 func (h *Handler) render(w http.ResponseWriter, r *http.Request, component templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	component.Render(r.Context(), w)
+	_ = component.Render(r.Context(), w)
 }
 
 func (h *Handler) renderError(w http.ResponseWriter, r *http.Request, code int, title, message string) {
@@ -86,7 +86,7 @@ func (h *Handler) RobotsTxt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(content))
+	_, _ = w.Write([]byte(content))
 }
 
 func (h *Handler) IndexNowKey(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +99,7 @@ func (h *Handler) IndexNowKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(content))
+	_, _ = w.Write([]byte(content))
 }
 
 func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
@@ -139,7 +139,7 @@ func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/xml")
-	w.Write([]byte(content))
+	_, _ = w.Write([]byte(content))
 }
 
 func (h *Handler) getReaderSettings(r *http.Request) views.ReaderSettings {
@@ -680,7 +680,7 @@ func (h *Handler) StaticPage(name, title string) http.HandlerFunc {
 		if err != nil || resp.StatusCode != 200 {
 			content = "<div class='error'>Не удалось загрузить документ с сервера.</div>"
 		} else {
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 			bodyBytes, _ := io.ReadAll(resp.Body)
 
 			bodyStr := string(bodyBytes)
@@ -747,7 +747,7 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func isBot(ua string) bool {

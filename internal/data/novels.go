@@ -204,5 +204,7 @@ func IncrementNovelViews(ctx context.Context, novelID string) {
 	dbCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	database.DB.Exec(dbCtx, queryNovelsIncrementViews, novelID)
+	if _, err := database.DB.Exec(dbCtx, queryNovelsIncrementViews, novelID); err != nil {
+		logger.Warn("Failed to increment views for novel %s: %v", novelID, err)
+	}
 }
