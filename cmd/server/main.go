@@ -156,7 +156,11 @@ func main() {
 	r.Use(logger.Middleware)
 	r.Use(web.UserAgentMiddleware)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Compress(5))
+	if os.Getenv("AIR") != "True" {
+		r.Use(middleware.Compress(5))
+	} else {
+		logger.Debug("Air mode enabled")
+	}
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	webRateLimiter := web.NewRateLimiter()
