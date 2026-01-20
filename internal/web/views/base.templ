@@ -27,13 +27,13 @@ templ Base(props BaseProps) {
 			}
 			<link rel="preconnect" href="https://s3.kappalib.ru/"/>
 			<link rel="preconnect" href="https://rsms.me/"/>
-			<link rel="preconnect" href="https://challenges.cloudflare.com">
+			<link rel="preconnect" href="https://challenges.cloudflare.com"/>
 			<link rel="preconnect" href="https://cdn.jsdelivr.net/"/>
 			<!-- Favicon -->
-			<link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico">
-			<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
-			<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
-			<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
+			<link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico"/>
+			<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png"/>
+			<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png"/>
+			<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png"/>
 			<meta property="og:type" content="website"/>
 			<meta property="og:site_name" content="kappalib"/>
 			<meta property="og:locale" content="ru_RU"/>
@@ -144,8 +144,10 @@ templ AgeModal(props BaseProps) {
 	<div class="modal-overlay" id="age-modal" style="display: none;" onclick="event.stopPropagation();">
 		<div class="modal-content" onclick="event.stopPropagation();">
 			<h3>Возрастное ограничение</h3>
-			<p>Эта новелла имеет возрастной рейтинг <span class="text-danger">18+</span>.
-			Продолжая, вы подтверждаете, что достигли совершеннолетия.</p>
+			<p>
+				Эта новелла имеет возрастной рейтинг <span class="text-danger">18+</span>.
+				Продолжая, вы подтверждаете, что достигли совершеннолетия.
+			</p>
 			<label class="age-checkbox-label">
 				<input type="checkbox" id="age-remember"/> Больше не показывать
 			</label>

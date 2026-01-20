@@ -47,13 +47,12 @@ templ Home(props HomeProps) {
 				</div>
 			</div>
 		}
-
 		<div class="chapters-header" style="margin-bottom: 1.5rem;">
 			<h2 id="catalog-title" style="margin-bottom: 0;">Каталог</h2>
 			<div class="dropdown" id="catalog-sort">
 				<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
 					<span class="js-dropdown-label">{ GetSortLabel(props.SortOrder) }</span>
-					<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+					<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
 				</button>
 				<div class="dropdown-menu" role="listbox">
 					<div class="dropdown-menu-inner">
@@ -72,7 +71,7 @@ templ Home(props HomeProps) {
 								aria-selected={ fmt.Sprintf("%t", props.SortOrder == opt.Val) }
 							>
 								<span>{ opt.Label }</span>
-								<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+								<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
 							</button>
 						}
 					</div>
@@ -119,7 +118,6 @@ templ Home(props HomeProps) {
 				</div>
 			}
 		</div>
-
 		if len(props.LatestUpdates) > 0 {
 			<div class="updates-section">
 				<div class="chapters-header" style="margin-bottom: 0.75rem;">
@@ -130,7 +128,8 @@ templ Home(props HomeProps) {
 						if update.Type == "chapter" && update.ChapterUpdate != nil {
 							<a href={ templ.SafeURL("/" + update.ChapterUpdate.NovelID) } class="update-log-item">
 								<span class="update-log-text">
-									@templ.Raw(FormatUpdateActionHTML(update.ChapterUpdate.ChapterMin, update.ChapterUpdate.ChapterMax, update.ChapterUpdate.ChapterCount)) для <span class="update-log-novel">{ update.ChapterUpdate.NovelTitle }</span>
+									@templ.Raw(FormatUpdateActionHTML(update.ChapterUpdate.ChapterMin, update.ChapterUpdate.ChapterMax, update.ChapterUpdate.ChapterCount))
+									для <span class="update-log-novel">{ update.ChapterUpdate.NovelTitle }</span>
 								</span>
 								<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
 							</a>

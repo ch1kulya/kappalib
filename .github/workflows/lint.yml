@@ -23,6 +23,15 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install templ
+        run: go install github.com/a-h/templ/cmd/templ@$(go list -m -f '{{.Version}}' github.com/a-h/templ)
+
+      - name: Check templ formatting
+        run: templ fmt -fail .
+
+      - name: Generate templ
+        run: templ generate
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
