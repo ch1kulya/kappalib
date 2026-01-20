@@ -1,18 +1,19 @@
 name: IndexNow
 
-permissions:
-  contents: read
-
 on:
   schedule:
     - cron: "0 2 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check-and-submit:
     runs-on: ubuntu-latest
+
     steps:
-      - name: indexnow-action
+      - name: Run IndexNow
         uses: bojieyang/indexnow-action@v2
         with:
           sitemap-location: "https://kappalib.ru/sitemap.xml"
