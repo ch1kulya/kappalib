@@ -10,38 +10,38 @@ templ Novel(props NovelProps) {
 					<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(props.Novel.CoverURL)) }>
 						<img src={ ResolveCover(props.Novel.CoverURL) } alt={ props.Novel.TitleEn }/>
 					</div>
-						if len(props.Chapters) > 0 {
-							<div class="desktop-actions">
-								if props.LastChapterID != "" {
-									<div class="reading-progress-container">
-										<div class="progress-labels">
-											<span class="progress-text">Глава <strong>{ fmt.Sprintf("%d", props.NextChapterNum) }</strong> из { fmt.Sprintf("%d", props.TotalChapters) }</span>
-											<span class="progress-percent">{ fmt.Sprintf("%d%%", props.ProgressPercent) }</span>
-										</div>
-										<div class="progress-bar-bg">
-											<div class="progress-bar-fill" style={ fmt.Sprintf("width: %d%%", props.ProgressPercent) }></div>
-										</div>
+					if len(props.Chapters) > 0 {
+						<div class="desktop-actions">
+							if props.LastChapterID != "" {
+								<div class="reading-progress-container">
+									<div class="progress-labels">
+										<span class="progress-text">Глава <strong>{ fmt.Sprintf("%d", props.NextChapterNum) }</strong> из { fmt.Sprintf("%d", props.TotalChapters) }</span>
+										<span class="progress-percent">{ fmt.Sprintf("%d%%", props.ProgressPercent) }</span>
 									</div>
-									<a
-										href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.LastChapterID)) }
-										class="action-btn btn-continue btn-primary js-reading-btn"
-										data-novel-id={ props.Novel.ID }
-									>
-										Продолжить
-									</a>
-								} else {
-									<a
-										href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.FirstChapterID)) }
-										class="action-btn btn-start js-reading-btn"
-										data-novel-id={ props.Novel.ID }
-										data-first-chapter={ props.FirstChapterID }
-									>
-										Начать читать
-									</a>
-								}
-							</div>
-						}
-					</div>
+									<div class="progress-bar-bg">
+										<div class="progress-bar-fill" style={ fmt.Sprintf("width: %d%%", props.ProgressPercent) }></div>
+									</div>
+								</div>
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.LastChapterID)) }
+									class="action-btn btn-continue btn-primary js-reading-btn"
+									data-novel-id={ props.Novel.ID }
+								>
+									Продолжить
+								</a>
+							} else {
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.FirstChapterID)) }
+									class="action-btn btn-start js-reading-btn"
+									data-novel-id={ props.Novel.ID }
+									data-first-chapter={ props.FirstChapterID }
+								>
+									Начать читать
+								</a>
+							}
+						</div>
+					}
+				</div>
 				<div class="novel-info">
 					<h1>{ props.Novel.Title }</h1>
 					<div class="meta">
@@ -51,17 +51,17 @@ templ Novel(props NovelProps) {
 					</div>
 					if props.Novel.Description != "" {
 						<div class="description-wrapper">
-						    <div class="description" id="novel-description">
-							    { props.Novel.Description }
-						    </div>
+							<div class="description" id="novel-description">
+								{ props.Novel.Description }
+							</div>
 						</div>
 					}
 					if props.IsSevere {
 						<div class="content-warning-banner">
 							<svg class="warning-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
-								<path d="M12 9v4"/>
-								<path d="M12 17h.01"/>
+								<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>
+								<path d="M12 9v4"></path>
+								<path d="M12 17h.01"></path>
 							</svg>
 							<div class="content-warning-content">
 								<div class="content-warning-title">Предупреждение о содержании</div>
@@ -102,7 +102,6 @@ templ Novel(props NovelProps) {
 					}
 				</div>
 			</div>
-
 			<div class="chapters-section">
 				<div class="chapters-header">
 					<h2>Главы</h2>
@@ -115,7 +114,7 @@ templ Novel(props NovelProps) {
 									Сначала старые
 								}
 							</span>
-							<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+							<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
 						</button>
 						<div class="dropdown-menu" role="listbox">
 							<div class="dropdown-menu-inner">
@@ -126,7 +125,7 @@ templ Novel(props NovelProps) {
 									aria-selected={ fmt.Sprintf("%t", props.SortOrder != "desc") }
 								>
 									<span>Сначала старые</span>
-									<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+									<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
 								</button>
 								<button
 									class={ "dropdown-item", templ.KV("selected", props.SortOrder == "desc") }
@@ -135,7 +134,7 @@ templ Novel(props NovelProps) {
 									aria-selected={ fmt.Sprintf("%t", props.SortOrder == "desc") }
 								>
 									<span>Сначала новые</span>
-									<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+									<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
 								</button>
 							</div>
 						</div>
