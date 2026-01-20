@@ -147,7 +147,7 @@ func verifyCommentsTurnstile(token string) bool {
 		logger.Error("Comments turnstile verification failed: %v", err)
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Success bool `json:"success"`
@@ -201,7 +201,9 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 
 	var user models.ProfilePublic
 	var avatarUpdatedAt time.Time
-	database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar, avatar_updated_at FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar, &avatarUpdatedAt)
+	if err := database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar, avatar_updated_at FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar, &avatarUpdatedAt); err != nil {
+		logger.Warn("Failed to fetch user data for comment: %v", err)
+	}
 	comment.UserDisplayName = user.DisplayName
 	comment.UserAvatarSeed = user.AvatarSeed
 	comment.UserHasCustomAvatar = user.HasCustomAvatar
@@ -359,7 +361,7 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 		logger.Error("Failed to send telegram message: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		OK     bool `json:"ok"`
@@ -376,7 +378,9 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 	if result.OK {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		database.DB.Exec(ctx, queryCommentsSetTelegramMessageID, result.Result.MessageID, comment.ID)
+		if _, err := database.DB.Exec(ctx, queryCommentsSetTelegramMessageID, result.Result.MessageID, comment.ID); err != nil {
+			logger.Warn("Failed to set telegram message ID for comment %s: %v", comment.ID, err)
+		}
 	}
 }
 
@@ -497,7 +501,7 @@ func DeleteTelegramMessage(chatID int64, messageID int64) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		OK bool `json:"ok"`
