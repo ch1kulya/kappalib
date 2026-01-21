@@ -215,6 +215,15 @@ a:hover {
     background: var(--bg-primary);
 }
 
+.header-logo {
+    width: 1.3em;
+    height: 1.3em;
+    flex-shrink: 0;
+    vertical-align: -0.3em;
+    margin-right: 0.2em;
+    filter: drop-shadow(0 0 0.5px var(--secondary));
+}
+
 .header-content {
     max-width: 800px;
     margin: 0 auto;
