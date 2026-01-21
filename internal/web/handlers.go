@@ -487,9 +487,9 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var latestUpdates []models.HomeUpdateItem
-	chapterUpdates, _ := data.GetLatestUpdates(r.Context(), 12)
+	chapterUpdates, _ := data.GetLatestUpdates(r.Context(), 15)
 	appUpdates, _ := data.GetAppUpdates(r.Context(), 5)
-	novelAdditions, _ := data.GetRecentlyAddedNovels(r.Context(), 5)
+	novelAdditions, _ := data.GetRecentlyAddedNovels(r.Context(), 15)
 
 	for _, cu := range chapterUpdates {
 		latestUpdates = append(latestUpdates, models.HomeUpdateItem{
