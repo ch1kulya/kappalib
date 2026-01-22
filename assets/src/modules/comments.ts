@@ -445,6 +445,12 @@ export function initComments(): void {
 
   container.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
+
+    if (target.classList.contains("spoiler")) {
+      target.classList.toggle("revealed");
+      return;
+    }
+
     const pageBtn = target.closest(".page-link[data-page]") as HTMLElement;
     if (pageBtn && !pageBtn.classList.contains("disabled")) {
       const page = parseInt(pageBtn.dataset.page || "1", 10);
