@@ -1,1 +1,2 @@
-UPDATE comments SET telegram_message_id = $1 WHERE id = $2;
+UPDATE comments SET telegram_message_id = $1
+WHERE id = $2;

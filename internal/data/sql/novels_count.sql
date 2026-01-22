@@ -1,1 +1,2 @@
-SELECT COUNT(*) FROM novels WHERE age_rating IS DISTINCT FROM '19+';
+SELECT COUNT(*) FROM novels
+WHERE age_rating IS DISTINCT FROM '19+';
