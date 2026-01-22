@@ -9,6 +9,6 @@ SELECT
     s.name,
     s.logo_url,
     s.is_translator
-FROM chapters c
-LEFT JOIN sources s ON c.source_id = s.id
+FROM chapters AS c
+LEFT JOIN sources AS s ON c.source_id = s.id
 WHERE c.id = $1;

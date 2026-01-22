@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -46,6 +47,7 @@ var (
 	telegramChatID          = os.Getenv("TELEGRAM_CHAT_ID")
 	telegramWebhookSecret   = os.Getenv("TELEGRAM_WEBHOOK_SECRET")
 	markdownPolicy          *bluemonday.Policy
+	spoilerRegex            = regexp.MustCompile(`\|\|(.+?)\|\|`)
 	telegramClient          = &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
@@ -92,6 +94,7 @@ func init() {
 	markdownPolicy.AllowElements("p", "br", "strong", "b", "em", "i", "code", "pre", "blockquote")
 	markdownPolicy.AllowElements("h1", "h2", "h3", "h4", "h5", "h6")
 	markdownPolicy.AllowElements("ul", "ol", "li")
+	markdownPolicy.AllowAttrs("class").Matching(regexp.MustCompile(`^spoiler$`)).OnElements("span")
 	markdownPolicy.AllowAttrs("href").OnElements("a")
 	markdownPolicy.AllowURLSchemes("http", "https")
 	markdownPolicy.AllowImages()
@@ -159,6 +162,7 @@ func verifyCommentsTurnstile(token string) bool {
 }
 
 func renderMarkdown(content string) string {
+	content = spoilerRegex.ReplaceAllString(content, `<span class="spoiler">$1</span>`)
 	unsafe := blackfriday.Run([]byte(content),
 		blackfriday.WithExtensions(blackfriday.CommonExtensions&^blackfriday.Tables&^blackfriday.FencedCode),
 	)
@@ -408,6 +412,8 @@ func htmlToTelegramHTML(html string) string {
 	result = strings.ReplaceAll(result, "</strong>", "</b>")
 	result = strings.ReplaceAll(result, "<em>", "<i>")
 	result = strings.ReplaceAll(result, "</em>", "</i>")
+	result = strings.ReplaceAll(result, `<span class="spoiler">`, "<tg-spoiler>")
+	result = strings.ReplaceAll(result, "</span>", "</tg-spoiler>")
 	result = replaceImgTags(result)
 
 	result = strings.TrimSpace(result)

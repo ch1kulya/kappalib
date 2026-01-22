@@ -3196,6 +3196,22 @@ html {
     font-style: italic;
 }
 
+.comment-content .spoiler {
+    background: var(--secondary);
+    color: transparent;
+    border-radius: 4px;
+    padding: 0 0.2rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    user-select: none;
+}
+
+.comment-content .spoiler.revealed {
+    background: var(--outline);
+    color: inherit;
+    user-select: text;
+}
+
 .comment-form-guest {
     display: flex;
     align-items: center;
@@ -3234,4 +3250,61 @@ html {
     .comment-content {
         font-size: 0.9rem;
     }
+}
+
+/* Markdown Help Page */
+.markdown-examples {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.75rem 0;
+}
+
+.markdown-examples td {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--outline);
+}
+
+.markdown-examples td:first-child {
+    width: 50%;
+    background: var(--surface);
+}
+
+.markdown-example-block {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    border: 1px solid var(--outline);
+    border-radius: 8px;
+}
+
+.markdown-example-block pre {
+    flex: 1;
+    margin: 0;
+    padding: 0.5rem;
+    background: var(--surface);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.markdown-example-block ul,
+.markdown-example-block ol,
+.markdown-example-block blockquote {
+    flex: 1;
+    margin: 0;
+}
+
+.markdown-help .spoiler {
+    background: var(--secondary);
+    color: transparent;
+    border-radius: 4px;
+    padding: 0 0.2rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.markdown-help .spoiler.revealed {
+    background: var(--outline);
+    color: inherit;
 }

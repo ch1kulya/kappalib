@@ -1,1 +1,2 @@
-DELETE FROM sessions WHERE token_hash = $1
+DELETE FROM sessions
+WHERE token_hash = $1;
