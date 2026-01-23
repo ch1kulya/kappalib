@@ -35,7 +35,9 @@ var queryUsersUpdateDisplayName string
 
 var (
 	cookieNameRegex  = regexp.MustCompile(`^kappalib_[a-z0-9_]{1,50}$`)
-	cookieValueRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-{}\[\]":,.\s]{1,500}$`)
+	simpleValueRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-]{1,100}$`)
+	novelIDRegex     = regexp.MustCompile(`^nvl_[a-z0-9]{8}$`)
+	chapterIDRegex   = regexp.MustCompile(`^chp_[a-z0-9]{8}$`)
 )
 
 var (
@@ -49,12 +51,103 @@ var (
 
 var ErrUnsupportedFormat = fmt.Errorf("unsupported image format")
 
+type progressNovel struct {
+	ChapterID  string `json:"chapterId"`
+	ChapterNum int    `json:"chapterNum"`
+	ReadAt     int64  `json:"readAt"`
+}
+
+type progressLastRead struct {
+	NovelID       string `json:"novelId"`
+	Title         string `json:"title"`
+	Author        string `json:"author"`
+	CoverURL      string `json:"coverUrl"`
+	ChapterID     string `json:"chapterId"`
+	ChapterNum    int    `json:"chapterNum"`
+	TotalChapters int    `json:"totalChapters"`
+	ReadAt        int64  `json:"readAt"`
+}
+
+type progressCookieSchema struct {
+	Novels   map[string]progressNovel `json:"novels"`
+	LastRead *progressLastRead        `json:"lastRead"`
+}
+
+type readerSettingsSchema struct {
+	Theme       string `json:"theme"`
+	ColorScheme string `json:"colorScheme"`
+	FontSize    int    `json:"fontSize"`
+	FontFamily  string `json:"fontFamily"`
+	Indent      int    `json:"indent"`
+	Density     string `json:"density"`
+	Justify     bool   `json:"justify"`
+}
+
+var cookieValidators = map[string]func(string) bool{
+	"kappalib_progress": func(v string) bool {
+		var p progressCookieSchema
+		if err := json.Unmarshal([]byte(v), &p); err != nil {
+			return false
+		}
+		if p.Novels == nil {
+			return false
+		}
+		for id, novel := range p.Novels {
+			if !novelIDRegex.MatchString(id) {
+				return false
+			}
+			if !chapterIDRegex.MatchString(novel.ChapterID) {
+				return false
+			}
+			if novel.ChapterNum < 1 || novel.ReadAt < 0 {
+				return false
+			}
+		}
+		if p.LastRead != nil {
+			if !novelIDRegex.MatchString(p.LastRead.NovelID) {
+				return false
+			}
+			if !chapterIDRegex.MatchString(p.LastRead.ChapterID) {
+				return false
+			}
+			if p.LastRead.ChapterNum < 1 || p.LastRead.TotalChapters < 1 {
+				return false
+			}
+		}
+		return true
+	},
+	"kappalib_reader_settings": func(v string) bool {
+		var s readerSettingsSchema
+		return json.Unmarshal([]byte(v), &s) == nil
+	},
+	"kappalib_chapter_sort": func(v string) bool {
+		return v == "asc" || v == "desc"
+	},
+	"kappalib_catalog_sort": func(v string) bool {
+		valid := []string{"popular", "oldest", "newest", "created", "large", "small", "alphabet", "relevance"}
+		for _, opt := range valid {
+			if v == opt {
+				return true
+			}
+		}
+		return false
+	},
+}
+
 func validateCookies(cookies map[string]models.CookieValue) map[string]models.CookieValue {
 	valid := make(map[string]models.CookieValue)
 	for name, cv := range cookies {
-		if cookieNameRegex.MatchString(name) && cookieValueRegex.MatchString(cv.Value) {
-			valid[name] = cv
+		if !cookieNameRegex.MatchString(name) {
+			continue
 		}
+		if validator, ok := cookieValidators[name]; ok {
+			if !validator(cv.Value) {
+				continue
+			}
+		} else if !simpleValueRegex.MatchString(cv.Value) {
+			continue
+		}
+		valid[name] = cv
 	}
 	return valid
 }

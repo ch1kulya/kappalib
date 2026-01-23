@@ -1,17 +1,70 @@
 import { setKappalibCookie } from "./profile";
 
-interface HistoryItem {
-  id: string;
-  num: number;
-  updatedAt: number;
+interface NovelProgress {
+  chapterId: string;
+  chapterNum: number;
+  readAt: number;
 }
 
-interface ProgressHistory {
-  [novelId: string]: HistoryItem;
+interface LastReadData {
+  novelId: string;
+  title: string;
+  author: string;
+  coverUrl: string;
+  chapterId: string;
+  chapterNum: number;
+  totalChapters: number;
+  readAt: number;
+}
+
+interface ProgressCookie {
+  novels: Record<string, NovelProgress>;
+  lastRead: LastReadData | null;
+}
+
+const COOKIE_NAME = "kappalib_progress";
+const MAX_COOKIE_SIZE = 4000;
+
+function getProgressCookie(): ProgressCookie {
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split("=");
+    if (name === COOKIE_NAME && value) {
+      try {
+        return JSON.parse(decodeURIComponent(value));
+      } catch {
+        break;
+      }
+    }
+  }
+  return { novels: {}, lastRead: null };
+}
+
+function saveProgressCookie(data: ProgressCookie): void {
+  let json = JSON.stringify(data);
+
+  while (json.length > MAX_COOKIE_SIZE && Object.keys(data.novels).length > 1) {
+    const entries = Object.entries(data.novels);
+    entries.sort((a, b) => a[1].readAt - b[1].readAt);
+    const oldestNovelId = entries[0][0];
+
+    if (data.lastRead?.novelId === oldestNovelId) {
+      if (entries.length > 1) {
+        delete data.novels[entries[1][0]];
+      } else {
+        break;
+      }
+    } else {
+      delete data.novels[oldestNovelId];
+    }
+
+    json = JSON.stringify(data);
+  }
+
+  setKappalibCookie(COOKIE_NAME, json);
 }
 
 export function initReadingProgressSaver(): void {
-  const STORAGE_KEY = "kappalib_progress";
   const tracker = document.getElementById("reading-tracker");
   const TIMER_DELAY = 60000;
 
@@ -20,37 +73,52 @@ export function initReadingProgressSaver(): void {
   const novelId = tracker.dataset.novelId;
   const currentChapterId = tracker.dataset.chapterId;
   const currentChapterNumStr = tracker.dataset.chapterNum;
+  const novelTitle = tracker.dataset.novelTitle || "";
+  const novelAuthor = tracker.dataset.novelAuthor || "";
+  const novelCover = tracker.dataset.novelCover || "";
+  const totalChaptersStr = tracker.dataset.totalChapters || "0";
 
   if (!novelId || !currentChapterId) return;
 
   const currentChapterNum = parseInt(currentChapterNumStr || "0", 10);
+  const totalChapters = parseInt(totalChaptersStr, 10);
 
   const saveProgress = (
     targetChapterId: string,
     targetChapterNum: number,
   ): void => {
     try {
-      const rawHistory = localStorage.getItem(STORAGE_KEY);
-      const history: ProgressHistory = rawHistory ? JSON.parse(rawHistory) : {};
+      const data = getProgressCookie();
+      const existing = data.novels[novelId];
 
-      const savedData = history[novelId] || { id: "", num: -1, updatedAt: 0 };
-
-      if (savedData.num > targetChapterNum) {
+      if (existing && existing.chapterNum > targetChapterNum) {
         return;
       }
 
-      if (savedData.id === targetChapterId) return;
+      if (existing && existing.chapterId === targetChapterId) {
+        return;
+      }
 
-      history[novelId] = {
-        id: targetChapterId,
-        num: targetChapterNum,
-        updatedAt: Date.now(),
+      const now = Date.now();
+
+      data.novels[novelId] = {
+        chapterId: targetChapterId,
+        chapterNum: targetChapterNum,
+        readAt: now,
       };
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-      setKappalibCookie(`prog_${novelId}`, targetChapterId);
-      setKappalibCookie("last_read", novelId);
+      data.lastRead = {
+        novelId,
+        title: novelTitle,
+        author: novelAuthor,
+        coverUrl: novelCover,
+        chapterId: targetChapterId,
+        chapterNum: targetChapterNum,
+        totalChapters,
+        readAt: now,
+      };
 
+      saveProgressCookie(data);
       console.info(`Progress saved: Novel ${novelId}, Ch ${targetChapterNum}`);
     } catch (e) {
       console.error("Failed to save reading progress", e);
