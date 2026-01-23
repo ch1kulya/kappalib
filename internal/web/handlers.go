@@ -280,7 +280,7 @@ func (h *Handler) getNovelCookieData(r *http.Request, novelID string, chapters [
 
 func (h *Handler) getHomeCookieData(r *http.Request) HomeCookieData {
 	result := HomeCookieData{
-		SortOrder:      "oldest",
+		SortOrder:      "popular",
 		LastReadWidget: nil,
 	}
 
@@ -759,4 +759,66 @@ func isBot(ua string) bool {
 		}
 	}
 	return false
+}
+
+func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
+	isPartial := r.Header.Get("X-Partial") == "true"
+
+	page := 1
+	if isPartial {
+		if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	searchQuery := r.URL.Query().Get("search")
+
+	sortOrder := r.URL.Query().Get("sort")
+	if sortOrder == "" {
+		if searchQuery != "" {
+			sortOrder = "relevance"
+		} else if cookie, err := r.Cookie("kappalib_catalog_sort"); err == nil {
+			sortOrder = cookie.Value
+		} else {
+			sortOrder = "popular"
+		}
+	}
+
+	dataResp, err := data.GetCatalogNovels(r.Context(), page, sortOrder, searchQuery)
+	if err != nil {
+		h.renderError(w, r, http.StatusServiceUnavailable, "Сервис временно недоступен", "Не удалось загрузить каталог. Пожалуйста, попробуйте позже.")
+		logger.Error("Failed to fetch catalog: %v", err)
+		return
+	}
+
+	title := "Каталог — kappalib"
+	description := "Полный каталог веб-новелл и ранобэ. Читайте популярные веб-новеллы онлайн."
+	if searchQuery != "" {
+		title = fmt.Sprintf("Поиск: %s — kappalib", searchQuery)
+		description = fmt.Sprintf("Результаты поиска по запросу «%s» в библиотеке веб-новелл.", searchQuery)
+	}
+
+	canonical := "https://kappalib.ru/catalog"
+	if page > 1 {
+		canonical = fmt.Sprintf("https://kappalib.ru/catalog?page=%d", page)
+	}
+
+	props := views.CatalogProps{
+		BaseProps: views.BaseProps{
+			Title:          title,
+			Description:    description,
+			Canonical:      canonical,
+			Version:        h.assetVersion,
+			ReaderSettings: h.getReaderSettings(r),
+		},
+		Novels:      dataResp.Novels,
+		Page:        page,
+		TotalPages:  dataResp.TotalPages,
+		TotalCount:  dataResp.TotalCount,
+		SortOrder:   sortOrder,
+		SearchQuery: searchQuery,
+		IsPartial:   isPartial,
+	}
+
+	h.render(w, r, views.Catalog(props))
 }

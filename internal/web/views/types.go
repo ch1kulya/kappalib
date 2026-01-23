@@ -87,3 +87,14 @@ type ColorSchemeOption struct {
 	Value string
 	Label string
 }
+
+type CatalogProps struct {
+	BaseProps
+	Novels      []models.Novel
+	Page        int
+	TotalPages  int
+	TotalCount  int
+	SortOrder   string
+	SearchQuery string
+	IsPartial   bool
+}

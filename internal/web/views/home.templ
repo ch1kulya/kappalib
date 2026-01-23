@@ -48,7 +48,10 @@ templ Home(props HomeProps) {
 			</div>
 		}
 		<div class="chapters-header" style="margin-bottom: 1.5rem;">
-			<h2 id="catalog-title" style="margin-bottom: 0;">Каталог</h2>
+			<a href="/catalog" class="catalog-title-link" id="catalog-title">
+				<h2 style="margin-bottom: 0;">Каталог</h2>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="catalog-chevron"><path d="m9 18 6-6-6-6"></path></svg>
+			</a>
 			<div class="dropdown" id="catalog-sort">
 				<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
 					<span class="js-dropdown-label">{ GetSortLabel(props.SortOrder) }</span>
@@ -57,12 +60,13 @@ templ Home(props HomeProps) {
 				<div class="dropdown-menu" role="listbox">
 					<div class="dropdown-menu-inner">
 						for _, opt := range []struct{Val, Label string}{
-							{"oldest", "Сначала старые"},
-							{"newest", "Сначала новые"},
+							{"popular", "Популярные"},
+							{"oldest", "Старые"},
+							{"newest", "Новые"},
 							{"created", "Недавно добавленные"},
-							{"large", "Сначала большие"},
-							{"small", "Сначала маленькие"},
-							{"alphabet", "По алфавиту"},
+							{"large", "Большие"},
+							{"small", "Маленькие"},
+							{"alphabet", "Алфавитный порядок"},
 						} {
 							<button
 								class={ "dropdown-item", templ.KV("selected", props.SortOrder == opt.Val) }
