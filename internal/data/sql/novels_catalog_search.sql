@@ -57,7 +57,18 @@ scored AS (
     FROM candidates
 )
 
-SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at
+SELECT
+    id,
+    title,
+    title_en,
+    author,
+    year_start,
+    year_end,
+    status,
+    description,
+    age_rating,
+    cover_url,
+    created_at
 FROM scored
 ORDER BY relevance DESC, created_at DESC
 LIMIT $2 OFFSET $3;

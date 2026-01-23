@@ -6,7 +6,7 @@ WITH norm_query AS (
         || '%' AS q_like
 )
 
-SELECT COUNT(*)
+SELECT count(*)
 FROM novels AS n, norm_query AS nq
 WHERE
     n.title_norm ILIKE nq.q_like
