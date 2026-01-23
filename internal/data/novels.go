@@ -29,9 +29,6 @@ var queryNovelsGetOne string
 //go:embed sql/novels_increment_views.sql
 var queryNovelsIncrementViews string
 
-//go:embed sql/novels_catalog_search.sql
-var queryNovelsCatalogSearch string
-
 //go:embed sql/novels_catalog_search_count.sql
 var queryNovelsCatalogSearchCount string
 
