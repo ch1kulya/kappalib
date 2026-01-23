@@ -178,6 +178,7 @@ func main() {
 	r.Get("/sitemap.xml", h.Sitemap)
 	r.Get(fmt.Sprintf("/%s.txt", os.Getenv("INDEX_NOW_KEY")), h.IndexNowKey)
 	r.Get("/", h.Home)
+	r.Get("/catalog", h.Catalog)
 	r.Get("/dmca", h.StaticPage("dmca", "DMCA"))
 	r.Get("/privacy", h.StaticPage("privacy", "Политика конфиденциальности"))
 	r.Get("/copyright", h.StaticPage("copyright", "Правообладателям"))

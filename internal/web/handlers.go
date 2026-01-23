@@ -33,11 +33,53 @@ type NovelCookieData struct {
 	LastChapterID   string
 	ProgressPercent int
 	NextChapterNum  int
+	ReadAt          int64
 }
 
 type HomeCookieData struct {
 	SortOrder      string
 	LastReadWidget *views.LastReadWidgetData
+}
+
+type novelProgress struct {
+	ChapterID  string `json:"chapterId"`
+	ChapterNum int    `json:"chapterNum"`
+	ReadAt     int64  `json:"readAt"`
+}
+
+type lastReadData struct {
+	NovelID       string `json:"novelId"`
+	Title         string `json:"title"`
+	Author        string `json:"author"`
+	CoverURL      string `json:"coverUrl"`
+	ChapterID     string `json:"chapterId"`
+	ChapterNum    int    `json:"chapterNum"`
+	TotalChapters int    `json:"totalChapters"`
+	ReadAt        int64  `json:"readAt"`
+}
+
+type progressCookie struct {
+	Novels   map[string]novelProgress `json:"novels"`
+	LastRead *lastReadData            `json:"lastRead"`
+}
+
+func (h *Handler) getProgressCookie(r *http.Request) *progressCookie {
+	cookie, err := r.Cookie("kappalib_progress")
+	if err != nil {
+		return nil
+	}
+
+	rawValue, err := url.QueryUnescape(cookie.Value)
+	if err != nil {
+		rawValue = cookie.Value
+	}
+
+	var prog progressCookie
+	if err := json.Unmarshal([]byte(rawValue), &prog); err != nil {
+		return nil
+	}
+
+	return &prog
 }
 
 func NewHandler() *Handler {
@@ -235,7 +277,7 @@ func (h *Handler) isValidFontFamily(family string) bool {
 }
 
 func (h *Handler) getNovelCookieData(r *http.Request, novelID string, chapters []models.ChapterSummary, totalChapters int) NovelCookieData {
-	data := NovelCookieData{
+	result := NovelCookieData{
 		SortOrder:       "asc",
 		LastChapterID:   "",
 		ProgressPercent: 0,
@@ -244,43 +286,51 @@ func (h *Handler) getNovelCookieData(r *http.Request, novelID string, chapters [
 
 	if cookie, err := r.Cookie("kappalib_chapter_sort"); err == nil {
 		if cookie.Value == "desc" {
-			data.SortOrder = "desc"
+			result.SortOrder = "desc"
 		}
 	}
 
-	cookieName := fmt.Sprintf("kappalib_prog_%s", novelID)
-	if cookie, err := r.Cookie(cookieName); err == nil {
-		data.LastChapterID = cookie.Value
+	prog := h.getProgressCookie(r)
+	if prog == nil || prog.Novels == nil {
+		return result
 	}
 
-	if data.LastChapterID != "" && len(chapters) > 0 {
+	novelProg, ok := prog.Novels[novelID]
+	if !ok {
+		return result
+	}
+
+	result.LastChapterID = novelProg.ChapterID
+	result.ReadAt = novelProg.ReadAt
+
+	if result.LastChapterID != "" && len(chapters) > 0 {
 		if totalChapters == 0 {
 			totalChapters = len(chapters)
 		}
 		currentChapterNum := 0
 		for _, ch := range chapters {
-			if ch.ID == data.LastChapterID {
+			if ch.ID == result.LastChapterID {
 				currentChapterNum = ch.ChapterNum
 				break
 			}
 		}
 		if currentChapterNum > 0 && totalChapters > 0 {
 			rawPercent := (float64(currentChapterNum) / float64(totalChapters)) * 100
-			data.ProgressPercent = int(rawPercent)
-			if rawPercent > 0 && data.ProgressPercent == 0 {
-				data.ProgressPercent = 1
+			result.ProgressPercent = int(rawPercent)
+			if rawPercent > 0 && result.ProgressPercent == 0 {
+				result.ProgressPercent = 1
 			}
-			data.ProgressPercent = min(data.ProgressPercent, 100)
-			data.NextChapterNum = currentChapterNum
+			result.ProgressPercent = min(result.ProgressPercent, 100)
+			result.NextChapterNum = currentChapterNum
 		}
 	}
 
-	return data
+	return result
 }
 
 func (h *Handler) getHomeCookieData(r *http.Request) HomeCookieData {
 	result := HomeCookieData{
-		SortOrder:      "oldest",
+		SortOrder:      "popular",
 		LastReadWidget: nil,
 	}
 
@@ -288,61 +338,37 @@ func (h *Handler) getHomeCookieData(r *http.Request) HomeCookieData {
 		result.SortOrder = cookie.Value
 	}
 
-	cookie, err := r.Cookie("kappalib_last_read")
-	if err != nil {
+	prog := h.getProgressCookie(r)
+	if prog == nil || prog.LastRead == nil {
 		return result
 	}
 
-	lastNovelID := cookie.Value
-	novel, err := data.GetNovel(r.Context(), lastNovelID)
-	if err != nil {
+	lastRead := prog.LastRead
+	if lastRead.TotalChapters <= 0 || lastRead.ChapterNum <= 0 {
 		return result
 	}
 
-	progCookieName := fmt.Sprintf("kappalib_prog_%s", lastNovelID)
-	progCookie, err := r.Cookie(progCookieName)
-	if err != nil {
-		return result
+	progressPercent := int((float64(lastRead.ChapterNum) / float64(lastRead.TotalChapters)) * 100)
+	if progressPercent == 0 {
+		progressPercent = 1
+	}
+	if progressPercent > 100 {
+		progressPercent = 100
 	}
 
-	lastChapterID := progCookie.Value
-	if lastChapterID == "" {
-		return result
-	}
-
-	chapters, err := data.GetChapters(r.Context(), lastNovelID)
-	if err != nil || len(chapters.Chapters) == 0 {
-		return result
-	}
-
-	currentChapterNum := 0
-	totalChapters := chapters.Count
-	if totalChapters == 0 {
-		totalChapters = len(chapters.Chapters)
-	}
-
-	for _, ch := range chapters.Chapters {
-		if ch.ID == lastChapterID {
-			currentChapterNum = ch.ChapterNum
-			break
-		}
-	}
-
-	if currentChapterNum > 0 {
-		progressPercent := int((float64(currentChapterNum) / float64(totalChapters)) * 100)
-		if progressPercent == 0 {
-			progressPercent = 1
-		}
-		if progressPercent > 100 {
-			progressPercent = 100
-		}
-		result.LastReadWidget = &views.LastReadWidgetData{
-			Novel:           novel,
-			LastChapterID:   lastChapterID,
-			NextChapterNum:  currentChapterNum,
-			TotalChapters:   totalChapters,
-			ProgressPercent: progressPercent,
-		}
+	coverURL := lastRead.CoverURL
+	result.LastReadWidget = &views.LastReadWidgetData{
+		Novel: &models.Novel{
+			ID:       lastRead.NovelID,
+			Title:    lastRead.Title,
+			Author:   lastRead.Author,
+			CoverURL: &coverURL,
+		},
+		LastChapterID:   lastRead.ChapterID,
+		NextChapterNum:  lastRead.ChapterNum,
+		TotalChapters:   lastRead.TotalChapters,
+		ProgressPercent: progressPercent,
+		ReadAt:          lastRead.ReadAt,
 	}
 
 	return result
@@ -647,6 +673,14 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 		prefetchURL = fmt.Sprintf("/%s/chapter/%s", novelID, nextID)
 	}
 
+	totalChapters := 0
+	if allChapters != nil {
+		totalChapters = allChapters.Count
+		if totalChapters == 0 {
+			totalChapters = len(allChapters.Chapters)
+		}
+	}
+
 	props := views.ChapterProps{
 		BaseProps: views.BaseProps{
 			Title:          chapterTitle,
@@ -661,10 +695,11 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 			PrefetchURL:    prefetchURL,
 			ReaderSettings: h.getReaderSettings(r),
 		},
-		Novel:   novel,
-		Chapter: chapter,
-		PrevID:  prevID,
-		NextID:  nextID,
+		Novel:         novel,
+		Chapter:       chapter,
+		PrevID:        prevID,
+		NextID:        nextID,
+		TotalChapters: totalChapters,
 	}
 
 	h.render(w, r, views.Chapter(props))
@@ -759,4 +794,66 @@ func isBot(ua string) bool {
 		}
 	}
 	return false
+}
+
+func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
+	isPartial := r.Header.Get("X-Partial") == "true"
+
+	page := 1
+	if isPartial {
+		if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	searchQuery := r.URL.Query().Get("search")
+
+	sortOrder := r.URL.Query().Get("sort")
+	if sortOrder == "" {
+		if searchQuery != "" {
+			sortOrder = "relevance"
+		} else if cookie, err := r.Cookie("kappalib_catalog_sort"); err == nil {
+			sortOrder = cookie.Value
+		} else {
+			sortOrder = "popular"
+		}
+	}
+
+	dataResp, err := data.GetCatalogNovels(r.Context(), page, sortOrder, searchQuery)
+	if err != nil {
+		h.renderError(w, r, http.StatusServiceUnavailable, "Сервис временно недоступен", "Не удалось загрузить каталог. Пожалуйста, попробуйте позже.")
+		logger.Error("Failed to fetch catalog: %v", err)
+		return
+	}
+
+	title := "Каталог — kappalib"
+	description := "Полный каталог веб-новелл и ранобэ. Читайте популярные веб-новеллы онлайн."
+	if searchQuery != "" {
+		title = fmt.Sprintf("Поиск: %s — kappalib", searchQuery)
+		description = fmt.Sprintf("Результаты поиска по запросу «%s» в библиотеке веб-новелл.", searchQuery)
+	}
+
+	canonical := "https://kappalib.ru/catalog"
+	if page > 1 {
+		canonical = fmt.Sprintf("https://kappalib.ru/catalog?page=%d", page)
+	}
+
+	props := views.CatalogProps{
+		BaseProps: views.BaseProps{
+			Title:          title,
+			Description:    description,
+			Canonical:      canonical,
+			Version:        h.assetVersion,
+			ReaderSettings: h.getReaderSettings(r),
+		},
+		Novels:      dataResp.Novels,
+		Page:        page,
+		TotalPages:  dataResp.TotalPages,
+		TotalCount:  dataResp.TotalCount,
+		SortOrder:   sortOrder,
+		SearchQuery: searchQuery,
+		IsPartial:   isPartial,
+	}
+
+	h.render(w, r, views.Catalog(props))
 }

@@ -1,0 +1,101 @@
+package views
+
+import "fmt"
+
+templ CatalogGrid(props CatalogProps) {
+	<div class="novels-grid" id="catalog-grid">
+		for _, novel := range props.Novels {
+			<a href={ templ.SafeURL("/" + novel.ID) } class="novel-card">
+				<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(novel.CoverURL)) }>
+					<img src={ ResolveCover(novel.CoverURL) } alt={ novel.Title } loading="lazy"/>
+				</div>
+				<div class="novel-card-info">
+					<h3>{ novel.Title }</h3>
+					<p class="author">{ novel.Author }</p>
+				</div>
+			</a>
+		}
+	</div>
+}
+
+templ Catalog(props CatalogProps) {
+	if props.IsPartial {
+		@CatalogGrid(props)
+	} else {
+		@Base(props.BaseProps) {
+			<div class="catalog-header-wrapper">
+				<div class="chapters-header">
+					if props.SearchQuery != "" {
+						<h2 style="margin: 0;">Поиск</h2>
+					} else {
+						<h2 style="margin: 0;">Каталог</h2>
+					}
+					<div class="dropdown" id="catalog-sort-dropdown">
+						<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+							<span class="js-dropdown-label">{ GetSortLabel(props.SortOrder) }</span>
+							<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+						</button>
+						<div class="dropdown-menu" role="listbox">
+							<div class="dropdown-menu-inner">
+								if props.SearchQuery != "" {
+									<button
+										class={ "dropdown-item", templ.KV("selected", props.SortOrder == "relevance") }
+										data-value="relevance"
+										role="option"
+										aria-selected={ fmt.Sprintf("%t", props.SortOrder == "relevance") }
+									>
+										<span>Релевантные</span>
+										<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+									</button>
+								}
+								for _, opt := range []struct{Val, Label string}{
+									{"popular", "Популярные"},
+									{"oldest", "Старые"},
+									{"newest", "Новые"},
+									{"created", "Недавно добавленные"},
+									{"large", "Большие"},
+									{"small", "Маленькие"},
+									{"alphabet", "Алфавитный порядок"},
+								} {
+									<button
+										class={ "dropdown-item", templ.KV("selected", props.SortOrder == opt.Val) }
+										data-value={ opt.Val }
+										role="option"
+										aria-selected={ fmt.Sprintf("%t", props.SortOrder == opt.Val) }
+									>
+										<span>{ opt.Label }</span>
+										<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+									</button>
+								}
+							</div>
+						</div>
+					</div>
+				</div>
+				if props.SearchQuery != "" {
+					<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по запросу «{ props.SearchQuery }»</span>
+				} else {
+					<span class="catalog-search-meta">На данной странице { pluralizeDisplayed(props.TotalCount) } { fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) }</span>
+				}
+			</div>
+			<div
+				id="catalog-content"
+				data-total-pages={ fmt.Sprintf("%d", props.TotalPages) }
+				data-sort={ props.SortOrder }
+				data-search={ props.SearchQuery }
+			>
+				@CatalogGrid(props)
+				if len(props.Novels) == 0 {
+					<div class="catalog-empty">
+						<p>Ничего не найдено</p>
+					</div>
+				}
+			</div>
+			if props.Page < props.TotalPages && len(props.Novels) > 0 {
+				<div class="catalog-loader" id="catalog-loader">
+					<div class="catalog-loader-spinner"></div>
+					<span>Загрузка...</span>
+				</div>
+			}
+		}
+	}
+}

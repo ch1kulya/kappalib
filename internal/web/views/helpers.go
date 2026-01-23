@@ -29,17 +29,23 @@ func MapStatus(status string) string {
 func GetSortLabel(sort string) string {
 	switch sort {
 	case "newest":
-		return "Сначала новые"
+		return "Новые"
+	case "oldest":
+		return "Старые"
 	case "large":
-		return "Сначала большие"
+		return "Большие"
 	case "small":
-		return "Сначала маленькие"
+		return "Маленькие"
 	case "alphabet":
-		return "По алфавиту"
+		return "Алфавитный порядок"
 	case "created":
 		return "Недавно добавленные"
+	case "relevance":
+		return "Релевантные"
+	case "popular":
+		return "Популярные"
 	default:
-		return "Сначала старые"
+		return "Популярные"
 	}
 }
 
@@ -291,4 +297,34 @@ func FormatUpdateActionHTML(min, max, count int) string {
 		return fmt.Sprintf(`Добавлена <span class="update-log-num">%d</span> гл. `, min)
 	}
 	return fmt.Sprintf(`Добавлены <span class="update-log-num">%d-%d</span> гл. `, min, max)
+}
+
+func pluralizeNovels(n int) string {
+	n100 := n % 100
+	n10 := n % 10
+	if n100 >= 11 && n100 <= 19 {
+		return "новелл"
+	}
+	if n10 == 1 {
+		return "новелла"
+	}
+	if n10 >= 2 && n10 <= 4 {
+		return "новеллы"
+	}
+	return "новелл"
+}
+
+func pluralizeDisplayed(n int) string {
+	n100 := n % 100
+	n10 := n % 10
+	if n100 >= 11 && n100 <= 19 {
+		return "отображено"
+	}
+	if n10 == 1 {
+		return "отображена"
+	}
+	if n10 >= 2 && n10 <= 4 {
+		return "отображены"
+	}
+	return "отображено"
 }

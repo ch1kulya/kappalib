@@ -23,6 +23,7 @@ type LastReadWidgetData struct {
 	NextChapterNum  int
 	TotalChapters   int
 	ProgressPercent int
+	ReadAt          int64
 }
 
 type HomeProps struct {
@@ -49,10 +50,11 @@ type NovelProps struct {
 
 type ChapterProps struct {
 	BaseProps
-	Novel   *models.Novel
-	Chapter *models.Chapter
-	PrevID  string
-	NextID  string
+	Novel         *models.Novel
+	Chapter       *models.Chapter
+	PrevID        string
+	NextID        string
+	TotalChapters int
 }
 
 type DocumentProps struct {
@@ -86,4 +88,15 @@ type FontOption struct {
 type ColorSchemeOption struct {
 	Value string
 	Label string
+}
+
+type CatalogProps struct {
+	BaseProps
+	Novels      []models.Novel
+	Page        int
+	TotalPages  int
+	TotalCount  int
+	SortOrder   string
+	SearchQuery string
+	IsPartial   bool
 }

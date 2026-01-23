@@ -2,7 +2,7 @@ import { initSearch } from "./modules/search";
 import { initAgeGate } from "./modules/age";
 import { initReadingProgressSaver } from "./modules/progress";
 import { initStatusBadge } from "./modules/status";
-import { initCatalogPagination } from "./modules/catalog";
+import { initCatalogPagination, initCatalogPage } from "./modules/catalog";
 import Dropdown from "./modules/dropdown";
 import { initChaptersSort, initCatalogSort } from "./modules/sort";
 import { initDescription } from "./modules/description";
@@ -33,6 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initReadingProgressSaver();
     initStatusBadge();
     initCatalogPagination();
+    initCatalogPage();
     initComments();
 
     console.info("All modules initialized successfully");

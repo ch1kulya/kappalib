@@ -61,7 +61,10 @@ export function initSearch(): void {
   input.onkeydown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (firstResultUrl) {
+      const query = input.value.trim();
+      if (query.length >= 2) {
+        window.location.href = `/catalog?search=${encodeURIComponent(query)}`;
+      } else if (firstResultUrl) {
         window.location.href = firstResultUrl;
       }
     }

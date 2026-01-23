@@ -10,6 +10,10 @@ templ Chapter(props ChapterProps) {
 				data-novel-id={ props.Novel.ID }
 				data-chapter-id={ props.Chapter.ID }
 				data-chapter-num={ fmt.Sprintf("%d", props.Chapter.ChapterNum) }
+				data-novel-title={ props.Novel.Title }
+				data-novel-author={ props.Novel.Author }
+				data-novel-cover={ ResolveCover(props.Novel.CoverURL) }
+				data-total-chapters={ fmt.Sprintf("%d", props.TotalChapters) }
 				style="display: none;"
 			></div>
 			<h1 class={ chapterTitleClasses(props.ReaderSettings) } style={ chapterTitleStyle(props.ReaderSettings) }>
