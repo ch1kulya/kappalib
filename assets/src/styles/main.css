@@ -2360,6 +2360,28 @@ html {
         padding: 1.25rem;
         position: relative;
         z-index: 2;
+        overflow: hidden;
+        & .pc-provider-bg {
+            position: absolute;
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            opacity: 0.08;
+            & svg {
+                width: 100px;
+                height: 100px;
+            }
+            &[data-provider="google"] {
+                color: var(--oauth-google);
+            }
+            &[data-provider="github"] {
+                color: var(--oauth-github);
+            }
+            &[data-provider="yandex"] {
+                color: var(--oauth-yandex);
+            }
+        }
         & .pc-section {
             margin-bottom: 0;
             & .pc-desc {
@@ -2390,67 +2412,6 @@ html {
                 gap: 0.4rem;
                 font-size: 0.7rem;
                 color: var(--tertiary);
-                & .pc-provider {
-                    padding: 1px 4px;
-                    border-radius: 4px;
-                    border: 1px solid var(--border);
-                    font-size: 0.65rem;
-                    font-family: "IBM Plex Mono", monospace;
-                    &:empty {
-                        display: none;
-                    }
-                    &[data-provider="google"] {
-                        color: color-mix(
-                            in srgb,
-                            var(--oauth-google),
-                            transparent 15%
-                        );
-                        background-color: color-mix(
-                            in srgb,
-                            var(--oauth-google),
-                            transparent 85%
-                        );
-                        border-color: color-mix(
-                            in srgb,
-                            var(--oauth-google),
-                            transparent 55%
-                        );
-                    }
-                    &[data-provider="github"] {
-                        color: color-mix(
-                            in srgb,
-                            var(--oauth-github),
-                            transparent 15%
-                        );
-                        background-color: color-mix(
-                            in srgb,
-                            var(--oauth-github),
-                            transparent 85%
-                        );
-                        border-color: color-mix(
-                            in srgb,
-                            var(--oauth-github),
-                            transparent 55%
-                        );
-                    }
-                    &[data-provider="yandex"] {
-                        color: color-mix(
-                            in srgb,
-                            var(--oauth-yandex),
-                            transparent 15%
-                        );
-                        background-color: color-mix(
-                            in srgb,
-                            var(--oauth-yandex),
-                            transparent 85%
-                        );
-                        border-color: color-mix(
-                            in srgb,
-                            var(--oauth-yandex),
-                            transparent 55%
-                        );
-                    }
-                }
                 & .pc-id {
                     font-family: "IBM Plex Mono", monospace;
                     padding: 1px 4px;
