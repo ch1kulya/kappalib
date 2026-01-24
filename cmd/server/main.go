@@ -179,6 +179,7 @@ func main() {
 	r.Get(fmt.Sprintf("/%s.txt", os.Getenv("INDEX_NOW_KEY")), h.IndexNowKey)
 	r.Get("/", h.Home)
 	r.Get("/catalog", h.Catalog)
+	r.Get("/history", h.History)
 	r.Get("/dmca", h.StaticPage("dmca", "DMCA"))
 	r.Get("/privacy", h.StaticPage("privacy", "Политика конфиденциальности"))
 	r.Get("/copyright", h.StaticPage("copyright", "Правообладателям"))
@@ -253,6 +254,13 @@ func main() {
 			Path:        "/novels/{id}",
 			Summary:     "Get novel by ID",
 		}, api.HandleGetNovel)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-novels-batch",
+			Method:      http.MethodPost,
+			Path:        "/novels/batch",
+			Summary:     "Get multiple novels by IDs",
+		}, api.HandleGetNovelsBatch)
 
 		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-chapters",

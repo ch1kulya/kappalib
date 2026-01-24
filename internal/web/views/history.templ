@@ -1,0 +1,68 @@
+package views
+
+templ History(props HistoryProps) {
+	@Base(props.BaseProps) {
+		<div class="chapters-header" style="margin-bottom: 1.5rem;">
+			<h2 style="margin: 0;">История</h2>
+			<button class="btn-text-danger" id="history-clear-all" style="display: none;">Очистить</button>
+		</div>
+		<div id="history-content">
+			<div class="history-empty" id="history-empty" style="display: none;">
+				<p>История чтения пуста</p>
+			</div>
+			<div class="history-list" id="history-list"></div>
+			<div class="history-skeleton" id="history-skeleton"></div>
+		</div>
+		<template id="tpl-history-skeleton">
+			<div class="history-item">
+				<div class="history-poster-link">
+					<div class="skeleton history-skeleton-poster"></div>
+				</div>
+				<div class="history-content">
+					<div class="history-info">
+						<div class="skeleton history-skeleton-title"></div>
+						<div class="skeleton history-skeleton-author"></div>
+					</div>
+					<div class="history-progress-wrapper">
+						<div class="history-skeleton-progress">
+							<div class="skeleton history-skeleton-text"></div>
+							<div class="skeleton history-skeleton-bar"></div>
+						</div>
+					</div>
+				</div>
+				<div class="history-skeleton-remove"></div>
+			</div>
+		</template>
+		<template id="tpl-history-item">
+			<div class="history-item" data-novel-id="">
+				<a href="" class="history-poster-link">
+					<div class="poster-wrapper">
+						<img src="" alt="" loading="lazy"/>
+					</div>
+				</a>
+				<div class="history-content">
+					<div class="history-info">
+						<a href="" class="history-title">
+							<h3 data-field="title"></h3>
+						</a>
+						<span class="history-meta" data-field="author"></span>
+					</div>
+					<div class="history-progress-wrapper">
+						<div class="reading-progress-container">
+							<div class="progress-labels">
+								<span class="progress-text" data-field="progress"></span>
+								<span class="progress-percent" data-field="percent"></span>
+							</div>
+							<div class="progress-bar-bg">
+								<div class="progress-bar-fill" data-field="progressBar"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<button class="history-remove" aria-label="Удалить из истории">
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+				</button>
+			</div>
+		</template>
+	}
+}

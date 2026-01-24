@@ -403,7 +403,7 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	cookieData := h.getNovelCookieData(r, id, chapters.Chapters, chapters.Count)
+	cookieData := h.getNovelCookieData(r, id, chapters.Chapters, novel.ChapterCount)
 
 	if len(chapters.Chapters) > 0 {
 		if cookieData.SortOrder == "desc" {
@@ -417,7 +417,7 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	desc := fmt.Sprintf("%d глав · %s", chapters.Count, novel.Description)
+	desc := fmt.Sprintf("%d глав · %s", novel.ChapterCount, novel.Description)
 	if len([]rune(desc)) > 155 {
 		desc = string([]rune(desc)[:155]) + "..."
 	}
@@ -490,7 +490,7 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		FirstChapterID:  firstChapterID,
 		ProgressPercent: cookieData.ProgressPercent,
 		NextChapterNum:  cookieData.NextChapterNum,
-		TotalChapters:   chapters.Count,
+		TotalChapters:   novel.ChapterCount,
 	}
 
 	h.render(w, r, views.Novel(props))
@@ -673,14 +673,6 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 		prefetchURL = fmt.Sprintf("/%s/chapter/%s", novelID, nextID)
 	}
 
-	totalChapters := 0
-	if allChapters != nil {
-		totalChapters = allChapters.Count
-		if totalChapters == 0 {
-			totalChapters = len(allChapters.Chapters)
-		}
-	}
-
 	props := views.ChapterProps{
 		BaseProps: views.BaseProps{
 			Title:          chapterTitle,
@@ -699,7 +691,7 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 		Chapter:       chapter,
 		PrevID:        prevID,
 		NextID:        nextID,
-		TotalChapters: totalChapters,
+		TotalChapters: novel.ChapterCount,
 	}
 
 	h.render(w, r, views.Chapter(props))
@@ -856,4 +848,17 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.render(w, r, views.Catalog(props))
+}
+
+func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
+	props := views.HistoryProps{
+		BaseProps: views.BaseProps{
+			Title:          "История чтения — kappalib",
+			Description:    "История прочитанных веб-новелл и ранобэ.",
+			Canonical:      "https://kappalib.ru/history",
+			Version:        h.assetVersion,
+			ReaderSettings: h.getReaderSettings(r),
+		},
+	}
+	h.render(w, r, views.History(props))
 }

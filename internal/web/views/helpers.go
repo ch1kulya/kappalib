@@ -300,31 +300,5 @@ func FormatUpdateActionHTML(min, max, count int) string {
 }
 
 func pluralizeNovels(n int) string {
-	n100 := n % 100
-	n10 := n % 10
-	if n100 >= 11 && n100 <= 19 {
-		return "новелл"
-	}
-	if n10 == 1 {
-		return "новелла"
-	}
-	if n10 >= 2 && n10 <= 4 {
-		return "новеллы"
-	}
-	return "новелл"
-}
-
-func pluralizeDisplayed(n int) string {
-	n100 := n % 100
-	n10 := n % 10
-	if n100 >= 11 && n100 <= 19 {
-		return "отображено"
-	}
-	if n10 == 1 {
-		return "отображена"
-	}
-	if n10 >= 2 && n10 <= 4 {
-		return "отображены"
-	}
-	return "отображено"
+	return pluralize(n, "новелла", "новеллы", "новелл")
 }

@@ -72,6 +72,7 @@ templ ProfileTemplates() {
 	</template>
 	<template id="tpl-pc-profile">
 		<div class="pc-body">
+			<div class="pc-provider-bg" id="pc-provider-bg"></div>
 			<div class="pc-profile">
 				<div class="pc-avatar-wrapper">
 					<img src="" alt="" class="pc-avatar" id="pc-avatar-img" data-field="avatarUrl"/>
@@ -89,7 +90,6 @@ templ ProfileTemplates() {
 						<input type="text" class="pc-name-input" id="pc-name-input" maxlength="15" style="display:none"/>
 					</div>
 					<div class="pc-meta">
-						<span class="pc-provider badge" data-field="provider"></span>
 						<span class="pc-id badge" data-field="profileId"></span>
 						<span class="pc-meta-date" data-field="createdAt"></span>
 					</div>
