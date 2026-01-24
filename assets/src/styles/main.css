@@ -221,7 +221,9 @@ a:hover {
     flex-shrink: 0;
     vertical-align: -0.3em;
     margin-right: 0.2em;
+    color: var(--secondary);
     filter: drop-shadow(0 0 0.5px var(--secondary));
+    will-change: filter;
 }
 
 .header-content {
@@ -3202,7 +3204,9 @@ html {
     border-radius: 4px;
     padding: 0 0.2rem;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
+    transition:
+        background 0.2s,
+        color 0.2s;
     user-select: none;
 }
 
@@ -3301,7 +3305,9 @@ html {
     border-radius: 4px;
     padding: 0 0.2rem;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
+    transition:
+        background 0.2s,
+        color 0.2s;
 }
 
 .markdown-help .spoiler.revealed {
@@ -3329,8 +3335,11 @@ html {
 
 .catalog-chevron {
     color: var(--secondary);
+    padding-top: 0.135rem;
     flex-shrink: 0;
     margin-top: 1px;
+    filter: drop-shadow(0 0 0.5px var(--secondary));
+    will-change: filter;
 }
 
 /* Catalog Header */
@@ -3386,4 +3395,3 @@ html {
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
-

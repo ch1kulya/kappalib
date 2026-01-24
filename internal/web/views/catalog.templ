@@ -74,7 +74,7 @@ templ Catalog(props CatalogProps) {
 				if props.SearchQuery != "" {
 					<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по запросу «{ props.SearchQuery }»</span>
 				} else {
-					<span class="catalog-search-meta">На данной странице { pluralizeDisplayed(props.TotalCount) } { fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) }</span>
+					<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } из основной коллекции</span>
 				}
 			</div>
 			<div
