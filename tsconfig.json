@@ -9,6 +9,7 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "./assets/static/dist",
     "rootDir": "./assets/src",
+    "noEmit": true,
   },
   "include": ["assets/src/**/*"],
 }
