@@ -3510,8 +3510,8 @@ html {
 /* Catalog Title Link */
 .catalog-title-link {
     display: flex;
-    align-items: center;
-    gap: 0.125rem;
+    align-items: baseline;
+    gap: 0.1rem;
     text-decoration: none;
     color: inherit;
     transition: opacity 0.2s;
@@ -3527,9 +3527,8 @@ html {
 
 .catalog-chevron {
     color: var(--secondary);
-    padding-top: 0.135rem;
     flex-shrink: 0;
-    margin-top: 1px;
+    transform: translateY(0.3em);
     filter: drop-shadow(0 0 0.5px var(--secondary));
     will-change: filter;
 }
