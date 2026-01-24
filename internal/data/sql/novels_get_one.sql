@@ -10,6 +10,10 @@ SELECT
     age_rating,
     cover_url,
     created_at,
-    chapters_count
+    chapters_count,
+    has_self_harm,
+    has_drug_usage,
+    has_sexual_violence,
+    has_graphic_sex
 FROM novels
 WHERE id = $1;

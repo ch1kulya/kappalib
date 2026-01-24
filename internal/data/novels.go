@@ -44,6 +44,7 @@ func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 			&n.ID, &n.Title, &n.TitleEn, &n.Author,
 			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
 			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
+			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex,
 		)
 		if err != nil {
 			return nil, err
@@ -74,7 +75,8 @@ func GetNovelsByIDs(ctx context.Context, ids []string) ([]models.Novel, error) {
 
 	query := fmt.Sprintf(`
 		SELECT id, title, title_en, author, year_start, year_end,
-			   status, description, age_rating, cover_url, created_at, chapters_count
+			   status, description, age_rating, cover_url, created_at, chapters_count,
+			   has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex
 		FROM novels
 		WHERE id IN (%s)
 	`, strings.Join(placeholders, ", "))
@@ -92,6 +94,7 @@ func GetNovelsByIDs(ctx context.Context, ids []string) ([]models.Novel, error) {
 			&n.ID, &n.Title, &n.TitleEn, &n.Author,
 			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
 			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
+			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex,
 		); err != nil {
 			return nil, err
 		}
@@ -126,7 +129,7 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 			}, nil
 		}
 
-		baseQuery := `SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at FROM novels WHERE age_rating IS DISTINCT FROM '19+'`
+		baseQuery := `SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at FROM novels WHERE NOT (has_self_harm OR has_drug_usage OR has_sexual_violence OR has_graphic_sex)`
 
 		var orderByClause string
 		switch sort {
@@ -413,7 +416,7 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 	}
 
 	selectQuery := fmt.Sprintf(
-		"SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at FROM novels WHERE age_rating IS DISTINCT FROM '19+' %s LIMIT $1 OFFSET $2",
+		"SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at FROM novels WHERE NOT (has_self_harm OR has_drug_usage OR has_sexual_violence OR has_graphic_sex) %s LIMIT $1 OFFSET $2",
 		orderByClause,
 	)
 

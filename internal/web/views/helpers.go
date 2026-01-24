@@ -302,3 +302,26 @@ func FormatUpdateActionHTML(min, max, count int) string {
 func pluralizeNovels(n int) string {
 	return pluralize(n, "новелла", "новеллы", "новелл")
 }
+
+func buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex bool) string {
+	var warnings []string
+	if hasSelfHarm {
+		warnings = append(warnings, "суицидальные темы", "селфхарм")
+	}
+	if hasDrugUsage {
+		warnings = append(warnings, "употребление наркотиков")
+	}
+	if hasSexualViolence {
+		warnings = append(warnings, "сексуальное насилие")
+	}
+	if hasGraphicSex {
+		warnings = append(warnings, "графичную эротику")
+	}
+	if len(warnings) == 0 {
+		return ""
+	}
+	if len(warnings) == 1 {
+		return warnings[0] + "."
+	}
+	return strings.Join(warnings[:len(warnings)-1], ", ") + " и " + warnings[len(warnings)-1] + "."
+}

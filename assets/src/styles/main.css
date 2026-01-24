@@ -1040,6 +1040,10 @@ a:hover {
     box-shadow: var(--shadow-secondary);
 }
 
+.badge-danger {
+    border-color: var(--color-danger-glow);
+}
+
 /* Chapters */
 .chapters-header {
     display: flex;
@@ -1428,14 +1432,6 @@ a:hover {
     border-left: 3px solid var(--color-danger);
     border-radius: 0 8px 8px 0;
     text-align: left;
-}
-
-.content-warning-banner .warning-icon {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    color: var(--color-danger);
-    margin-top: 2px;
 }
 
 .content-warning-content {

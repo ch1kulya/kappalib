@@ -1,2 +1,2 @@
 SELECT COUNT(*) FROM novels
-WHERE age_rating IS DISTINCT FROM '19+';
+WHERE NOT (has_self_harm OR has_drug_usage OR has_sexual_violence OR has_graphic_sex);

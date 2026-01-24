@@ -48,6 +48,9 @@ templ Novel(props NovelProps) {
 						<span class="badge">{ props.Novel.Author }</span>
 						<span class="badge">{ fmt.Sprintf("%d", props.Novel.YearStart) }</span>
 						<span class="badge">{ MapStatus(props.Novel.Status) }</span>
+						if props.Novel.AgeRating != nil && *props.Novel.AgeRating != "" {
+							<span class={ "badge", templ.KV("badge-danger", *props.Novel.AgeRating == "18+") }>{ *props.Novel.AgeRating }</span>
+						}
 					</div>
 					if props.Novel.Description != "" {
 						<div class="description-wrapper">
@@ -58,14 +61,12 @@ templ Novel(props NovelProps) {
 					}
 					if props.IsSevere {
 						<div class="content-warning-banner">
-							<svg class="warning-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>
-								<path d="M12 9v4"></path>
-								<path d="M12 17h.01"></path>
-							</svg>
 							<div class="content-warning-content">
-								<div class="content-warning-title">Предупреждение о содержании</div>
-								<p class="content-warning-text">Эта новелла содержит шокирующий контент, в том числе сцены сексуального насилия, употребления наркотиков и другие темы, которые могут быть неприемлемыми для многих читателей.</p>
+								<div class="content-warning-title">Внимание!</div>
+								<p class="content-warning-text">
+									<span>В этой новелле присутствуют сцены, включающие </span>
+									@ContentWarningList(props.Novel.HasSelfHarm, props.Novel.HasDrugUsage, props.Novel.HasSexualViolence, props.Novel.HasGraphicSex)
+								</p>
 							</div>
 						</div>
 					}
@@ -164,4 +165,8 @@ templ Novel(props NovelProps) {
 			</div>
 		</div>
 	}
+}
+
+templ ContentWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex bool) {
+	@templ.Raw(buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex))
 }
