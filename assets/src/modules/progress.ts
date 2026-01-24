@@ -1,12 +1,12 @@
 import { setKappalibCookie } from "./profile";
 
-interface NovelProgress {
+export interface NovelProgress {
   chapterId: string;
   chapterNum: number;
   readAt: number;
 }
 
-interface LastReadData {
+export interface LastReadData {
   novelId: string;
   title: string;
   author: string;
@@ -17,7 +17,7 @@ interface LastReadData {
   readAt: number;
 }
 
-interface ProgressCookie {
+export interface ProgressCookie {
   novels: Record<string, NovelProgress>;
   lastRead: LastReadData | null;
 }
@@ -25,7 +25,7 @@ interface ProgressCookie {
 const COOKIE_NAME = "kappalib_progress";
 const MAX_COOKIE_SIZE = 4000;
 
-function getProgressCookie(): ProgressCookie {
+export function getProgressCookie(): ProgressCookie {
   const cookies = document.cookie.split(";");
   for (const cookie of cookies) {
     const [name, value] = cookie.trim().split("=");
@@ -40,7 +40,7 @@ function getProgressCookie(): ProgressCookie {
   return { novels: {}, lastRead: null };
 }
 
-function saveProgressCookie(data: ProgressCookie): void {
+export function saveProgressCookie(data: ProgressCookie): void {
   let json = JSON.stringify(data);
 
   while (json.length > MAX_COOKIE_SIZE && Object.keys(data.novels).length > 1) {

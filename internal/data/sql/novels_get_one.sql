@@ -9,6 +9,7 @@ SELECT
     description,
     age_rating,
     cover_url,
-    created_at
+    created_at,
+    chapters_count
 FROM novels
 WHERE id = $1;

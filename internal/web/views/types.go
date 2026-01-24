@@ -100,3 +100,7 @@ type CatalogProps struct {
 	SearchQuery string
 	IsPartial   bool
 }
+
+type HistoryProps struct {
+	BaseProps
+}

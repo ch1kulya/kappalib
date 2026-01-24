@@ -9,6 +9,7 @@ import { initDescription } from "./modules/description";
 import { initProfile, initProfileModal } from "./modules/profile";
 import { initComments } from "./modules/comments";
 import { initSettings, initSettingsModal } from "./modules/settings";
+import { initHistoryPage } from "./modules/history";
 
 declare global {
   interface Window {
@@ -35,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initCatalogPagination();
     initCatalogPage();
     initComments();
+    initHistoryPage();
 
     console.info("All modules initialized successfully");
   } catch (err) {

@@ -3,17 +3,18 @@ package models
 import "time"
 
 type Novel struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	TitleEn     string    `json:"title_en"`
-	Author      string    `json:"author"`
-	YearStart   int       `json:"year_start"`
-	YearEnd     *int      `json:"year_end"`
-	Status      string    `json:"status"`
-	Description string    `json:"description"`
-	AgeRating   *string   `json:"age_rating"`
-	CoverURL    *string   `json:"cover_url"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID           string    `json:"id"`
+	Title        string    `json:"title"`
+	TitleEn      string    `json:"title_en"`
+	Author       string    `json:"author"`
+	YearStart    int       `json:"year_start"`
+	YearEnd      *int      `json:"year_end"`
+	Status       string    `json:"status"`
+	Description  string    `json:"description"`
+	AgeRating    *string   `json:"age_rating"`
+	CoverURL     *string   `json:"cover_url"`
+	CreatedAt    time.Time `json:"created_at"`
+	ChapterCount int       `json:"chapter_count"`
 }
 
 type NovelsPage struct {
