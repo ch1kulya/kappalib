@@ -424,12 +424,11 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 
 	isAdult := false
 	isSevere := false
-	if novel.AgeRating != nil && !isBot(r.UserAgent()) {
-		switch *novel.AgeRating {
-		case "18+":
+	if !isBot(r.UserAgent()) {
+		if novel.AgeRating != nil && *novel.AgeRating == "18+" {
 			isAdult = true
-		case "19+":
-			isAdult = true
+		}
+		if novel.HasContentWarnings() {
 			isSevere = true
 		}
 	}
@@ -634,12 +633,11 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 
 	isAdult := false
 	isSevere := false
-	if novel.AgeRating != nil && !isBot(r.UserAgent()) {
-		switch *novel.AgeRating {
-		case "18+":
+	if !isBot(r.UserAgent()) {
+		if novel.AgeRating != nil && *novel.AgeRating == "18+" {
 			isAdult = true
-		case "19+":
-			isAdult = true
+		}
+		if novel.HasContentWarnings() {
 			isSevere = true
 		}
 	}
