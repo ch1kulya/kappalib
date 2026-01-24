@@ -5,8 +5,6 @@
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "strict": true,
     "noImplicitAny": true,
-    "moduleResolution": "node",
-    "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./assets/static/dist",
