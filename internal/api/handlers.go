@@ -46,6 +46,12 @@ type IDInput struct {
 	ID string `path:"id"`
 }
 
+type BatchNovelsInput struct {
+	Body struct {
+		IDs []string `json:"ids" maxItems:"50"`
+	}
+}
+
 type SyncCookiesInput struct {
 	Body struct {
 		Cookies map[string]models.CookieValue `json:"cookies"`
@@ -148,6 +154,17 @@ func HandleGetNovel(ctx context.Context, input *IDInput) (*struct{ Body any }, e
 		return nil, huma.Error404NotFound("Novel not found")
 	}
 	return &struct{ Body any }{Body: novel}, nil
+}
+
+func HandleGetNovelsBatch(ctx context.Context, input *BatchNovelsInput) (*struct{ Body any }, error) {
+	if len(input.Body.IDs) == 0 {
+		return &struct{ Body any }{Body: []models.Novel{}}, nil
+	}
+	novels, err := data.GetNovelsByIDs(ctx, input.Body.IDs)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to fetch novels")
+	}
+	return &struct{ Body any }{Body: novels}, nil
 }
 
 func HandleGetChaptersList(ctx context.Context, input *IDInput) (*struct{ Body any }, error) {

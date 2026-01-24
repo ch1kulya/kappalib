@@ -256,6 +256,13 @@ func main() {
 		}, api.HandleGetNovel)
 
 		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-novels-batch",
+			Method:      http.MethodPost,
+			Path:        "/novels/batch",
+			Summary:     "Get multiple novels by IDs",
+		}, api.HandleGetNovelsBatch)
+
+		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-chapters",
 			Method:      http.MethodGet,
 			Path:        "/novels/{id}/chapters",

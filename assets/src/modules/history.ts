@@ -24,16 +24,26 @@ interface HistoryItem {
   readAt: number;
 }
 
-async function fetchNovelData(novelId: string): Promise<NovelData | null> {
+async function fetchNovelsBatch(ids: string[]): Promise<Map<string, NovelData>> {
+  const map = new Map<string, NovelData>();
+  if (ids.length === 0) return map;
+
   try {
-    const res = await fetch(`${API_URL}/novels/${novelId}`);
+    const res = await fetch(`${API_URL}/novels/batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
     if (res.ok) {
-      return await res.json();
+      const novels: NovelData[] = await res.json();
+      for (const novel of novels) {
+        map.set(novel.id, novel);
+      }
     }
   } catch {
     // ignore
   }
-  return null;
+  return map;
 }
 
 export function initHistoryPage(): void {
@@ -72,15 +82,7 @@ export function initHistoryPage(): void {
   const renderHistory = async (): Promise<void> => {
     const items: HistoryItem[] = [];
 
-    const novelDataMap = new Map<string, NovelData>();
-    const fetchPromises = novelIds.map(async (novelId) => {
-      const data = await fetchNovelData(novelId);
-      if (data) {
-        novelDataMap.set(novelId, data);
-      }
-    });
-
-    await Promise.all(fetchPromises);
+    const novelDataMap = await fetchNovelsBatch(novelIds);
 
     for (const [novelId, novelProgress] of Object.entries(
       progress.novels as Record<string, NovelProgress>,

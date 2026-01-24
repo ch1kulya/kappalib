@@ -57,6 +57,50 @@ func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 	return value.(*models.Novel), nil
 }
 
+func GetNovelsByIDs(ctx context.Context, ids []string) ([]models.Novel, error) {
+	if len(ids) == 0 {
+		return []models.Novel{}, nil
+	}
+
+	dbCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, title, title_en, author, year_start, year_end,
+			   status, description, age_rating, cover_url, created_at, chapters_count
+		FROM novels
+		WHERE id IN (%s)
+	`, strings.Join(placeholders, ", "))
+
+	rows, err := database.DB.Query(dbCtx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	novels := make([]models.Novel, 0, len(ids))
+	for rows.Next() {
+		var n models.Novel
+		if err := rows.Scan(
+			&n.ID, &n.Title, &n.TitleEn, &n.Author,
+			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
+			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
+		); err != nil {
+			return nil, err
+		}
+		novels = append(novels, n)
+	}
+
+	return novels, nil
+}
+
 func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, error) {
 	key := fmt.Sprintf("novels:page:%d:sort:%s", page, sort)
 	pageSize := 12
