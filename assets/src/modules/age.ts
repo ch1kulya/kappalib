@@ -19,6 +19,12 @@ export function initAgeGate(): void {
     return;
   }
 
+  const modalContent = modal.querySelector(".modal-content");
+  if (modalContent) {
+    modalContent.addEventListener("click", (e) => e.stopPropagation());
+  }
+  modal.addEventListener("click", (e) => e.stopPropagation());
+
   const isConfirmed =
     localStorage.getItem("ageConfirmed") === "true" ||
     sessionStorage.getItem("ageConfirmed") === "true";

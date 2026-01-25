@@ -1,12 +1,16 @@
 package web
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/ch1kulya/logger"
 	"golang.org/x/time/rate"
 )
@@ -104,25 +108,35 @@ func WwwRedirect(next http.Handler) http.Handler {
 	})
 }
 
+func generateNonce() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
+}
+
 func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nonce := generateNonce()
+
 		w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 
-		csp := "default-src 'self'; " +
-			"connect-src 'self' https://stats.ch1kulya.ru https://cdn.jsdelivr.net/; " +
-			"img-src 'self' https: data:; " +
-			"script-src 'self' 'unsafe-inline' https://stats.ch1kulya.ru " +
-			"https://challenges.cloudflare.com https://cdn.jsdelivr.net; " +
-			"frame-src 'self' https://challenges.cloudflare.com; " +
-			"style-src 'self' 'unsafe-inline' https://rsms.me https://cdn.jsdelivr.net; " +
-			"font-src 'self' data: https://rsms.me https://fonts.scalar.com https://cdn.jsdelivr.net; "
+		csp := fmt.Sprintf("default-src 'self'; "+
+			"connect-src 'self' https://stats.ch1kulya.ru https://cdn.jsdelivr.net/; "+
+			"img-src 'self' https: data:; "+
+			"script-src 'self' 'nonce-%s' https://stats.ch1kulya.ru "+
+			"https://challenges.cloudflare.com https://cdn.jsdelivr.net; "+
+			"frame-src 'self' https://challenges.cloudflare.com; "+
+			"style-src 'self' 'unsafe-inline' https://rsms.me https://cdn.jsdelivr.net; "+
+			"font-src 'self' data: https://rsms.me https://fonts.scalar.com https://cdn.jsdelivr.net; ",
+			nonce)
 
 		w.Header().Set("Content-Security-Policy", csp)
 
-		next.ServeHTTP(w, r)
+		ctx := templ.WithNonce(r.Context(), nonce)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

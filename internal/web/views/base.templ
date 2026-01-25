@@ -48,9 +48,9 @@ templ Base(props BaseProps) {
 				<meta name="twitter:card" content="summary"/>
 			}
 			<link rel="stylesheet" crossorigin href="https://rsms.me/inter/inter.css"/>
-			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" onload="this.media='all'"/>
-			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/noto-sans-cjk-jp@1.0.1/index.min.css" media="print" onload="this.media='all'"/>
-			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/@ibm/plex-mono@1.1.0/css/ibm-plex-mono-all.min.css" media="print" onload="this.media='all'"/>
+			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" class="lazy-font"/>
+			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/noto-sans-cjk-jp@1.0.1/index.min.css" media="print" class="lazy-font"/>
+			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/@ibm/plex-mono@1.1.0/css/ibm-plex-mono-all.min.css" media="print" class="lazy-font"/>
 			if props.IsChapterPage && props.ReaderSettings.FontFamily != "default" {
 				if fontURL := GetFontURL(props.ReaderSettings.FontFamily); fontURL != "" {
 					<link rel="stylesheet" crossorigin href={ fontURL }/>
@@ -145,9 +145,24 @@ templ Footer(props BaseProps) {
 	</footer>
 }
 
+script showAgeModalScript() {
+	window.isAdultContent = true;
+	(function() {
+		try {
+			var isConfirmed = localStorage.getItem("ageConfirmed") === "true" ||
+							sessionStorage.getItem("ageConfirmed") === "true";
+			if (!isConfirmed) {
+				var modal = document.getElementById("age-modal");
+				if (modal) modal.style.display = "flex";
+				document.body.style.overflow = "hidden";
+			}
+		} catch(e) {}
+	})();
+}
+
 templ AgeModal(props BaseProps) {
-	<div class="modal-overlay" id="age-modal" style="display: none;" onclick="event.stopPropagation();">
-		<div class="modal-content" onclick="event.stopPropagation();">
+	<div class="modal-overlay" id="age-modal" style="display: none;">
+		<div class="modal-content">
 			<h3>Возрастное ограничение</h3>
 			<p>
 				Эта новелла имеет возрастной рейтинг <span class="text-danger">18+</span>.
@@ -163,19 +178,6 @@ templ AgeModal(props BaseProps) {
 		</div>
 	</div>
 	if props.IsAdult {
-		<script>
-			window.isAdultContent = true;
-			(function() {
-				try {
-					var isConfirmed = localStorage.getItem("ageConfirmed") === "true" ||
-									sessionStorage.getItem("ageConfirmed") === "true";
-					if (!isConfirmed) {
-						var modal = document.getElementById("age-modal");
-						if (modal) modal.style.display = "flex";
-						document.body.style.overflow = "hidden";
-					}
-				} catch(e) {}
-			})();
-		</script>
+		@showAgeModalScript()
 	}
 }
