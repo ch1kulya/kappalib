@@ -19,6 +19,17 @@ declare global {
 
 document.addEventListener("DOMContentLoaded", () => {
   try {
+    document
+      .querySelectorAll<HTMLLinkElement>("link.lazy-font")
+      .forEach((link) => {
+        link.media = "all";
+      });
+
+    const retryBtn = document.getElementById("retry-btn");
+    if (retryBtn) {
+      retryBtn.addEventListener("click", () => window.location.reload());
+    }
+
     const dropdowns = document.querySelectorAll<HTMLElement>(".dropdown");
     dropdowns.forEach((el) => new Dropdown(el));
 
