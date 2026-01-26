@@ -2914,7 +2914,28 @@ html {
     display: inline-block;
     width: 50px;
     height: 1rem;
-    margin: 0.4rem 0;
+    margin: 0.25rem 0;
+}
+
+.pc-skeleton-desc {
+    display: block;
+    width: 80%;
+    height: 1.125rem;
+    margin-bottom: 1rem;
+}
+
+.pc-skeleton-oauth-btn {
+    display: block;
+    width: 100%;
+    height: 40px;
+    border-radius: 8px;
+}
+
+.pc-skeleton-legal {
+    display: block;
+    width: 100%;
+    height: 4rem;
+    border-radius: 4px;
 }
 
 /* Profile Agreement */

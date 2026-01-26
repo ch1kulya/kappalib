@@ -1,7 +1,14 @@
 package views
 
-templ Profile() {
-	<div class="profile-card" id="profile-card" style="display: none;"></div>
+templ Profile(isLoggedIn bool) {
+	<div class="profile-card" id="profile-card" style="display: none;" data-has-session={ boolToString(isLoggedIn) }></div>
+}
+
+func boolToString(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
 }
 
 templ ProfileTemplates() {
@@ -44,6 +51,21 @@ templ ProfileTemplates() {
 						принимаете <a href="/terms" target="_blank">Пользовательское соглашение</a> и
 						<a href="/privacy" target="_blank">Политику конфиденциальности</a>
 					</p>
+				</div>
+			</div>
+		</div>
+	</template>
+	<template id="tpl-pc-guest-skeleton">
+		<div class="pc-body">
+			<div class="pc-section">
+				<span class="pc-skeleton pc-skeleton-desc"></span>
+				<div class="pc-oauth-buttons">
+					<span class="pc-skeleton pc-skeleton-oauth-btn"></span>
+					<span class="pc-skeleton pc-skeleton-oauth-btn"></span>
+					<span class="pc-skeleton pc-skeleton-oauth-btn"></span>
+				</div>
+				<div class="pc-agreements">
+					<span class="pc-skeleton pc-skeleton-legal"></span>
 				</div>
 			</div>
 		</div>

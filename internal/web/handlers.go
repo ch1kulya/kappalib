@@ -82,6 +82,11 @@ func (h *Handler) getProgressCookie(r *http.Request) *progressCookie {
 	return &prog
 }
 
+func (h *Handler) hasSession(r *http.Request) bool {
+	_, err := r.Cookie("kpl_session")
+	return err == nil
+}
+
 func NewHandler() *Handler {
 	b := make([]byte, 4)
 	if _, err := rand.Read(b); err != nil {
@@ -104,6 +109,7 @@ func (h *Handler) renderError(w http.ResponseWriter, r *http.Request, code int, 
 			Title:          fmt.Sprintf("%d - %s", code, title),
 			Description:    message,
 			Version:        h.assetVersion,
+			IsLoggedIn:     h.hasSession(r),
 			ReaderSettings: h.getReaderSettings(r),
 		},
 		ErrorCode:    code,
@@ -477,6 +483,7 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 			OGImage:        ogImage,
 			Version:        h.assetVersion,
 			IsAdult:        isAdult,
+			IsLoggedIn:     h.hasSession(r),
 			IsSevere:       isSevere,
 			Schema:         schema,
 			PrefetchURL:    prefetchURL,
@@ -571,6 +578,7 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 			Description:    description,
 			Canonical:      canonical,
 			Version:        h.assetVersion,
+			IsLoggedIn:     h.hasSession(r),
 			Schema:         schema,
 			ReaderSettings: h.getReaderSettings(r),
 		},
@@ -679,6 +687,7 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 			Version:        h.assetVersion,
 			IsChapterPage:  true,
 			IsAdult:        isAdult,
+			IsLoggedIn:     h.hasSession(r),
 			IsSevere:       isSevere,
 			Novel:          novel,
 			Schema:         schema,
@@ -723,6 +732,7 @@ func (h *Handler) StaticPage(name, title string) http.HandlerFunc {
 				Description:    title,
 				Canonical:      fmt.Sprintf("https://kappalib.ru/%s", name),
 				Version:        h.assetVersion,
+				IsLoggedIn:     h.hasSession(r),
 				ReaderSettings: h.getReaderSettings(r),
 			},
 			Content: content,
@@ -834,6 +844,7 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 			Description:    description,
 			Canonical:      canonical,
 			Version:        h.assetVersion,
+			IsLoggedIn:     h.hasSession(r),
 			ReaderSettings: h.getReaderSettings(r),
 		},
 		Novels:      dataResp.Novels,
@@ -855,6 +866,7 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 			Description:    "История прочитанных веб-новелл и ранобэ.",
 			Canonical:      "https://kappalib.ru/history",
 			Version:        h.assetVersion,
+			IsLoggedIn:     h.hasSession(r),
 			ReaderSettings: h.getReaderSettings(r),
 		},
 	}

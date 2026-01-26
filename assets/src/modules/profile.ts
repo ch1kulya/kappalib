@@ -366,8 +366,12 @@ function renderProfileCard(): void {
   const content = document.getElementById("profile-card");
   if (!content) return;
 
+  const hasSession = content.dataset.hasSession === "true";
+
   content.innerHTML = "";
-  content.appendChild(cloneTemplate("tpl-pc-skeleton"));
+  content.appendChild(
+    cloneTemplate(hasSession ? "tpl-pc-skeleton" : "tpl-pc-guest-skeleton"),
+  );
 
   profileManager.fetchProfile().then((profile) => {
     if (!profile) {
@@ -553,6 +557,10 @@ function initProfileInteractions(profile: ProfilePublic): void {
 
   document.getElementById("pc-logout")?.addEventListener("click", async () => {
     await profileManager.logout();
+    const profileCard = document.getElementById("profile-card");
+    if (profileCard) {
+      profileCard.dataset.hasSession = "false";
+    }
     renderGuestView();
   });
 
@@ -560,6 +568,10 @@ function initProfileInteractions(profile: ProfilePublic): void {
     if (!confirm("Удалить аккаунт? Это действие необратимо.")) return;
     const deleted = await profileManager.deleteProfile();
     if (deleted) {
+      const profileCard = document.getElementById("profile-card");
+      if (profileCard) {
+        profileCard.dataset.hasSession = "false";
+      }
       renderGuestView();
     }
   });

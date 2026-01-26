@@ -1,5 +1,7 @@
 import { setKappalibCookie } from "./profile";
 
+const API_URL = process.env.API_URL;
+
 export interface NovelProgress {
   chapterId: string;
   chapterNum: number;
@@ -83,6 +85,16 @@ export function initReadingProgressSaver(): void {
   const currentChapterNum = parseInt(currentChapterNumStr || "0", 10);
   const totalChapters = parseInt(totalChaptersStr, 10);
 
+  const data = getProgressCookie();
+  if (
+    data.lastRead &&
+    data.lastRead.novelId === novelId &&
+    data.lastRead.totalChapters < totalChapters
+  ) {
+    data.lastRead.totalChapters = totalChapters;
+    saveProgressCookie(data);
+  }
+
   const saveProgress = (
     targetChapterId: string,
     targetChapterNum: number,
@@ -150,4 +162,25 @@ export function initReadingProgressSaver(): void {
   window.addEventListener("beforeunload", () => {
     clearTimeout(timerId);
   });
+}
+
+export async function refreshLastReadTotalChapters(): Promise<void> {
+  const data = getProgressCookie();
+  if (!data.lastRead) return;
+
+  try {
+    const res = await fetch(`${API_URL}/novels/${data.lastRead.novelId}`);
+    if (!res.ok) return;
+
+    const novel = await res.json();
+    if (
+      novel.chapter_count &&
+      novel.chapter_count > data.lastRead.totalChapters
+    ) {
+      data.lastRead.totalChapters = novel.chapter_count;
+      saveProgressCookie(data);
+    }
+  } catch {
+    // ignore
+  }
 }

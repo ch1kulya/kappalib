@@ -11,6 +11,7 @@ type BaseProps struct {
 	OGImage        string
 	IsChapterPage  bool
 	IsAdult        bool
+	IsLoggedIn     bool
 	Novel          *models.Novel
 	PrefetchURL    string
 	ReaderSettings ReaderSettings
