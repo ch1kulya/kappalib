@@ -261,8 +261,13 @@ a:hover {
     overflow: hidden;
     border-radius: 10px;
     min-width: 34px;
+    transition: all 0.2s ease;
     &:hover {
         cursor: pointer;
+    }
+    &.active {
+        border-color: var(--tertiary);
+        box-shadow: var(--shadow-focus);
     }
     & .header-profile-icon {
         width: 24px;

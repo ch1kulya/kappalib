@@ -72,18 +72,8 @@ export function initSearch(): void {
 
   input.onblur = () => {
     setTimeout(() => {
-      const focusMovedToResults = results.contains(document.activeElement);
-
-      /*   TODO: FIX THIS CASE
-      if (firstResultUrl && input.value.trim().length >= 2) {
-        window.location.href = firstResultUrl;
-        return;
-      }
-      */
-
-      if (!focusMovedToResults) {
+      if (input.value.trim().length === 0) {
         if (header) header.classList.remove("search-expanded");
-        input.value = "";
         results.style.display = "none";
         clearResults();
         hideBackdrop();

@@ -315,8 +315,10 @@ export function initSettingsModal(): void {
     e.preventDefault();
     e.stopPropagation();
 
+    const profileBtn = document.getElementById("header-profile-btn");
     if (profileCard?.style.display === "block") {
       profileCard.style.display = "none";
+      profileBtn?.classList.remove("active");
     }
 
     if (settingsCard.style.display === "block") {
@@ -351,10 +353,12 @@ export function initSettingsModal(): void {
 
 function openSettingsCard(): void {
   const settingsCard = document.getElementById("settings-card");
+  const settingsBtn = document.getElementById("header-settings-btn");
   const backdrop = document.getElementById("header-backdrop");
   if (!settingsCard) return;
 
   settingsCard.style.display = "block";
+  settingsBtn?.classList.add("active");
   backdrop?.classList.add("active");
   document.body.style.overflow = "hidden";
 
@@ -363,11 +367,13 @@ function openSettingsCard(): void {
 
 function closeSettingsCard(): void {
   const settingsCard = document.getElementById("settings-card");
+  const settingsBtn = document.getElementById("header-settings-btn");
   const backdrop = document.getElementById("header-backdrop");
   const profileCard = document.getElementById("profile-card");
   if (!settingsCard) return;
 
   settingsCard.style.display = "none";
+  settingsBtn?.classList.remove("active");
 
   if (profileCard?.style.display !== "block") {
     backdrop?.classList.remove("active");
