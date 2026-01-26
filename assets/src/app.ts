@@ -1,6 +1,9 @@
 import { initSearch } from "./modules/search";
 import { initAgeGate } from "./modules/age";
-import { initReadingProgressSaver } from "./modules/progress";
+import {
+  initReadingProgressSaver,
+  refreshLastReadTotalChapters,
+} from "./modules/progress";
 import { initStatusBadge } from "./modules/status";
 import { initCatalogPagination, initCatalogPage } from "./modules/catalog";
 import Dropdown from "./modules/dropdown";
@@ -48,6 +51,10 @@ document.addEventListener("DOMContentLoaded", () => {
     initCatalogPage();
     initComments();
     initHistoryPage();
+
+    if (document.querySelector(".cr-wrapper")) {
+      refreshLastReadTotalChapters();
+    }
 
     console.info("All modules initialized successfully");
   } catch (err) {
