@@ -63,7 +63,7 @@ templ Base(props BaseProps) {
 			<div id="app">
 				@Header(props)
 				@AgeModal(props)
-				@Profile()
+				@Profile(props.IsLoggedIn)
 				@Settings()
 				@ProfileTemplates()
 				@SettingsTemplates()
