@@ -53,9 +53,7 @@ export function initSearch(): void {
     if (window.innerWidth <= 600 && header) {
       header.classList.add("search-expanded");
     }
-    if (input.value.trim().length >= 2) {
-      showBackdrop();
-    }
+    showBackdrop();
   };
 
   input.onkeydown = (e: KeyboardEvent) => {
@@ -68,27 +66,6 @@ export function initSearch(): void {
         window.location.href = firstResultUrl;
       }
     }
-  };
-
-  input.onblur = () => {
-    setTimeout(() => {
-      const focusMovedToResults = results.contains(document.activeElement);
-
-      /*   TODO: FIX THIS CASE
-      if (firstResultUrl && input.value.trim().length >= 2) {
-        window.location.href = firstResultUrl;
-        return;
-      }
-      */
-
-      if (!focusMovedToResults) {
-        if (header) header.classList.remove("search-expanded");
-        input.value = "";
-        results.style.display = "none";
-        clearResults();
-        hideBackdrop();
-      }
-    }, 150);
   };
 
   input.oninput = (e: Event) => {
@@ -246,6 +223,7 @@ function mapStatus(status: string): string {
   const statusMap: Record<string, string> = {
     ongoing: "Онгоинг",
     completed: "Завершено",
+    announced: "Анонс",
   };
   return statusMap[status] || status;
 }
