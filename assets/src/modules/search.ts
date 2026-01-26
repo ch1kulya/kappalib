@@ -53,9 +53,7 @@ export function initSearch(): void {
     if (window.innerWidth <= 600 && header) {
       header.classList.add("search-expanded");
     }
-    if (input.value.trim().length >= 2) {
-      showBackdrop();
-    }
+    showBackdrop();
   };
 
   input.onkeydown = (e: KeyboardEvent) => {
@@ -68,17 +66,6 @@ export function initSearch(): void {
         window.location.href = firstResultUrl;
       }
     }
-  };
-
-  input.onblur = () => {
-    setTimeout(() => {
-      if (input.value.trim().length === 0) {
-        if (header) header.classList.remove("search-expanded");
-        results.style.display = "none";
-        clearResults();
-        hideBackdrop();
-      }
-    }, 150);
   };
 
   input.oninput = (e: Event) => {
