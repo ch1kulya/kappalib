@@ -207,6 +207,7 @@ a:hover {
     z-index: 60;
     width: 100%;
     box-shadow: var(--shadow-primary);
+    height: 70px;
 }
 
 .header.static {
@@ -261,7 +262,9 @@ a:hover {
     overflow: hidden;
     border-radius: 10px;
     min-width: 34px;
-    transition: all 0.2s ease;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
     &:hover {
         cursor: pointer;
     }
@@ -806,22 +809,19 @@ a:hover {
 
 /* Search Expanded (Mobile) */
 @media (max-width: 600px) {
-    .header.search-expanded .header-left {
-        display: none;
-    }
-
+    .header.search-expanded .header-left,
     .header.search-expanded .header-right {
-        display: none;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
     }
 
     .header.search-expanded .search-bar {
+        position: absolute;
+        left: 1.25rem;
+        right: 1.25rem;
         max-width: 100%;
-        width: 100%;
-        margin-left: 0;
-    }
-
-    .header.search-expanded .search-input-wrapper {
-        width: 100%;
+        margin: 0;
     }
 }
 

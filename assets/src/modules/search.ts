@@ -236,6 +236,7 @@ function mapStatus(status: string): string {
   const statusMap: Record<string, string> = {
     ongoing: "Онгоинг",
     completed: "Завершено",
+    announced: "Анонс",
   };
   return statusMap[status] || status;
 }
