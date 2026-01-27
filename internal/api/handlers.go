@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ch1kulya/kappalib/internal/auth"
 	"github.com/ch1kulya/kappalib/internal/data"
@@ -19,7 +21,10 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-const SessionCookieName = "kpl_session"
+const (
+	SessionCookieName = "kpl_session"
+	MaxAvatarSize     = 1 << 20
+)
 
 func clearSessionCookie() http.Cookie {
 	return http.Cookie{
@@ -33,6 +38,21 @@ func clearSessionCookie() http.Cookie {
 	}
 }
 
+func requireAuth(ctx context.Context) (string, error) {
+	userID := auth.GetUserIDFromContext(ctx)
+	if userID == "" {
+		return "", huma.Error401Unauthorized("Authentication required")
+	}
+	return userID, nil
+}
+
+func requireOwner(userID, resourceID string) error {
+	if userID != resourceID {
+		return huma.Error403Forbidden("Access denied")
+	}
+	return nil
+}
+
 type GetNovelsInput struct {
 	Page int    `query:"page" default:"1" minimum:"1" maximum:"9999"`
 	Sort string `query:"sort" default:"oldest" enum:"newest,oldest,large,small,alphabet,created"`
@@ -42,8 +62,12 @@ type SearchNovelsInput struct {
 	Query string `query:"q" required:"true" maxLength:"50"`
 }
 
-type IDInput struct {
-	ID string `path:"id"`
+type NovelIDInput struct {
+	ID string `path:"id" pattern:"^nvl_[a-z0-9]{8}$"`
+}
+
+type ChapterIDInput struct {
+	ID string `path:"id" pattern:"^chp_[a-z0-9]{8}$"`
 }
 
 type BatchNovelsInput struct {
@@ -59,7 +83,7 @@ type SyncCookiesInput struct {
 }
 
 type ProfileIDInput struct {
-	ProfileID string `path:"id"`
+	ProfileID string `path:"id" pattern:"^usr_[a-z0-9]{8}$"`
 }
 
 type APIStatus struct {
@@ -68,12 +92,12 @@ type APIStatus struct {
 }
 
 type GetCommentsInput struct {
-	ChapterID string `path:"chapterId"`
+	ChapterID string `path:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
 	Page      int    `query:"page" default:"1" minimum:"1" maximum:"9999"`
 }
 
-type CreateCommentAPIInput struct {
-	ChapterID string `path:"chapterId"`
+type CreateCommentInput struct {
+	ChapterID string `path:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
 	Body      struct {
 		Content        string `json:"content" minLength:"1" maxLength:"1000"`
 		TurnstileToken string `json:"turnstile_token" minLength:"1"`
@@ -86,22 +110,18 @@ type TelegramWebhookInput struct {
 }
 
 type UpdateDisplayNameInput struct {
-	ProfileID string `path:"id"`
+	ProfileID string `path:"id" pattern:"^usr_[a-z0-9]{8}$"`
 	Body      struct {
 		DisplayName string `json:"display_name" minLength:"1" maxLength:"15"`
 	}
 }
 
 type UploadAvatarInput struct {
-	ProfileID string `path:"id"`
+	ProfileID string `path:"id" pattern:"^usr_[a-z0-9]{8}$"`
 	Body      struct {
 		Image string `json:"image" minLength:"1"`
 	}
 }
-
-type GetCurrentUserInput struct{}
-
-type LogoutInput struct{}
 
 func HandleStatus(ctx context.Context, input *struct{}) (*struct{ Body APIStatus }, error) {
 	dbStatus := "connected"
@@ -131,10 +151,6 @@ func HandleGetNovels(ctx context.Context, input *GetNovelsInput) (*struct{ Body 
 }
 
 func HandleSearchNovels(ctx context.Context, input *SearchNovelsInput) (*struct{ Body any }, error) {
-	if input.Query == "" {
-		return nil, huma.Error400BadRequest("Search query is required")
-	}
-
 	novels, err := data.SearchNovels(ctx, input.Query)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Search failed")
@@ -148,7 +164,7 @@ func HandleSearchNovels(ctx context.Context, input *SearchNovelsInput) (*struct{
 	}, nil
 }
 
-func HandleGetNovel(ctx context.Context, input *IDInput) (*struct{ Body any }, error) {
+func HandleGetNovel(ctx context.Context, input *NovelIDInput) (*struct{ Body any }, error) {
 	novel, err := data.GetNovel(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Novel not found")
@@ -167,7 +183,7 @@ func HandleGetNovelsBatch(ctx context.Context, input *BatchNovelsInput) (*struct
 	return &struct{ Body any }{Body: novels}, nil
 }
 
-func HandleGetChaptersList(ctx context.Context, input *IDInput) (*struct{ Body any }, error) {
+func HandleGetChaptersList(ctx context.Context, input *NovelIDInput) (*struct{ Body any }, error) {
 	chapters, err := data.GetChapters(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch chapters")
@@ -175,7 +191,7 @@ func HandleGetChaptersList(ctx context.Context, input *IDInput) (*struct{ Body a
 	return &struct{ Body any }{Body: chapters}, nil
 }
 
-func HandleGetChapter(ctx context.Context, input *IDInput) (*struct{ Body any }, error) {
+func HandleGetChapter(ctx context.Context, input *ChapterIDInput) (*struct{ Body any }, error) {
 	chapter, err := data.GetChapter(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Chapter not found")
@@ -192,9 +208,9 @@ func HandleGetProfile(ctx context.Context, input *ProfileIDInput) (*struct{ Body
 }
 
 func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct{ Body any }, error) {
-	userID := auth.GetUserIDFromContext(ctx)
-	if userID == "" {
-		return nil, huma.Error401Unauthorized("Authentication required")
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	result, err := data.SyncCookies(ctx, userID, input.Body.Cookies)
@@ -208,17 +224,16 @@ func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct{ B
 func HandleDeleteProfile(ctx context.Context, input *ProfileIDInput) (*struct {
 	SetCookies []http.Cookie `header:"Set-Cookie"`
 }, error) {
-	userID := auth.GetUserIDFromContext(ctx)
-	if userID == "" {
-		return nil, huma.Error401Unauthorized("Authentication required")
-	}
-
-	if userID != input.ProfileID {
-		return nil, huma.Error403Forbidden("Access denied")
-	}
-
-	err := data.DeleteProfile(ctx, userID)
+	userID, err := requireAuth(ctx)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := requireOwner(userID, input.ProfileID); err != nil {
+		return nil, err
+	}
+
+	if err := data.DeleteProfile(ctx, userID); err != nil {
 		return nil, huma.Error404NotFound("Profile not found")
 	}
 
@@ -229,13 +244,12 @@ func HandleDeleteProfile(ctx context.Context, input *ProfileIDInput) (*struct {
 	}, nil
 }
 
-func HandleLogout(ctx context.Context, input *LogoutInput) (*struct {
-	Body       any
+func HandleLogout(ctx context.Context, input *struct{}) (*struct {
 	SetCookies []http.Cookie `header:"Set-Cookie"`
 }, error) {
-	userID := auth.GetUserIDFromContext(ctx)
-	if userID == "" {
-		return nil, huma.Error401Unauthorized("Authentication required")
+	_, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	sessionID := auth.GetSessionIDFromContext(ctx)
@@ -244,10 +258,8 @@ func HandleLogout(ctx context.Context, input *LogoutInput) (*struct {
 	}
 
 	return &struct {
-		Body       any
 		SetCookies []http.Cookie `header:"Set-Cookie"`
 	}{
-		Body:       map[string]string{"status": "logged out"},
 		SetCookies: []http.Cookie{clearSessionCookie()},
 	}, nil
 }
@@ -260,10 +272,10 @@ func HandleGetComments(ctx context.Context, input *GetCommentsInput) (*struct{ B
 	return &struct{ Body any }{Body: comments}, nil
 }
 
-func HandleCreateComment(ctx context.Context, input *CreateCommentAPIInput) (*struct{ Body any }, error) {
-	userID := auth.GetUserIDFromContext(ctx)
-	if userID == "" {
-		return nil, huma.Error401Unauthorized("Authentication required")
+func HandleCreateComment(ctx context.Context, input *CreateCommentInput) (*struct{ Body any }, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	commentInput := models.CreateCommentInput{
@@ -274,14 +286,14 @@ func HandleCreateComment(ctx context.Context, input *CreateCommentAPIInput) (*st
 
 	comment, err := data.CreateComment(ctx, userID, commentInput)
 	if err != nil {
-		switch err.Error() {
-		case "rate limit exceeded":
+		switch {
+		case errors.Is(err, data.ErrRateLimitExceeded):
 			return nil, huma.Error429TooManyRequests("Подождите 30 секунд перед отправкой следующего комментария")
-		case "captcha verification failed":
+		case errors.Is(err, data.ErrCaptchaFailed):
 			return nil, huma.Error400BadRequest("Captcha verification failed")
-		case "invalid content length":
+		case errors.Is(err, data.ErrInvalidContentLength):
 			return nil, huma.Error400BadRequest("Comment must be 1-1000 characters")
-		case "chapter not found":
+		case errors.Is(err, data.ErrChapterNotFound):
 			return nil, huma.Error404NotFound("Chapter not found")
 		default:
 			return nil, huma.Error500InternalServerError("Failed to create comment")
@@ -301,11 +313,7 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 		return nil, huma.Error403Forbidden("Invalid webhook secret")
 	}
 
-	bodyStr := string(input.Body)
-	logger.Debug("Telegram Webhook Payload: %s", bodyStr)
-
-	type TelegramUpdate struct {
-		UpdateID      int64 `json:"update_id"`
+	var update struct {
 		CallbackQuery *struct {
 			ID      string `json:"id"`
 			Data    string `json:"data"`
@@ -318,22 +326,16 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 		} `json:"callback_query"`
 	}
 
-	var update TelegramUpdate
 	if err := json.Unmarshal(input.Body, &update); err != nil {
 		logger.Error("Failed to unmarshal Telegram update: %v", err)
 		return &struct{}{}, nil
 	}
 
-	if update.CallbackQuery == nil {
+	if update.CallbackQuery == nil || update.CallbackQuery.Message == nil {
 		return &struct{}{}, nil
 	}
 
 	callback := update.CallbackQuery
-
-	if callback.Message == nil {
-		logger.Warn("CallbackQuery received without Message field")
-		return &struct{}{}, nil
-	}
 
 	expectedChatID := data.GetTelegramChatID()
 	if expectedChatID != "" && fmt.Sprintf("%d", callback.Message.Chat.ID) != expectedChatID {
@@ -347,19 +349,14 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 		return &struct{}{}, nil
 	}
 
-	action := parts[0]
-	commentID := parts[1]
+	action, commentID := parts[0], parts[1]
 
-	var status string
-	var statusText string
-
+	var status, statusText string
 	switch action {
 	case "approve":
-		status = "approved"
-		statusText = "✅ Подтверждено"
+		status, statusText = "approved", "✅ Подтверждено"
 	case "reject":
-		status = "rejected"
-		statusText = "❌ Отклонено"
+		status, statusText = "rejected", "❌ Отклонено"
 	default:
 		logger.Warn("Unknown action in callback: %s", action)
 		return &struct{}{}, nil
@@ -370,59 +367,64 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 		return &struct{}{}, nil
 	}
 
-	if err := data.DeleteTelegramMessage(
-		callback.Message.Chat.ID,
-		callback.Message.MessageID,
-	); err != nil {
+	if err := data.DeleteTelegramMessage(callback.Message.Chat.ID, callback.Message.MessageID); err != nil {
 		logger.Warn("Failed to delete telegram message: %v", err)
 	}
 
-	answerURL := fmt.Sprintf(
-		"https://api.telegram.org/bot%s/answerCallbackQuery",
-		os.Getenv("TELEGRAM_BOT_TOKEN"),
-	)
+	answerURL := fmt.Sprintf("https://api.telegram.org/bot%s/answerCallbackQuery", os.Getenv("TELEGRAM_BOT_TOKEN"))
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	go func() {
-		_, err := http.PostForm(answerURL, url.Values{
+		defer cancel()
+		req, _ := http.NewRequestWithContext(ctx, http.MethodPost, answerURL, strings.NewReader(url.Values{
 			"callback_query_id": {callback.ID},
 			"text":              {statusText},
-		})
+		}.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			logger.Error("Failed to answer callback query: %v", err)
+			return
 		}
+		resp.Body.Close()
 	}()
 
 	return &struct{}{}, nil
 }
 
 func HandleUpdateDisplayName(ctx context.Context, input *UpdateDisplayNameInput) (*struct{ Body any }, error) {
-	userID := auth.GetUserIDFromContext(ctx)
-	if userID == "" {
-		return nil, huma.Error401Unauthorized("Authentication required")
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	if userID != input.ProfileID {
-		return nil, huma.Error403Forbidden("Access denied")
+	if err := requireOwner(userID, input.ProfileID); err != nil {
+		return nil, err
 	}
 
 	profile, err := data.UpdateDisplayName(ctx, userID, input.Body.DisplayName)
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid name") {
+		switch {
+		case errors.Is(err, data.ErrInvalidDisplayName),
+			errors.Is(err, data.ErrNameEmpty),
+			errors.Is(err, data.ErrNameTooLong),
+			errors.Is(err, data.ErrInvalidCharacters):
 			return nil, huma.Error400BadRequest("Invalid display name")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to update profile")
 		}
-		return nil, huma.Error500InternalServerError("Failed to update profile")
 	}
 	return &struct{ Body any }{Body: profile}, nil
 }
 
 func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{ Body any }, error) {
-	userID := auth.GetUserIDFromContext(ctx)
-	if userID == "" {
-		return nil, huma.Error401Unauthorized("Authentication required")
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	if userID != input.ProfileID {
-		return nil, huma.Error403Forbidden("Access denied")
+	if err := requireOwner(userID, input.ProfileID); err != nil {
+		return nil, err
 	}
 
 	imageData, err := base64.StdEncoding.DecodeString(input.Body.Image)
@@ -430,13 +432,13 @@ func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{
 		return nil, huma.Error400BadRequest("Invalid base64 image")
 	}
 
-	if len(imageData) > 1<<20 {
+	if len(imageData) > MaxAvatarSize {
 		return nil, huma.Error400BadRequest("Image too large (max 1MB)")
 	}
 
 	profile, err := data.UpdateAvatar(ctx, userID, imageData)
 	if err != nil {
-		if strings.Contains(err.Error(), "unsupported format") {
+		if errors.Is(err, data.ErrUnsupportedFormat) {
 			return nil, huma.Error400BadRequest("Unsupported format")
 		}
 		return nil, huma.Error500InternalServerError("Upload failed")
@@ -444,10 +446,10 @@ func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{
 	return &struct{ Body any }{Body: profile}, nil
 }
 
-func HandleGetCurrentUser(ctx context.Context, input *GetCurrentUserInput) (*struct{ Body any }, error) {
-	userID := auth.GetUserIDFromContext(ctx)
-	if userID == "" {
-		return nil, huma.Error401Unauthorized("Authentication required")
+func HandleGetCurrentUser(ctx context.Context, input *struct{}) (*struct{ Body any }, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	profile, err := data.GetProfile(ctx, userID)

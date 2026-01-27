@@ -173,22 +173,22 @@ func renderMarkdown(content string) string {
 
 func CreateComment(ctx context.Context, userID string, input models.CreateCommentInput) (*models.Comment, error) {
 	if len(input.Content) == 0 || len(input.Content) > 1000 {
-		return nil, fmt.Errorf("invalid content length")
+		return nil, ErrInvalidContentLength
 	}
 
 	if !checkCommentRateLimit(userID) {
-		return nil, fmt.Errorf("rate limit exceeded")
+		return nil, ErrRateLimitExceeded
 	}
 
 	if !verifyCommentsTurnstile(input.TurnstileToken) {
-		return nil, fmt.Errorf("captcha verification failed")
+		return nil, ErrCaptchaFailed
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	if !chapterExists(dbCtx, input.ChapterID) {
-		return nil, fmt.Errorf("chapter not found")
+		return nil, ErrChapterNotFound
 	}
 
 	contentHTML := renderMarkdown(input.Content)
