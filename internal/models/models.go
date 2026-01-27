@@ -33,12 +33,32 @@ func (n *Novel) HasContentWarnings() bool {
 	return n.HasSelfHarm || n.HasSexualViolence || n.HasGraphicSex || n.HasProfanity || n.HasDrugUsage
 }
 
+type NovelSummary struct {
+	ID                string    `json:"id"`
+	Title             string    `json:"title"`
+	TitleEn           string    `json:"title_en"`
+	Author            string    `json:"author"`
+	YearStart         int       `json:"year_start"`
+	YearEnd           *int      `json:"year_end"`
+	Status            string    `json:"status"`
+	Description       string    `json:"description"`
+	AgeRating         *string   `json:"age_rating"`
+	CoverURL          *string   `json:"cover_url"`
+	CreatedAt         time.Time `json:"created_at"`
+	ChapterCount      int       `json:"chapter_count"`
+	HasSelfHarm       bool      `json:"has_self_harm"`
+	HasDrugUsage      bool      `json:"has_drug_usage"`
+	HasSexualViolence bool      `json:"has_sexual_violence"`
+	HasGraphicSex     bool      `json:"has_graphic_sex"`
+	HasProfanity      bool      `json:"has_profanity"`
+}
+
 type NovelsPage struct {
-	Novels     []Novel `json:"novels"`
-	Page       int     `json:"page"`
-	PageSize   int     `json:"page_size"`
-	TotalCount int     `json:"total_count"`
-	TotalPages int     `json:"total_pages"`
+	Novels     []NovelSummary `json:"novels"`
+	Page       int            `json:"page"`
+	PageSize   int            `json:"page_size"`
+	TotalCount int            `json:"total_count"`
+	TotalPages int            `json:"total_pages"`
 }
 
 type Source struct {

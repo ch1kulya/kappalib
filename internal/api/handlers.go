@@ -161,13 +161,13 @@ type SitemapResponse struct {
 
 type SearchNovelsResponse struct {
 	Body struct {
-		Novels []models.Novel `json:"novels"`
-		Query  string         `json:"query"`
+		Novels []models.NovelSummary `json:"novels"`
+		Query  string                `json:"query"`
 	}
 }
 
 type BatchNovelsResponse struct {
-	Body []models.Novel
+	Body []models.NovelSummary
 }
 
 type CookieSyncResponse struct {
@@ -223,8 +223,8 @@ func HandleSearchNovels(ctx context.Context, input *SearchNovelsInput) (*SearchN
 
 	return &SearchNovelsResponse{
 		Body: struct {
-			Novels []models.Novel `json:"novels"`
-			Query  string         `json:"query"`
+			Novels []models.NovelSummary `json:"novels"`
+			Query  string                `json:"query"`
 		}{
 			Novels: novels,
 			Query:  input.Query,
@@ -242,7 +242,7 @@ func HandleGetNovel(ctx context.Context, input *NovelIDInput) (*NovelResponse, e
 
 func HandleGetNovelsBatch(ctx context.Context, input *BatchNovelsInput) (*BatchNovelsResponse, error) {
 	if len(input.Body.IDs) == 0 {
-		return &BatchNovelsResponse{Body: []models.Novel{}}, nil
+		return &BatchNovelsResponse{Body: []models.NovelSummary{}}, nil
 	}
 	novels, err := data.GetNovelsByIDs(ctx, input.Body.IDs)
 	if err != nil {

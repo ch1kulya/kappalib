@@ -38,6 +38,12 @@ SELECT
     age_rating,
     cover_url,
     created_at,
+    chapters_count,
+    has_self_harm,
+    has_drug_usage,
+    has_sexual_violence,
+    has_graphic_sex,
+    has_profanity,
     (
         CASE WHEN title_norm = q THEN 100 ELSE 0 END
         + CASE WHEN title_en_norm = q THEN 100 ELSE 0 END
