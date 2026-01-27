@@ -65,7 +65,7 @@ templ Novel(props NovelProps) {
 								<div class="content-warning-title">Внимание!</div>
 								<p class="content-warning-text">
 									<span>В этой новелле присутствуют сцены, включающие </span>
-									@ContentWarningList(props.Novel.HasSelfHarm, props.Novel.HasDrugUsage, props.Novel.HasSexualViolence, props.Novel.HasGraphicSex)
+									@ContentWarningList(props.Novel.HasSelfHarm, props.Novel.HasDrugUsage, props.Novel.HasSexualViolence, props.Novel.HasGraphicSex, props.Novel.HasProfanity)
 								</p>
 							</div>
 						</div>
@@ -167,6 +167,6 @@ templ Novel(props NovelProps) {
 	}
 }
 
-templ ContentWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex bool) {
-	@templ.Raw(buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex))
+templ ContentWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex, hasProfanity bool) {
+	@templ.Raw(buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex, hasProfanity))
 }

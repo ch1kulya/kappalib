@@ -9,7 +9,12 @@ SELECT
     created_at
 FROM novels
 WHERE
-    NOT (has_self_harm OR has_drug_usage OR has_sexual_violence OR has_graphic_sex)
+    NOT (
+        has_self_harm
+        OR has_drug_usage
+        OR has_sexual_violence
+        OR has_graphic_sex
+    )
     AND created_at > NOW() - INTERVAL '30 days'
 ORDER BY created_at DESC
 LIMIT $1;

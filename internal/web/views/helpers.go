@@ -303,7 +303,7 @@ func pluralizeNovels(n int) string {
 	return pluralize(n, "новелла", "новеллы", "новелл")
 }
 
-func buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex bool) string {
+func buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex, hasProfanity bool) string {
 	var warnings []string
 	if hasSelfHarm {
 		warnings = append(warnings, "суицидальные темы", "селфхарм")
@@ -316,6 +316,9 @@ func buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSe
 	}
 	if hasGraphicSex {
 		warnings = append(warnings, "графичную эротику")
+	}
+	if hasProfanity {
+		warnings = append(warnings, "нецензурную брань")
 	}
 	if len(warnings) == 0 {
 		return ""

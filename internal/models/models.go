@@ -19,10 +19,18 @@ type Novel struct {
 	HasDrugUsage      bool      `json:"has_drug_usage"`
 	HasSexualViolence bool      `json:"has_sexual_violence"`
 	HasGraphicSex     bool      `json:"has_graphic_sex"`
+	HasProfanity      bool      `json:"has_profanity"`
+	AltTitles         []string  `json:"alt_titles"`
+	Tags              []Tag     `json:"tags"`
+}
+
+type Tag struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 func (n *Novel) HasContentWarnings() bool {
-	return n.HasSelfHarm || n.HasDrugUsage || n.HasSexualViolence || n.HasGraphicSex
+	return n.HasSelfHarm || n.HasSexualViolence || n.HasGraphicSex || n.HasProfanity || n.HasDrugUsage
 }
 
 type NovelsPage struct {
