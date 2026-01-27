@@ -44,7 +44,7 @@ func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 			&n.ID, &n.Title, &n.TitleEn, &n.Author,
 			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
 			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
-			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex,
+			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity,
 		)
 		if err != nil {
 			return nil, err
@@ -76,7 +76,7 @@ func GetNovelsByIDs(ctx context.Context, ids []string) ([]models.Novel, error) {
 	query := fmt.Sprintf(`
 		SELECT id, title, title_en, author, year_start, year_end,
 			   status, description, age_rating, cover_url, created_at, chapters_count,
-			   has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex
+			   has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity
 		FROM novels
 		WHERE id IN (%s)
 	`, strings.Join(placeholders, ", "))
@@ -94,7 +94,7 @@ func GetNovelsByIDs(ctx context.Context, ids []string) ([]models.Novel, error) {
 			&n.ID, &n.Title, &n.TitleEn, &n.Author,
 			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
 			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
-			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex,
+			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity,
 		); err != nil {
 			return nil, err
 		}
@@ -129,7 +129,7 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 			}, nil
 		}
 
-		baseQuery := `SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at FROM novels WHERE NOT (has_self_harm OR has_drug_usage OR has_sexual_violence OR has_graphic_sex)`
+		baseQuery := `SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at, has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity FROM novels`
 
 		var orderByClause string
 		switch sort {
@@ -165,7 +165,8 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 			var n models.Novel
 			if err := rows.Scan(&n.ID, &n.Title, &n.TitleEn, &n.Author,
 				&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
-				&n.AgeRating, &n.CoverURL, &n.CreatedAt); err != nil {
+				&n.AgeRating, &n.CoverURL, &n.CreatedAt,
+				&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity); err != nil {
 				logger.Warn("GetNovels: Row scan error: %v", err)
 				continue
 			}
@@ -318,16 +319,20 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 					n.title_norm ILIKE nq.q_like
 					OR n.title_en_norm ILIKE nq.q_like
 					OR n.author_norm ILIKE nq.q_like
+					OR n.alt_titles_norm ILIKE nq.q_like
 					OR nq.q %% n.title_norm
 					OR nq.q %% n.title_en_norm
 					OR nq.q %% n.author_norm
+					OR nq.q %% n.alt_titles_norm
 					OR nq.q <%% n.title_norm
 					OR nq.q <%% n.title_en_norm
+					OR nq.q <%% n.alt_titles_norm
 			),
 			scored AS (
 				SELECT
 					id, title, title_en, author, year_start, year_end, status,
 					description, age_rating, cover_url, created_at, chapters_count, views_count,
+					has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity,
 					(
 						CASE WHEN title_norm = q THEN 100 ELSE 0 END
 						+ CASE WHEN title_en_norm = q THEN 100 ELSE 0 END
@@ -336,15 +341,18 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 						+ CASE WHEN title_norm ILIKE q_like THEN 25 ELSE 0 END
 						+ CASE WHEN title_en_norm ILIKE q_like THEN 20 ELSE 0 END
 						+ CASE WHEN author_norm ILIKE q_like THEN 15 ELSE 0 END
+						+ CASE WHEN alt_titles_norm ILIKE q_like THEN 20 ELSE 0 END
 						+ similarity(q, title_norm) * 30
 						+ similarity(q, title_en_norm) * 25
 						+ similarity(q, author_norm) * 15
+						+ similarity(q, alt_titles_norm) * 20
 						+ word_similarity(q, title_norm) * 20
 						+ word_similarity(q, title_en_norm) * 15
+						+ word_similarity(q, alt_titles_norm) * 15
 					) AS relevance
 				FROM candidates
 			)
-			SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at
+			SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at, has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity
 			FROM scored
 			%s
 			LIMIT $2 OFFSET $3
@@ -362,7 +370,8 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 			var n models.Novel
 			if err := rows.Scan(&n.ID, &n.Title, &n.TitleEn, &n.Author,
 				&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
-				&n.AgeRating, &n.CoverURL, &n.CreatedAt); err != nil {
+				&n.AgeRating, &n.CoverURL, &n.CreatedAt,
+				&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity); err != nil {
 				logger.Warn("GetCatalogNovels: Row scan error: %v", err)
 				continue
 			}
@@ -416,7 +425,7 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 	}
 
 	selectQuery := fmt.Sprintf(
-		"SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at FROM novels WHERE NOT (has_self_harm OR has_drug_usage OR has_sexual_violence OR has_graphic_sex) %s LIMIT $1 OFFSET $2",
+		"SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at, has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity FROM novels %s LIMIT $1 OFFSET $2",
 		orderByClause,
 	)
 
@@ -432,7 +441,8 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 		var n models.Novel
 		if err := rows.Scan(&n.ID, &n.Title, &n.TitleEn, &n.Author,
 			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
-			&n.AgeRating, &n.CoverURL, &n.CreatedAt); err != nil {
+			&n.AgeRating, &n.CoverURL, &n.CreatedAt,
+			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity); err != nil {
 			logger.Warn("GetCatalogNovels: Row scan error: %v", err)
 			continue
 		}

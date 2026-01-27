@@ -12,8 +12,11 @@ WHERE
     n.title_norm ILIKE nq.q_like
     OR n.title_en_norm ILIKE nq.q_like
     OR n.author_norm ILIKE nq.q_like
+    OR n.alt_titles_norm ILIKE nq.q_like
     OR nq.q % n.title_norm
     OR nq.q % n.title_en_norm
     OR nq.q % n.author_norm
+    OR nq.q % n.alt_titles_norm
     OR nq.q <% n.title_norm
-    OR nq.q <% n.title_en_norm;
+    OR nq.q <% n.title_en_norm
+    OR nq.q <% n.alt_titles_norm;

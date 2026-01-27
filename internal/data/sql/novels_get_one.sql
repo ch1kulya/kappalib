@@ -14,6 +14,7 @@ SELECT
     has_self_harm,
     has_drug_usage,
     has_sexual_violence,
-    has_graphic_sex
+    has_graphic_sex,
+    has_profanity
 FROM novels
 WHERE id = $1;
