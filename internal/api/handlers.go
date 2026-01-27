@@ -55,7 +55,7 @@ func requireOwner(userID, resourceID string) error {
 
 type GetNovelsInput struct {
 	Page int    `query:"page" default:"1" minimum:"1" maximum:"9999"`
-	Sort string `query:"sort" default:"oldest" enum:"newest,oldest,large,small,alphabet,created"`
+	Sort string `query:"sort" default:"popular" enum:"newest,oldest,large,small,alphabet,created,popular"`
 }
 
 type SearchNovelsInput struct {
@@ -84,11 +84,6 @@ type SyncCookiesInput struct {
 
 type ProfileIDInput struct {
 	ProfileID string `path:"id" pattern:"^usr_[a-z0-9]{8}$"`
-}
-
-type APIStatus struct {
-	Status   string `json:"status"`
-	Database string `json:"database"`
 }
 
 type GetCommentsInput struct {
@@ -123,91 +118,164 @@ type UploadAvatarInput struct {
 	}
 }
 
-func HandleStatus(ctx context.Context, input *struct{}) (*struct{ Body APIStatus }, error) {
+type APIStatus struct {
+	Status   string `json:"status"`
+	Database string `json:"database"`
+}
+
+type StatusResponse struct {
+	Body APIStatus
+}
+
+type NovelResponse struct {
+	Body models.Novel
+}
+
+type NovelsPageResponse struct {
+	Body models.NovelsPage
+}
+
+type ChapterResponse struct {
+	Body models.Chapter
+}
+
+type ChaptersListResponse struct {
+	Body models.ChaptersList
+}
+
+type ProfileResponse struct {
+	Body models.ProfilePublic
+}
+
+type CommentResponse struct {
+	Body models.Comment
+}
+
+type CommentsPageResponse struct {
+	Body models.CommentsPage
+}
+
+type SitemapResponse struct {
+	Body []models.SitemapItem
+}
+
+type SearchNovelsResponse struct {
+	Body struct {
+		Novels []models.Novel `json:"novels"`
+		Query  string         `json:"query"`
+	}
+}
+
+type BatchNovelsResponse struct {
+	Body []models.Novel
+}
+
+type CookieSyncResponse struct {
+	Body map[string]models.CookieValue
+}
+
+type LogoutResponse struct {
+	Status     int           `json:"-" default:"204"`
+	SetCookies []http.Cookie `header:"Set-Cookie"`
+}
+
+type DeleteProfileResponse struct {
+	Status     int           `json:"-" default:"204"`
+	SetCookies []http.Cookie `header:"Set-Cookie"`
+}
+
+type EmptyResponse struct {
+	Status int `json:"-" default:"204"`
+}
+
+func HandleStatus(ctx context.Context, input *struct{}) (*StatusResponse, error) {
 	dbStatus := "connected"
 	if err := database.DB.Ping(ctx); err != nil {
 		dbStatus = "disconnected"
 	}
 
-	return &struct{ Body APIStatus }{
+	return &StatusResponse{
 		Body: APIStatus{Status: "ok", Database: dbStatus},
 	}, nil
 }
 
-func HandleGetSitemapData(ctx context.Context, input *struct{}) (*struct{ Body any }, error) {
+func HandleGetSitemapData(ctx context.Context, input *struct{}) (*SitemapResponse, error) {
 	items, err := data.GetSitemapData(ctx)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch data")
 	}
-	return &struct{ Body any }{Body: items}, nil
+	return &SitemapResponse{Body: items}, nil
 }
 
-func HandleGetNovels(ctx context.Context, input *GetNovelsInput) (*struct{ Body any }, error) {
+func HandleGetNovels(ctx context.Context, input *GetNovelsInput) (*NovelsPageResponse, error) {
 	novels, err := data.GetNovels(ctx, input.Page, input.Sort)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Database error")
 	}
-	return &struct{ Body any }{Body: novels}, nil
+	return &NovelsPageResponse{Body: *novels}, nil
 }
 
-func HandleSearchNovels(ctx context.Context, input *SearchNovelsInput) (*struct{ Body any }, error) {
+func HandleSearchNovels(ctx context.Context, input *SearchNovelsInput) (*SearchNovelsResponse, error) {
 	novels, err := data.SearchNovels(ctx, input.Query)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Search failed")
 	}
 
-	return &struct{ Body any }{
-		Body: map[string]any{
-			"novels": novels,
-			"query":  input.Query,
+	return &SearchNovelsResponse{
+		Body: struct {
+			Novels []models.Novel `json:"novels"`
+			Query  string         `json:"query"`
+		}{
+			Novels: novels,
+			Query:  input.Query,
 		},
 	}, nil
 }
 
-func HandleGetNovel(ctx context.Context, input *NovelIDInput) (*struct{ Body any }, error) {
+func HandleGetNovel(ctx context.Context, input *NovelIDInput) (*NovelResponse, error) {
 	novel, err := data.GetNovel(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Novel not found")
 	}
-	return &struct{ Body any }{Body: novel}, nil
+	return &NovelResponse{Body: *novel}, nil
 }
 
-func HandleGetNovelsBatch(ctx context.Context, input *BatchNovelsInput) (*struct{ Body any }, error) {
+func HandleGetNovelsBatch(ctx context.Context, input *BatchNovelsInput) (*BatchNovelsResponse, error) {
 	if len(input.Body.IDs) == 0 {
-		return &struct{ Body any }{Body: []models.Novel{}}, nil
+		return &BatchNovelsResponse{Body: []models.Novel{}}, nil
 	}
 	novels, err := data.GetNovelsByIDs(ctx, input.Body.IDs)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch novels")
 	}
-	return &struct{ Body any }{Body: novels}, nil
+	return &BatchNovelsResponse{Body: novels}, nil
 }
 
-func HandleGetChaptersList(ctx context.Context, input *NovelIDInput) (*struct{ Body any }, error) {
+func HandleGetChaptersList(ctx context.Context, input *NovelIDInput) (*ChaptersListResponse, error) {
 	chapters, err := data.GetChapters(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch chapters")
 	}
-	return &struct{ Body any }{Body: chapters}, nil
+	return &ChaptersListResponse{Body: *chapters}, nil
 }
 
-func HandleGetChapter(ctx context.Context, input *ChapterIDInput) (*struct{ Body any }, error) {
+func HandleGetChapter(ctx context.Context, input *ChapterIDInput) (*ChapterResponse, error) {
 	chapter, err := data.GetChapter(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Chapter not found")
 	}
-	return &struct{ Body any }{Body: chapter}, nil
+	return &ChapterResponse{Body: *chapter}, nil
 }
 
-func HandleGetProfile(ctx context.Context, input *ProfileIDInput) (*struct{ Body any }, error) {
+func HandleGetProfile(ctx context.Context, input *ProfileIDInput) (*ProfileResponse, error) {
 	profile, err := data.GetProfile(ctx, input.ProfileID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Profile not found")
 	}
-	return &struct{ Body any }{Body: profile}, nil
+	return &ProfileResponse{Body: *profile}, nil
 }
 
-func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct{ Body any }, error) {
+func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*CookieSyncResponse, error) {
 	userID, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
@@ -218,12 +286,10 @@ func HandleSyncCookies(ctx context.Context, input *SyncCookiesInput) (*struct{ B
 		return nil, huma.Error500InternalServerError("Failed to sync cookies")
 	}
 
-	return &struct{ Body any }{Body: result}, nil
+	return &CookieSyncResponse{Body: result}, nil
 }
 
-func HandleDeleteProfile(ctx context.Context, input *ProfileIDInput) (*struct {
-	SetCookies []http.Cookie `header:"Set-Cookie"`
-}, error) {
+func HandleDeleteProfile(ctx context.Context, input *ProfileIDInput) (*DeleteProfileResponse, error) {
 	userID, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
@@ -237,18 +303,14 @@ func HandleDeleteProfile(ctx context.Context, input *ProfileIDInput) (*struct {
 		return nil, huma.Error404NotFound("Profile not found")
 	}
 
-	return &struct {
-		SetCookies []http.Cookie `header:"Set-Cookie"`
-	}{
+	return &DeleteProfileResponse{
+		Status:     http.StatusNoContent,
 		SetCookies: []http.Cookie{clearSessionCookie()},
 	}, nil
 }
 
-func HandleLogout(ctx context.Context, input *struct{}) (*struct {
-	SetCookies []http.Cookie `header:"Set-Cookie"`
-}, error) {
-	_, err := requireAuth(ctx)
-	if err != nil {
+func HandleLogout(ctx context.Context, input *struct{}) (*LogoutResponse, error) {
+	if _, err := requireAuth(ctx); err != nil {
 		return nil, err
 	}
 
@@ -257,22 +319,21 @@ func HandleLogout(ctx context.Context, input *struct{}) (*struct {
 		logger.Warn("Failed to delete session on logout: %v", err)
 	}
 
-	return &struct {
-		SetCookies []http.Cookie `header:"Set-Cookie"`
-	}{
+	return &LogoutResponse{
+		Status:     http.StatusNoContent,
 		SetCookies: []http.Cookie{clearSessionCookie()},
 	}, nil
 }
 
-func HandleGetComments(ctx context.Context, input *GetCommentsInput) (*struct{ Body any }, error) {
+func HandleGetComments(ctx context.Context, input *GetCommentsInput) (*CommentsPageResponse, error) {
 	comments, err := data.GetApprovedComments(ctx, input.ChapterID, input.Page)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch comments")
 	}
-	return &struct{ Body any }{Body: comments}, nil
+	return &CommentsPageResponse{Body: *comments}, nil
 }
 
-func HandleCreateComment(ctx context.Context, input *CreateCommentInput) (*struct{ Body any }, error) {
+func HandleCreateComment(ctx context.Context, input *CreateCommentInput) (*CommentResponse, error) {
 	userID, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
@@ -299,10 +360,10 @@ func HandleCreateComment(ctx context.Context, input *CreateCommentInput) (*struc
 			return nil, huma.Error500InternalServerError("Failed to create comment")
 		}
 	}
-	return &struct{ Body any }{Body: comment}, nil
+	return &CommentResponse{Body: *comment}, nil
 }
 
-func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*struct{}, error) {
+func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*EmptyResponse, error) {
 	expectedSecret := data.GetTelegramWebhookSecret()
 	if expectedSecret == "" {
 		logger.Error("Telegram webhook secret not configured")
@@ -328,11 +389,11 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 
 	if err := json.Unmarshal(input.Body, &update); err != nil {
 		logger.Error("Failed to unmarshal Telegram update: %v", err)
-		return &struct{}{}, nil
+		return &EmptyResponse{Status: http.StatusNoContent}, nil
 	}
 
 	if update.CallbackQuery == nil || update.CallbackQuery.Message == nil {
-		return &struct{}{}, nil
+		return &EmptyResponse{Status: http.StatusNoContent}, nil
 	}
 
 	callback := update.CallbackQuery
@@ -340,13 +401,13 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 	expectedChatID := data.GetTelegramChatID()
 	if expectedChatID != "" && fmt.Sprintf("%d", callback.Message.Chat.ID) != expectedChatID {
 		logger.Warn("Telegram Webhook: Invalid chat ID")
-		return &struct{}{}, nil
+		return &EmptyResponse{Status: http.StatusNoContent}, nil
 	}
 
 	parts := strings.SplitN(callback.Data, ":", 2)
 	if len(parts) != 2 {
 		logger.Warn("Invalid callback data format: %s", callback.Data)
-		return &struct{}{}, nil
+		return &EmptyResponse{Status: http.StatusNoContent}, nil
 	}
 
 	action, commentID := parts[0], parts[1]
@@ -359,12 +420,12 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 		status, statusText = "rejected", "❌ Отклонено"
 	default:
 		logger.Warn("Unknown action in callback: %s", action)
-		return &struct{}{}, nil
+		return &EmptyResponse{Status: http.StatusNoContent}, nil
 	}
 
 	if err := data.UpdateCommentStatus(ctx, commentID, status); err != nil {
 		logger.Error("Failed to update comment via webhook: %v", err)
-		return &struct{}{}, nil
+		return &EmptyResponse{Status: http.StatusNoContent}, nil
 	}
 
 	if err := data.DeleteTelegramMessage(callback.Message.Chat.ID, callback.Message.MessageID); err != nil {
@@ -386,13 +447,13 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*s
 			logger.Error("Failed to answer callback query: %v", err)
 			return
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}()
 
-	return &struct{}{}, nil
+	return &EmptyResponse{Status: http.StatusNoContent}, nil
 }
 
-func HandleUpdateDisplayName(ctx context.Context, input *UpdateDisplayNameInput) (*struct{ Body any }, error) {
+func HandleUpdateDisplayName(ctx context.Context, input *UpdateDisplayNameInput) (*ProfileResponse, error) {
 	userID, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
@@ -414,10 +475,10 @@ func HandleUpdateDisplayName(ctx context.Context, input *UpdateDisplayNameInput)
 			return nil, huma.Error500InternalServerError("Failed to update profile")
 		}
 	}
-	return &struct{ Body any }{Body: profile}, nil
+	return &ProfileResponse{Body: *profile}, nil
 }
 
-func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{ Body any }, error) {
+func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*ProfileResponse, error) {
 	userID, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
@@ -443,10 +504,10 @@ func HandleUploadAvatar(ctx context.Context, input *UploadAvatarInput) (*struct{
 		}
 		return nil, huma.Error500InternalServerError("Upload failed")
 	}
-	return &struct{ Body any }{Body: profile}, nil
+	return &ProfileResponse{Body: *profile}, nil
 }
 
-func HandleGetCurrentUser(ctx context.Context, input *struct{}) (*struct{ Body any }, error) {
+func HandleGetCurrentUser(ctx context.Context, input *struct{}) (*ProfileResponse, error) {
 	userID, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
@@ -457,5 +518,5 @@ func HandleGetCurrentUser(ctx context.Context, input *struct{}) (*struct{ Body a
 		return nil, huma.Error404NotFound("Profile not found")
 	}
 
-	return &struct{ Body any }{Body: profile}, nil
+	return &ProfileResponse{Body: *profile}, nil
 }

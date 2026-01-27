@@ -208,6 +208,7 @@ func main() {
 		config.Info.Description = "Public API for accessing kappalib services."
 		config.DocsPath = ""
 		config.Servers = []*huma.Server{{URL: "/api"}}
+		config.OpenAPI.OpenAPI = "3.0.3"
 
 		humaApi := humachi.New(r, config)
 
