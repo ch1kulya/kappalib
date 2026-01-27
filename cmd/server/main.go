@@ -156,11 +156,7 @@ func main() {
 	r.Use(logger.Middleware)
 	r.Use(web.UserAgentMiddleware)
 	r.Use(middleware.Recoverer)
-	if os.Getenv("AIR") != "True" {
-		r.Use(middleware.Compress(5))
-	} else {
-		logger.Debug("Air mode enabled")
-	}
+	r.Use(middleware.Compress(5))
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	webRateLimiter := web.NewRateLimiter()
@@ -212,8 +208,17 @@ func main() {
 		config.Info.Description = "Public API for accessing kappalib services."
 		config.DocsPath = ""
 		config.Servers = []*huma.Server{{URL: "/api"}}
+		config.OpenAPI.OpenAPI = "3.0.3"
 
 		humaApi := humachi.New(r, config)
+
+		humaApi.OpenAPI().Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+			"sessionCookie": {
+				Type: "apiKey",
+				In:   "cookie",
+				Name: "kpl_session",
+			},
+		}
 
 		r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
@@ -277,39 +282,11 @@ func main() {
 		}, api.HandleGetChapter)
 
 		huma.Register(humaApi, huma.Operation{
-			OperationID: "get-current-user",
-			Method:      http.MethodGet,
-			Path:        "/profile/me",
-			Summary:     "Get current authenticated user",
-		}, api.HandleGetCurrentUser)
-
-		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-profile",
 			Method:      http.MethodGet,
 			Path:        "/profile/{id}",
 			Summary:     "Get user profile",
 		}, api.HandleGetProfile)
-
-		huma.Register(humaApi, huma.Operation{
-			OperationID: "delete-profile",
-			Method:      http.MethodDelete,
-			Path:        "/profile/{id}",
-			Summary:     "Delete user profile",
-		}, api.HandleDeleteProfile)
-
-		huma.Register(humaApi, huma.Operation{
-			OperationID: "logout",
-			Method:      http.MethodPost,
-			Path:        "/profile/logout",
-			Summary:     "Logout and clear session cookie",
-		}, api.HandleLogout)
-
-		huma.Register(humaApi, huma.Operation{
-			OperationID: "sync-cookies",
-			Method:      http.MethodPost,
-			Path:        "/profile/sync-cookies",
-			Summary:     "Sync cookies",
-		}, api.HandleSyncCookies)
 
 		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-comments",
@@ -319,13 +296,6 @@ func main() {
 		}, api.HandleGetComments)
 
 		huma.Register(humaApi, huma.Operation{
-			OperationID: "create-comment",
-			Method:      http.MethodPost,
-			Path:        "/chapters/{chapterId}/comments",
-			Summary:     "Create comment",
-		}, api.HandleCreateComment)
-
-		huma.Register(humaApi, huma.Operation{
 			OperationID: "telegram-webhook",
 			Method:      http.MethodPost,
 			Path:        "/webhook/telegram",
@@ -333,10 +303,51 @@ func main() {
 		}, api.HandleTelegramWebhook)
 
 		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-current-user",
+			Method:      http.MethodGet,
+			Path:        "/profile/me",
+			Summary:     "Get current authenticated user",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+		}, api.HandleGetCurrentUser)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "delete-profile",
+			Method:      http.MethodDelete,
+			Path:        "/profile/{id}",
+			Summary:     "Delete user profile",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+		}, api.HandleDeleteProfile)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "logout",
+			Method:      http.MethodPost,
+			Path:        "/profile/logout",
+			Summary:     "Logout and clear session cookie",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+		}, api.HandleLogout)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "sync-cookies",
+			Method:      http.MethodPost,
+			Path:        "/profile/sync-cookies",
+			Summary:     "Sync cookies",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+		}, api.HandleSyncCookies)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "create-comment",
+			Method:      http.MethodPost,
+			Path:        "/chapters/{chapterId}/comments",
+			Summary:     "Create comment",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+		}, api.HandleCreateComment)
+
+		huma.Register(humaApi, huma.Operation{
 			OperationID: "update-display-name",
 			Method:      http.MethodPatch,
 			Path:        "/profile/{id}/name",
 			Summary:     "Update display name",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
 		}, api.HandleUpdateDisplayName)
 
 		huma.Register(humaApi, huma.Operation{
@@ -344,6 +355,7 @@ func main() {
 			Method:      http.MethodPost,
 			Path:        "/profile/{id}/avatar",
 			Summary:     "Upload avatar",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
 		}, api.HandleUploadAvatar)
 	})
 

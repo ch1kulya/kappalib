@@ -1,5 +1,7 @@
+# air v1.64.4
 root = "."
 tmp_dir = "tmp"
+env_files = [".env.dev"]
 
 [build]
 pre_cmd = ["templ fmt .", "templ generate"]

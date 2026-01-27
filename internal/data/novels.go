@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -40,15 +41,32 @@ func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 		defer cancel()
 
 		var n models.Novel
+		var altTitlesJSON []byte
 		err := database.DB.QueryRow(dbCtx, queryNovelsGetOne, id).Scan(
 			&n.ID, &n.Title, &n.TitleEn, &n.Author,
 			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
 			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
 			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity,
+			&altTitlesJSON,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		if len(altTitlesJSON) > 0 {
+			_ = json.Unmarshal(altTitlesJSON, &n.AltTitles)
+		}
+		if n.AltTitles == nil {
+			n.AltTitles = []string{}
+		}
+
+		tags, err := getNovelTags(dbCtx, id)
+		if err != nil {
+			logger.Warn("GetNovel: Failed to fetch tags for %s: %v", id, err)
+			tags = []models.Tag{}
+		}
+		n.Tags = tags
+
 		return &n, nil
 	})
 
@@ -58,9 +76,30 @@ func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 	return value.(*models.Novel), nil
 }
 
-func GetNovelsByIDs(ctx context.Context, ids []string) ([]models.Novel, error) {
+func getNovelTags(ctx context.Context, novelID string) ([]models.Tag, error) {
+	rows, err := database.DB.Query(ctx,
+		`SELECT t.id, t.name FROM tags t JOIN novel_tags nt ON t.id = nt.tag_id WHERE nt.novel_id = $1 ORDER BY t.name`,
+		novelID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tags := make([]models.Tag, 0)
+	for rows.Next() {
+		var t models.Tag
+		if err := rows.Scan(&t.ID, &t.Name); err != nil {
+			continue
+		}
+		tags = append(tags, t)
+	}
+	return tags, nil
+}
+
+func GetNovelsByIDs(ctx context.Context, ids []string) ([]models.NovelSummary, error) {
 	if len(ids) == 0 {
-		return []models.Novel{}, nil
+		return []models.NovelSummary{}, nil
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -87,9 +126,9 @@ func GetNovelsByIDs(ctx context.Context, ids []string) ([]models.Novel, error) {
 	}
 	defer rows.Close()
 
-	novels := make([]models.Novel, 0, len(ids))
+	novels := make([]models.NovelSummary, 0, len(ids))
 	for rows.Next() {
-		var n models.Novel
+		var n models.NovelSummary
 		if err := rows.Scan(
 			&n.ID, &n.Title, &n.TitleEn, &n.Author,
 			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
@@ -121,7 +160,7 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 
 		if totalCount > 0 && offset >= totalCount {
 			return &models.NovelsPage{
-				Novels:     []models.Novel{},
+				Novels:     []models.NovelSummary{},
 				Page:       page,
 				PageSize:   pageSize,
 				TotalCount: totalCount,
@@ -129,7 +168,7 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 			}, nil
 		}
 
-		baseQuery := `SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at, has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity FROM novels`
+		baseQuery := `SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at, chapters_count, has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity FROM novels`
 
 		var orderByClause string
 		switch sort {
@@ -160,12 +199,12 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 		}
 		defer rows.Close()
 
-		novels := make([]models.Novel, 0)
+		novels := make([]models.NovelSummary, 0)
 		for rows.Next() {
-			var n models.Novel
+			var n models.NovelSummary
 			if err := rows.Scan(&n.ID, &n.Title, &n.TitleEn, &n.Author,
 				&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
-				&n.AgeRating, &n.CoverURL, &n.CreatedAt,
+				&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
 				&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity); err != nil {
 				logger.Warn("GetNovels: Row scan error: %v", err)
 				continue
@@ -189,10 +228,10 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 	return value.(*models.NovelsPage), nil
 }
 
-func SearchNovels(ctx context.Context, query string) ([]models.Novel, error) {
+func SearchNovels(ctx context.Context, query string) ([]models.NovelSummary, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
-		return []models.Novel{}, nil
+		return []models.NovelSummary{}, nil
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -205,13 +244,15 @@ func SearchNovels(ctx context.Context, query string) ([]models.Novel, error) {
 	}
 	defer rows.Close()
 
-	novels := make([]models.Novel, 0)
+	novels := make([]models.NovelSummary, 0)
 	for rows.Next() {
-		var n models.Novel
+		var n models.NovelSummary
 		var relevance float64
 		if err := rows.Scan(&n.ID, &n.Title, &n.TitleEn, &n.Author,
 			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
-			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &relevance); err != nil {
+			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
+			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity,
+			&relevance); err != nil {
 			continue
 		}
 		novels = append(novels, n)
@@ -278,7 +319,7 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 
 		if totalCount > 0 && offset >= totalCount {
 			return &models.NovelsPage{
-				Novels:     []models.Novel{},
+				Novels:     []models.NovelSummary{},
 				Page:       page,
 				PageSize:   pageSize,
 				TotalCount: totalCount,
@@ -352,7 +393,7 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 					) AS relevance
 				FROM candidates
 			)
-			SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at, has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity
+			SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at, chapters_count, has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity
 			FROM scored
 			%s
 			LIMIT $2 OFFSET $3
@@ -365,12 +406,12 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 		}
 		defer rows.Close()
 
-		novels := make([]models.Novel, 0)
+		novels := make([]models.NovelSummary, 0)
 		for rows.Next() {
-			var n models.Novel
+			var n models.NovelSummary
 			if err := rows.Scan(&n.ID, &n.Title, &n.TitleEn, &n.Author,
 				&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
-				&n.AgeRating, &n.CoverURL, &n.CreatedAt,
+				&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
 				&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity); err != nil {
 				logger.Warn("GetCatalogNovels: Row scan error: %v", err)
 				continue
@@ -396,7 +437,7 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 
 	if totalCount > 0 && offset >= totalCount {
 		return &models.NovelsPage{
-			Novels:     []models.Novel{},
+			Novels:     []models.NovelSummary{},
 			Page:       page,
 			PageSize:   pageSize,
 			TotalCount: totalCount,
@@ -425,7 +466,7 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 	}
 
 	selectQuery := fmt.Sprintf(
-		"SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at, has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity FROM novels %s LIMIT $1 OFFSET $2",
+		"SELECT id, title, title_en, author, year_start, year_end, status, description, age_rating, cover_url, created_at, chapters_count, has_self_harm, has_drug_usage, has_sexual_violence, has_graphic_sex, has_profanity FROM novels %s LIMIT $1 OFFSET $2",
 		orderByClause,
 	)
 
@@ -436,12 +477,12 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 	}
 	defer rows.Close()
 
-	novels := make([]models.Novel, 0)
+	novels := make([]models.NovelSummary, 0)
 	for rows.Next() {
-		var n models.Novel
+		var n models.NovelSummary
 		if err := rows.Scan(&n.ID, &n.Title, &n.TitleEn, &n.Author,
 			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
-			&n.AgeRating, &n.CoverURL, &n.CreatedAt,
+			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
 			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity); err != nil {
 			logger.Warn("GetCatalogNovels: Row scan error: %v", err)
 			continue

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -115,6 +116,8 @@ func generateNonce() string {
 }
 
 func SecurityHeadersMiddleware(next http.Handler) http.Handler {
+	airHash := os.Getenv("AIR_PROXY_HASH")
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nonce := generateNonce()
 
@@ -123,18 +126,20 @@ func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 
-		csp := fmt.Sprintf("default-src 'self'; "+
-			"connect-src 'self' https://stats.ch1kulya.ru https://cdn.jsdelivr.net/; "+
-			"img-src 'self' https: data:; "+
-			"script-src 'self' 'nonce-%s' https://stats.ch1kulya.ru "+
-			"https://challenges.cloudflare.com https://cdn.jsdelivr.net; "+
-			"frame-src 'self' https://challenges.cloudflare.com; "+
-			"style-src 'self' 'unsafe-inline' https://rsms.me https://cdn.jsdelivr.net; "+
-			"font-src 'self' data: https://rsms.me https://fonts.scalar.com https://cdn.jsdelivr.net; ",
-			nonce)
+		var cspBuilder strings.Builder
+		cspBuilder.WriteString("default-src 'self'; ")
+		cspBuilder.WriteString("connect-src 'self' https://stats.ch1kulya.ru https://cdn.jsdelivr.net/; ")
+		cspBuilder.WriteString("img-src 'self' https: data:; ")
+		cspBuilder.WriteString(fmt.Sprintf("script-src 'self' 'nonce-%s' https://stats.ch1kulya.ru https://challenges.cloudflare.com https://cdn.jsdelivr.net", nonce))
+		if airHash != "" {
+			cspBuilder.WriteString(fmt.Sprintf(" '%s'", airHash))
+		}
+		cspBuilder.WriteString("; ")
+		cspBuilder.WriteString("frame-src 'self' https://challenges.cloudflare.com; ")
+		cspBuilder.WriteString("style-src 'self' 'unsafe-inline' https://rsms.me https://cdn.jsdelivr.net; ")
+		cspBuilder.WriteString("font-src 'self' data: https://rsms.me https://fonts.scalar.com https://cdn.jsdelivr.net; ")
 
-		w.Header().Set("Content-Security-Policy", csp)
-
+		w.Header().Set("Content-Security-Policy", cspBuilder.String())
 		ctx := templ.WithNonce(r.Context(), nonce)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

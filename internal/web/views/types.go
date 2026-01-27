@@ -29,7 +29,7 @@ type LastReadWidgetData struct {
 
 type HomeProps struct {
 	BaseProps
-	Novels        []models.Novel
+	Novels        []models.NovelSummary
 	Page          int
 	TotalPages    int
 	SortOrder     string
@@ -93,7 +93,7 @@ type ColorSchemeOption struct {
 
 type CatalogProps struct {
 	BaseProps
-	Novels      []models.Novel
+	Novels      []models.NovelSummary
 	Page        int
 	TotalPages  int
 	TotalCount  int

@@ -2595,14 +2595,13 @@ html {
         overflow: hidden;
         & .pc-provider-bg {
             position: absolute;
-            right: -10px;
-            top: 50%;
-            transform: translateY(-50%);
+            right: 1rem;
+            top: 0.75rem;
             pointer-events: none;
             opacity: 0.08;
             & svg {
-                width: 100px;
-                height: 100px;
+                width: 65px;
+                height: 65px;
             }
             &[data-provider="google"] {
                 color: var(--oauth-google);

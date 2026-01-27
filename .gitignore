@@ -5,3 +5,4 @@
 *_templ.go
 tmp
 dist
+.env.dev

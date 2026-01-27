@@ -13,7 +13,14 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const maxVisitors = 9999
+const (
+	maxVisitors            = 9999
+	visitorCleanupInterval = 2 * time.Minute
+	visitorExpiry          = 5 * time.Minute
+	visitorEmergencyExpiry = 1 * time.Minute
+	defaultRateLimit       = 3
+	defaultBurst           = 9
+)
 
 type visitor struct {
 	limiter  *rate.Limiter
@@ -32,19 +39,19 @@ func NewRateLimiter() *RateLimiter {
 		apiToken: os.Getenv("API_TOKEN"),
 	}
 	if rl.apiToken == "" {
-		logger.Warn("API_TOKEN is not set.")
+		logger.Warn("API_TOKEN is not set")
 	}
 	go rl.cleanupVisitors()
 	return rl
 }
 
 func (rl *RateLimiter) cleanupVisitors() {
-	ticker := time.NewTicker(2 * time.Minute)
+	ticker := time.NewTicker(visitorCleanupInterval)
 	defer ticker.Stop()
 	for range ticker.C {
 		rl.mu.Lock()
 		for ip, v := range rl.visitors {
-			if time.Since(v.lastSeen) > 5*time.Minute {
+			if time.Since(v.lastSeen) > visitorExpiry {
 				delete(rl.visitors, ip)
 			}
 		}
@@ -56,48 +63,62 @@ func (rl *RateLimiter) getVisitor(ip string) *rate.Limiter {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	v, exists := rl.visitors[ip]
-	if !exists {
-		if len(rl.visitors) >= maxVisitors {
-			for k, val := range rl.visitors {
-				if time.Since(val.lastSeen) > 1*time.Minute {
-					delete(rl.visitors, k)
-				}
-			}
-			if len(rl.visitors) >= maxVisitors {
-				return rate.NewLimiter(rate.Limit(1), 1)
-			}
-		}
-
-		limiter := rate.NewLimiter(rate.Limit(3), 9)
-		rl.visitors[ip] = &visitor{limiter, time.Now()}
-		return limiter
+	if v, exists := rl.visitors[ip]; exists {
+		v.lastSeen = time.Now()
+		return v.limiter
 	}
 
-	v.lastSeen = time.Now()
-	return v.limiter
+	if len(rl.visitors) >= maxVisitors {
+		for k, v := range rl.visitors {
+			if time.Since(v.lastSeen) > visitorEmergencyExpiry {
+				delete(rl.visitors, k)
+			}
+		}
+		if len(rl.visitors) >= maxVisitors {
+			return rate.NewLimiter(rate.Limit(1), 1)
+		}
+	}
+
+	limiter := rate.NewLimiter(rate.Limit(defaultRateLimit), defaultBurst)
+	rl.visitors[ip] = &visitor{limiter: limiter, lastSeen: time.Now()}
+	return limiter
 }
 
-func RateLimitMiddleware(rl *RateLimiter) func(next http.Handler) http.Handler {
+func getClientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if idx := strings.Index(xff, ","); idx != -1 {
+			return strings.TrimSpace(xff[:idx])
+		}
+		return strings.TrimSpace(xff)
+	}
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return xri
+	}
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
+}
+
+func RateLimitMiddleware(rl *RateLimiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			clientToken := r.Header.Get("X-Service-Token")
-			isAuthorized := rl.apiToken != "" && subtle.ConstantTimeCompare([]byte(clientToken), []byte(rl.apiToken)) == 1
-			if isAuthorized {
-				next.ServeHTTP(w, r)
-				return
+			if rl.apiToken != "" {
+				clientToken := r.Header.Get("X-Service-Token")
+				if subtle.ConstantTimeCompare([]byte(clientToken), []byte(rl.apiToken)) == 1 {
+					next.ServeHTTP(w, r)
+					return
+				}
 			}
 
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				ip = r.RemoteAddr
-			}
-
+			ip := getClientIP(r)
 			if !rl.getVisitor(ip).Allow() {
 				logger.Warn("Rate limit exceeded for IP: %s", ip)
 				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Retry-After", "10")
 				w.WriteHeader(http.StatusTooManyRequests)
-				_, _ = w.Write([]byte(`{"error": "Too many requests"}`))
+				_, _ = w.Write([]byte(`{"error":"Too many requests"}`))
 				return
 			}
 
@@ -114,12 +135,14 @@ func CorsMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+
 		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Service-Token, X-Profile-ID, X-Secret-Token")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Service-Token")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
@@ -127,26 +150,24 @@ func CorsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-var noCachePaths = []string{
+var noCachePrefixes = []string{
 	"/api/profile/",
-	"/api/profile/me",
 	"/api/webhook/",
-}
-
-func shouldNotCache(path string) bool {
-	for _, p := range noCachePaths {
-		if strings.HasPrefix(path, p) || path == p {
-			return true
-		}
-	}
-	return false
 }
 
 func CacheMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
-		if shouldNotCache(path) {
+		noCache := false
+		for _, prefix := range noCachePrefixes {
+			if strings.HasPrefix(path, prefix) {
+				noCache = true
+				break
+			}
+		}
+
+		if noCache {
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, private")
 			w.Header().Set("Pragma", "no-cache")
 			w.Header().Set("Expires", "0")

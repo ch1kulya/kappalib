@@ -15,6 +15,7 @@ SELECT
     has_drug_usage,
     has_sexual_violence,
     has_graphic_sex,
-    has_profanity
+    has_profanity,
+    alt_titles
 FROM novels
 WHERE id = $1;

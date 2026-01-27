@@ -49,8 +49,6 @@ var (
 	strictPolicy       = bluemonday.StrictPolicy()
 )
 
-var ErrUnsupportedFormat = fmt.Errorf("unsupported image format")
-
 type progressNovel struct {
 	ChapterID  string `json:"chapterId"`
 	ChapterNum int    `json:"chapterNum"`
@@ -179,7 +177,7 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &avatarUpdatedAt, &profile.CreatedAt)
 
 	if err != nil {
-		return nil, err
+		return nil, ErrProfileNotFound
 	}
 
 	profile.AvatarUpdatedAt = avatarUpdatedAt.Unix()
@@ -200,7 +198,7 @@ func SyncCookies(ctx context.Context, userID string, cookies map[string]models.C
 	var existingJSON []byte
 	err := database.DB.QueryRow(dbCtx, `SELECT cookies FROM users WHERE id = $1`, userID).Scan(&existingJSON)
 	if err != nil {
-		return nil, fmt.Errorf("profile not found")
+		return nil, ErrProfileNotFound
 	}
 
 	var existing map[string]models.CookieValue
@@ -236,7 +234,7 @@ func DeleteProfile(ctx context.Context, userID string) error {
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("profile not found")
+		return ErrProfileNotFound
 	}
 
 	logger.Info("Profile deleted: %s", userID)
@@ -249,28 +247,27 @@ func ValidateDisplayName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 
 	if len(name) == 0 {
-		return "", fmt.Errorf("name is empty")
+		return "", ErrNameEmpty
 	}
 
 	runeCount := len([]rune(name))
 	if runeCount > 15 {
-		return "", fmt.Errorf("name too long")
+		return "", ErrNameTooLong
 	}
 
 	if !displayNameRegex.MatchString(name) {
-		return "", fmt.Errorf("invalid characters")
+		return "", ErrInvalidCharacters
 	}
 
 	return name, nil
 }
-
 func UpdateDisplayName(ctx context.Context, userID, newName string) (*models.ProfilePublic, error) {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	validName, err := ValidateDisplayName(newName)
 	if err != nil {
-		return nil, fmt.Errorf("invalid name: %w", err)
+		return nil, ErrInvalidDisplayName
 	}
 
 	_, err = database.DB.Exec(dbCtx, queryUsersUpdateDisplayName, validName, userID)
@@ -285,7 +282,7 @@ func UpdateDisplayName(ctx context.Context, userID, newName string) (*models.Pro
 
 func UpdateAvatar(ctx context.Context, userID string, imageData []byte) (*models.ProfilePublic, error) {
 	if minioClient == nil {
-		return nil, fmt.Errorf("s3 not configured")
+		return nil, ErrS3NotConfigured
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
