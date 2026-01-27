@@ -56,6 +56,13 @@ document.addEventListener("DOMContentLoaded", () => {
       refreshLastReadTotalChapters();
     }
 
+    document.querySelector(".markdown-help")?.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains("spoiler")) {
+        target.classList.toggle("revealed");
+      }
+    });
+
     console.info("All modules initialized successfully");
   } catch (err) {
     console.error("Critical error during module initialization", err);
