@@ -8,6 +8,7 @@ import { initStatusBadge } from "./modules/status";
 import { initCatalogPagination, initCatalogPage } from "./modules/catalog";
 import Dropdown from "./modules/dropdown";
 import { initChaptersSort, initCatalogSort } from "./modules/sort";
+import { initTocFilter } from "./modules/toc";
 import { initDescription } from "./modules/description";
 import { initProfile, initProfileModal } from "./modules/profile";
 import { initComments } from "./modules/comments";
@@ -42,6 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initSettingsModal();
     initChaptersSort();
     initCatalogSort();
+    initTocFilter();
     initSearch();
     initAgeGate();
     initDescription();
