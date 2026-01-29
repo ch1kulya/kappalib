@@ -1123,6 +1123,8 @@ a:hover {
     & .no-results {
         padding: 2rem 1rem;
         text-align: center;
+        font-size: 0.9rem;
+        color: var(--secondary);
     }
 }
 
