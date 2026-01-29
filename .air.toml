@@ -30,4 +30,4 @@ keep_scroll = true
 enabled = true
 proxy_port = 80
 app_port = 8080
-app_start_timeout = 15000
+app_start_timeout = 60000
