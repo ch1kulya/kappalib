@@ -169,12 +169,15 @@ templ Novel(props NovelProps) {
 					}
 				</div>
 			</div>
-			if len(props.Novel.AltTitles) > 0 || len(props.Novel.Tags) > 0 {
+			if props.Novel.TitleEn != "" || len(props.Novel.AltTitles) > 0 || len(props.Novel.Tags) > 0 {
 				<div class="novel-extra-info">
-					if len(props.Novel.AltTitles) > 0 {
+					if props.Novel.TitleEn != "" || len(props.Novel.AltTitles) > 0 {
 						<div class="extra-info-block">
 							<h4>Альтернативные названия</h4>
 							<div class="alt-titles-list">
+								if props.Novel.TitleEn != "" {
+									<span class="alt-title badge">{ props.Novel.TitleEn }</span>
+								}
 								for _, title := range props.Novel.AltTitles {
 									<span class="alt-title badge">{ title }</span>
 								}
