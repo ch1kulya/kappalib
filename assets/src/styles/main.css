@@ -1161,7 +1161,6 @@ a:hover {
 .chapter-item mark {
     background-color: var(--accent-primary);
     color: var(--bg-primary);
-    padding: 0 2px;
 }
 
 .chapter-num {

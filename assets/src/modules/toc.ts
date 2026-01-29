@@ -17,6 +17,7 @@ export function initTocFilter(): void {
     titleEl: el.querySelector(".chapter-title") as HTMLElement,
     numText: el.querySelector(".chapter-num")?.textContent || "",
     titleText: el.querySelector(".chapter-title")?.textContent || "",
+    titleHtml: el.querySelector(".chapter-title")?.innerHTML || "",
   }));
 
   let noResultsEl: HTMLElement | null = null;
@@ -34,7 +35,7 @@ export function initTocFilter(): void {
       originalData.forEach((item) => {
         item.element.classList.remove("toc-hidden");
         item.numEl.textContent = item.numText;
-        item.titleEl.innerHTML = escapeHtml(item.titleText);
+        item.titleEl.innerHTML = item.titleHtml;
       });
       hideNoResults();
       return;
@@ -47,13 +48,13 @@ export function initTocFilter(): void {
 
       if (numMatch || titleMatch) {
         item.element.classList.remove("toc-hidden");
-        item.numEl.innerHTML = highlightMatch(item.numText, q);
-        item.titleEl.innerHTML = highlightMatch(item.titleText, q);
+        item.numEl.innerHTML = highlight(item.numText, q);
+        item.titleEl.innerHTML = highlight(item.titleHtml, q);
         matchCount++;
       } else {
         item.element.classList.add("toc-hidden");
         item.numEl.textContent = item.numText;
-        item.titleEl.innerHTML = escapeHtml(item.titleText);
+        item.titleEl.innerHTML = item.titleHtml;
       }
     });
 
@@ -79,19 +80,16 @@ export function initTocFilter(): void {
     }
   }
 
-  function highlightMatch(text: string, query: string): string {
-    const escaped = escapeHtml(text);
+  function highlight(html: string, query: string): string {
     const queryEscaped = escapeRegex(query);
     const regex = new RegExp(`(${queryEscaped})`, "gi");
-    return escaped.replace(regex, "<mark>$1</mark>");
-  }
-
-  function escapeHtml(str: string): string {
-    return str
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    const parts = html.split(/(<[^>]*>)/);
+    return parts
+      .map((part) => {
+        if (part.startsWith("<")) return part;
+        return part.replace(regex, "<mark>$1</mark>");
+      })
+      .join("");
   }
 
   function escapeRegex(str: string): string {
