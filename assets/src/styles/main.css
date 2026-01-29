@@ -1365,6 +1365,7 @@ a:hover {
 
 @media (max-width: 500px) {
     .footer {
+        margin: 0;
         padding: 2rem 1.25rem;
     }
 
@@ -3659,4 +3660,36 @@ html {
     border-top-color: var(--primary);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+}
+
+/* Novel Extra Info */
+.novel-extra-info {
+    margin-top: 1rem;
+    padding-top: 1rem;
+}
+
+.extra-info-block {
+    margin-bottom: 1.25rem;
+    &:last-child {
+        margin-bottom: 0;
+    }
+    & h4 {
+        color: var(--tertiary);
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+}
+
+.alt-titles-list,
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.alt-title,
+.tag {
+    color: var(--secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
 }

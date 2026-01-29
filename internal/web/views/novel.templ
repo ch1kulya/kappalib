@@ -169,6 +169,30 @@ templ Novel(props NovelProps) {
 					}
 				</div>
 			</div>
+			if len(props.Novel.AltTitles) > 0 || len(props.Novel.Tags) > 0 {
+				<div class="novel-extra-info">
+					if len(props.Novel.AltTitles) > 0 {
+						<div class="extra-info-block">
+							<h4>Альтернативные названия</h4>
+							<div class="alt-titles-list">
+								for _, title := range props.Novel.AltTitles {
+									<span class="alt-title badge">{ title }</span>
+								}
+							</div>
+						</div>
+					}
+					if len(props.Novel.Tags) > 0 {
+						<div class="extra-info-block">
+							<h4>Тэги</h4>
+							<div class="tags-list">
+								for _, tag := range props.Novel.Tags {
+									<span class="tag badge">{ tag.Name }</span>
+								}
+							</div>
+						</div>
+					}
+				</div>
+			}
 		</div>
 	}
 }
