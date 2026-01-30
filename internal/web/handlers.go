@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ch1kulya/kappalib/assets/templates"
 	"github.com/ch1kulya/kappalib/internal/data"
 	"github.com/ch1kulya/kappalib/internal/models"
+	"github.com/ch1kulya/kappalib/internal/templates"
 	"github.com/ch1kulya/kappalib/internal/web/views"
 
 	"github.com/a-h/templ"
@@ -173,6 +173,7 @@ func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
 		{Path: "license"},
 		{Path: "terms"},
 		{Path: "markdown"},
+		{Path: "api/docs"},
 	}
 
 	content, err := templates.RenderSitemap(templates.SitemapData{
@@ -559,7 +560,7 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	description := "Бесплатная библиотека веб-новелл и ранобэ. Читайте популярные веб-новеллы онлайн в хорошем переводе."
-	title := "Свободная библиотека веб-новелл — kappalib"
+	title := "Открытая коллекция веб-новелл — kappalib"
 
 	schema, err := templates.RenderSchemaWebsite(templates.SchemaWebsiteData{
 		Domain:      "https://kappalib.ru",
@@ -853,6 +854,7 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 		TotalCount:  dataResp.TotalCount,
 		SortOrder:   sortOrder,
 		SearchQuery: searchQuery,
+		SearchTags:  dataResp.SearchTags,
 		IsPartial:   isPartial,
 	}
 

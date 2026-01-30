@@ -1160,6 +1160,10 @@ a:hover {
     display: none;
 }
 
+.chapter-item.toc-last-visible {
+    border-bottom: none;
+}
+
 .chapter-item mark {
     background-color: var(--accent-primary);
     color: var(--bg-primary);
@@ -1516,26 +1520,7 @@ a:hover {
 html {
     scrollbar-width: thin;
     scrollbar-gutter: stable;
-    scrollbar-color: var(--outline) var(--bg-primary);
-}
-
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background-color: var(--outline);
-    border-radius: 20px;
-    border: 3px solid var(--bg-primary);
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background-color: var(--tertiary);
+    scrollbar-color: var(--secondary) var(--outline);
 }
 
 /* Description Toggle */
@@ -2319,7 +2304,17 @@ html {
     cursor: pointer;
     border-radius: 6px;
     transition: all 0.15s ease;
-    &:hover {
+    @media (hover: hover) {
+        &:hover {
+            color: var(--color-danger);
+            background: color-mix(
+                in srgb,
+                var(--color-danger),
+                transparent 90%
+            );
+        }
+    }
+    &:active {
         color: var(--color-danger);
         background: color-mix(in srgb, var(--color-danger), transparent 90%);
     }
@@ -2335,7 +2330,17 @@ html {
     padding: 0.25rem 0.5rem;
     border-radius: 6px;
     transition: all 0.15s ease;
-    &:hover {
+    @media (hover: hover) {
+        &:hover {
+            color: var(--color-danger);
+            background: color-mix(
+                in srgb,
+                var(--color-danger),
+                transparent 90%
+            );
+        }
+    }
+    &:active {
         color: var(--color-danger);
         background: color-mix(in srgb, var(--color-danger), transparent 90%);
     }
@@ -2530,7 +2535,17 @@ html {
             &::before {
                 display: none;
             }
-            &:hover {
+            @media (hover: hover) {
+                &:hover {
+                    color: var(--color-danger);
+                    background: color-mix(
+                        in srgb,
+                        var(--color-danger),
+                        transparent 90%
+                    );
+                }
+            }
+            &:active {
                 color: var(--color-danger);
                 background: color-mix(
                     in srgb,

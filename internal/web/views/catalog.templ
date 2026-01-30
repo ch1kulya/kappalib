@@ -71,7 +71,16 @@ templ Catalog(props CatalogProps) {
 						</div>
 					</div>
 				</div>
-				if props.SearchQuery != "" {
+				if len(props.SearchTags) > 0 {
+					<span class="catalog-search-meta">
+						{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по { pluralizeTags(len(props.SearchTags)) }
+						<span style="display: inline-flex; flex-wrap: wrap; gap: 0.4rem;">
+							for _, tag := range props.SearchTags {
+								<span class="tag badge">{ tag }</span>
+							}
+						</span>
+					</span>
+				} else if props.SearchQuery != "" {
 					<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по запросу «{ props.SearchQuery }»</span>
 				} else {
 					<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } из основной коллекции</span>

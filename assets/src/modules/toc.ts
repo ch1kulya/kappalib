@@ -33,7 +33,7 @@ export function initTocFilter(): void {
 
     if (!q) {
       originalData.forEach((item) => {
-        item.element.classList.remove("toc-hidden");
+        item.element.classList.remove("toc-hidden", "toc-last-visible");
         item.numEl.textContent = item.numText;
         item.titleEl.innerHTML = item.titleHtml;
       });
@@ -41,8 +41,9 @@ export function initTocFilter(): void {
       return;
     }
 
-    let matchCount = 0;
+    let lastVisible: HTMLAnchorElement | null = null;
     originalData.forEach((item) => {
+      item.element.classList.remove("toc-last-visible");
       const numMatch = item.numText.toLowerCase().includes(q);
       const titleMatch = item.titleText.toLowerCase().includes(q);
 
@@ -50,7 +51,7 @@ export function initTocFilter(): void {
         item.element.classList.remove("toc-hidden");
         item.numEl.innerHTML = highlight(item.numText, q);
         item.titleEl.innerHTML = highlight(item.titleHtml, q);
-        matchCount++;
+        lastVisible = item.element;
       } else {
         item.element.classList.add("toc-hidden");
         item.numEl.textContent = item.numText;
@@ -58,10 +59,11 @@ export function initTocFilter(): void {
       }
     });
 
-    if (matchCount === 0) {
-      showNoResults();
-    } else {
+    if (lastVisible) {
       hideNoResults();
+      (lastVisible as HTMLAnchorElement).classList.add("toc-last-visible");
+    } else {
+      showNoResults();
     }
   }
 

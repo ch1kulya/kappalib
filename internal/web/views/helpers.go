@@ -303,6 +303,13 @@ func pluralizeNovels(n int) string {
 	return pluralize(n, "новелла", "новеллы", "новелл")
 }
 
+func pluralizeTags(n int) string {
+	if n == 1 {
+		return "тегу"
+	}
+	return "тегам"
+}
+
 func buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex, hasProfanity bool) string {
 	var warnings []string
 	if hasSelfHarm {

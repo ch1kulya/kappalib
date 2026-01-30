@@ -11,11 +11,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ch1kulya/kappalib/assets/templates"
 	"github.com/ch1kulya/kappalib/internal/api"
 	"github.com/ch1kulya/kappalib/internal/auth"
 	"github.com/ch1kulya/kappalib/internal/data"
 	"github.com/ch1kulya/kappalib/internal/database"
+	"github.com/ch1kulya/kappalib/internal/templates"
 	"github.com/ch1kulya/kappalib/internal/web"
 
 	"github.com/ch1kulya/logger"
