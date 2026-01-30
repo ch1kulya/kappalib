@@ -2304,7 +2304,17 @@ html {
     cursor: pointer;
     border-radius: 6px;
     transition: all 0.15s ease;
-    &:hover {
+    @media (hover: hover) {
+        &:hover {
+            color: var(--color-danger);
+            background: color-mix(
+                in srgb,
+                var(--color-danger),
+                transparent 90%
+            );
+        }
+    }
+    &:active {
         color: var(--color-danger);
         background: color-mix(in srgb, var(--color-danger), transparent 90%);
     }
@@ -2320,7 +2330,17 @@ html {
     padding: 0.25rem 0.5rem;
     border-radius: 6px;
     transition: all 0.15s ease;
-    &:hover {
+    @media (hover: hover) {
+        &:hover {
+            color: var(--color-danger);
+            background: color-mix(
+                in srgb,
+                var(--color-danger),
+                transparent 90%
+            );
+        }
+    }
+    &:active {
         color: var(--color-danger);
         background: color-mix(in srgb, var(--color-danger), transparent 90%);
     }
@@ -2515,7 +2535,17 @@ html {
             &::before {
                 display: none;
             }
-            &:hover {
+            @media (hover: hover) {
+                &:hover {
+                    color: var(--color-danger);
+                    background: color-mix(
+                        in srgb,
+                        var(--color-danger),
+                        transparent 90%
+                    );
+                }
+            }
+            &:active {
                 color: var(--color-danger);
                 background: color-mix(
                     in srgb,
