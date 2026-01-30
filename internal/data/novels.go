@@ -33,6 +33,9 @@ var queryNovelsIncrementViews string
 //go:embed sql/novels_catalog_search_count.sql
 var queryNovelsCatalogSearchCount string
 
+//go:embed sql/novels_catalog_search_tags.sql
+var queryNovelsCatalogSearchTags string
+
 func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 	key := fmt.Sprintf("novel:%s", id)
 
@@ -303,7 +306,7 @@ func IncrementNovelViews(ctx context.Context, novelID string) {
 	}
 }
 
-func GetCatalogNovels(ctx context.Context, page int, sort string, search string) (*models.NovelsPage, error) {
+func GetCatalogNovels(ctx context.Context, page int, sort string, search string) (*models.CatalogPage, error) {
 	pageSize := 24
 	offset := (page - 1) * pageSize
 
@@ -317,13 +320,18 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 			return nil, err
 		}
 
+		var searchTags []string
+		if err := database.DB.QueryRow(dbCtx, queryNovelsCatalogSearchTags, search).Scan(&searchTags); err == nil && len(searchTags) > 0 {
+		}
+
 		if totalCount > 0 && offset >= totalCount {
-			return &models.NovelsPage{
+			return &models.CatalogPage{
 				Novels:     []models.NovelSummary{},
 				Page:       page,
 				PageSize:   pageSize,
 				TotalCount: totalCount,
 				TotalPages: (totalCount + pageSize - 1) / pageSize,
+				SearchTags: searchTags,
 			}, nil
 		}
 
@@ -479,12 +487,13 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 		}
 
 		totalPages := (totalCount + pageSize - 1) / pageSize
-		return &models.NovelsPage{
+		return &models.CatalogPage{
 			Novels:     novels,
 			Page:       page,
 			PageSize:   pageSize,
 			TotalCount: totalCount,
 			TotalPages: totalPages,
+			SearchTags: searchTags,
 		}, nil
 	}
 
@@ -495,7 +504,7 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 	}
 
 	if totalCount > 0 && offset >= totalCount {
-		return &models.NovelsPage{
+		return &models.CatalogPage{
 			Novels:     []models.NovelSummary{},
 			Page:       page,
 			PageSize:   pageSize,
@@ -550,7 +559,7 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 	}
 
 	totalPages := (totalCount + pageSize - 1) / pageSize
-	return &models.NovelsPage{
+	return &models.CatalogPage{
 		Novels:     novels,
 		Page:       page,
 		PageSize:   pageSize,

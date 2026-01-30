@@ -61,6 +61,15 @@ type NovelsPage struct {
 	TotalPages int            `json:"total_pages"`
 }
 
+type CatalogPage struct {
+	Novels     []NovelSummary `json:"novels"`
+	Page       int            `json:"page"`
+	PageSize   int            `json:"page_size"`
+	TotalCount int            `json:"total_count"`
+	TotalPages int            `json:"total_pages"`
+	SearchTags []string       `json:"search_tags,omitempty"`
+}
+
 type Source struct {
 	Name         string  `json:"name"`
 	LogoURL      *string `json:"logo_url"`

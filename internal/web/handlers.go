@@ -853,6 +853,7 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 		TotalCount:  dataResp.TotalCount,
 		SortOrder:   sortOrder,
 		SearchQuery: searchQuery,
+		SearchTags:  dataResp.SearchTags,
 		IsPartial:   isPartial,
 	}
 

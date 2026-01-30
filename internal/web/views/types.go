@@ -99,6 +99,7 @@ type CatalogProps struct {
 	TotalCount  int
 	SortOrder   string
 	SearchQuery string
+	SearchTags  []string
 	IsPartial   bool
 }
 
