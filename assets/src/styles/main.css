@@ -1160,6 +1160,10 @@ a:hover {
     display: none;
 }
 
+.chapter-item.toc-last-visible {
+    border-bottom: none;
+}
+
 .chapter-item mark {
     background-color: var(--accent-primary);
     color: var(--bg-primary);
