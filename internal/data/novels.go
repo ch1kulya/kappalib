@@ -321,7 +321,9 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 		}
 
 		var searchTags []string
-		if err := database.DB.QueryRow(dbCtx, queryNovelsCatalogSearchTags, search).Scan(&searchTags); err == nil && len(searchTags) > 0 {
+		if err := database.DB.QueryRow(dbCtx, queryNovelsCatalogSearchTags, search).Scan(&searchTags); err != nil {
+			logger.Error("GetCatalogNovels: Failed to scan search tags: %v", err)
+			return nil, err
 		}
 
 		if totalCount > 0 && offset >= totalCount {
