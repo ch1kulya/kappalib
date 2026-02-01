@@ -1,8 +1,11 @@
 package data
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -26,12 +29,6 @@ import (
 //go:embed sql/comments_create.sql
 var queryCommentsCreate string
 
-//go:embed sql/comments_get_approved.sql
-var queryCommentsGetApproved string
-
-//go:embed sql/comments_count_approved.sql
-var queryCommentsCountApproved string
-
 //go:embed sql/comments_get_by_id.sql
 var queryCommentsGetByID string
 
@@ -47,7 +44,7 @@ var (
 	telegramChatID          = os.Getenv("TELEGRAM_CHAT_ID")
 	telegramWebhookSecret   = os.Getenv("TELEGRAM_WEBHOOK_SECRET")
 	markdownPolicy          *bluemonday.Policy
-	spoilerRegex            = regexp.MustCompile(`\|\|(.+?)\|\|`)
+	spoilerRegex            = regexp.MustCompile(`(?s)\|\|(.+?)\|\|`)
 	telegramClient          = &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
@@ -131,6 +128,16 @@ func init() {
 		} else {
 			minioClient = client
 			logger.Info("MinIO client initialized for endpoint: %s", endpoint)
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+				_, err := client.BucketExists(ctx, s3Bucket)
+				if err != nil {
+					logger.Warn("S3 warmup failed: %v", err)
+				} else {
+					logger.Info("S3 connection warmed up")
+				}
+			}()
 		}
 	}
 }
@@ -162,12 +169,12 @@ func verifyCommentsTurnstile(token string) bool {
 }
 
 func renderMarkdown(content string) string {
-	content = spoilerRegex.ReplaceAllString(content, `<span class="spoiler">$1</span>`)
 	unsafe := blackfriday.Run([]byte(content),
 		blackfriday.WithExtensions(blackfriday.CommonExtensions&^blackfriday.Tables&^blackfriday.FencedCode),
 	)
 	safe := markdownPolicy.SanitizeBytes(unsafe)
-	result := strings.ReplaceAll(string(safe), "<img src=", `<img loading="lazy" src=`)
+	result := spoilerRegex.ReplaceAllString(string(safe), `<span class="spoiler">$1</span>`)
+	result = strings.ReplaceAll(result, "<img src=", `<img loading="lazy" src=`)
 	return strings.TrimSpace(result)
 }
 
@@ -221,7 +228,7 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 	return &comment, nil
 }
 
-func GetApprovedComments(ctx context.Context, chapterID string, page int) (*models.CommentsPage, error) {
+func GetVisibleComments(ctx context.Context, chapterID, userID string, page int) (*models.CommentsPage, error) {
 	pageSize := 12
 	offset := (page - 1) * pageSize
 
@@ -229,8 +236,18 @@ func GetApprovedComments(ctx context.Context, chapterID string, page int) (*mode
 	defer cancel()
 
 	var totalCount int
-	if err := database.DB.QueryRow(dbCtx, queryCommentsCountApproved, chapterID).Scan(&totalCount); err != nil {
-		logger.Error("Failed to count comments: %v", err)
+	err := database.DB.QueryRow(dbCtx, `
+        SELECT COUNT(*)
+        FROM comments c
+        WHERE c.chapter_id = $1
+          AND c.status != 'deleted'
+          AND (
+            c.status = 'approved'
+            OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
+          )
+    `, chapterID, userID).Scan(&totalCount)
+	if err != nil {
+		logger.Error("Failed to count visible comments: %v", err)
 		return nil, err
 	}
 
@@ -244,9 +261,23 @@ func GetApprovedComments(ctx context.Context, chapterID string, page int) (*mode
 		}, nil
 	}
 
-	rows, err := database.DB.Query(dbCtx, queryCommentsGetApproved, chapterID, pageSize, offset)
+	rows, err := database.DB.Query(dbCtx, `
+        SELECT
+            c.id, c.chapter_id, c.user_id, c.content_html, c.status, c.created_at,
+            u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at
+        FROM comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.chapter_id = $1
+          AND c.status != 'deleted'
+          AND (
+            c.status = 'approved'
+            OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
+          )
+        ORDER BY c.created_at DESC
+        LIMIT $3 OFFSET $4
+    `, chapterID, userID, pageSize, offset)
 	if err != nil {
-		logger.Error("Failed to get comments: %v", err)
+		logger.Error("Failed to get visible comments: %v", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -255,7 +286,11 @@ func GetApprovedComments(ctx context.Context, chapterID string, page int) (*mode
 	for rows.Next() {
 		var c models.Comment
 		var avatarUpdatedAt time.Time
-		if err := rows.Scan(&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed, &c.UserHasCustomAvatar, &avatarUpdatedAt); err != nil {
+		if err := rows.Scan(
+			&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status,
+			&c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed,
+			&c.UserHasCustomAvatar, &avatarUpdatedAt,
+		); err != nil {
 			logger.Warn("Comment row scan error: %v", err)
 			continue
 		}
@@ -461,6 +496,95 @@ func replaceImgTags(html string) string {
 		result = result[:start] + replacement + result[end+1:]
 	}
 	return result
+}
+
+var imageUploadLimiter = struct {
+	sync.Mutex
+	lastUpload map[string]time.Time
+}{
+	lastUpload: make(map[string]time.Time),
+}
+
+const imageUploadCooldown = 3 * time.Second
+
+func checkImageUploadRateLimit(userID string) bool {
+	imageUploadLimiter.Lock()
+	defer imageUploadLimiter.Unlock()
+	if last, exists := imageUploadLimiter.lastUpload[userID]; exists {
+		if time.Since(last) < imageUploadCooldown {
+			return false
+		}
+	}
+	return true
+}
+
+func recordImageUploadTime(userID string) {
+	imageUploadLimiter.Lock()
+	defer imageUploadLimiter.Unlock()
+	imageUploadLimiter.lastUpload[userID] = time.Now()
+}
+
+func detectImageFormat(data []byte) (string, string, error) {
+	if len(data) < 4 {
+		return "", "", ErrUnsupportedFormat
+	}
+	if data[0] == 0xFF && data[1] == 0xD8 {
+		return "image/jpeg", "jpg", nil
+	}
+	if data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 {
+		return "image/png", "png", nil
+	}
+	if data[0] == 0x47 && data[1] == 0x49 && data[2] == 0x46 {
+		return "image/gif", "gif", nil
+	}
+	return "", "", ErrUnsupportedFormat
+}
+
+func hashImageData(data []byte) string {
+	h := sha256.Sum256(data)
+	return hex.EncodeToString(h[:8])
+}
+
+func UploadCommentImage(ctx context.Context, userID string, imageData []byte) (string, error) {
+	if minioClient == nil {
+		return "", ErrS3NotConfigured
+	}
+
+	if !checkImageUploadRateLimit(userID) {
+		return "", ErrRateLimitExceeded
+	}
+
+	recordImageUploadTime(userID)
+
+	contentType, ext, err := detectImageFormat(imageData)
+	if err != nil {
+		return "", err
+	}
+
+	hash := hashImageData(imageData)
+	key := fmt.Sprintf("comments/%s_%s.%s", userID, hash, ext)
+
+	_, statErr := minioClient.StatObject(ctx, s3Bucket, key, minio.StatObjectOptions{})
+	if statErr == nil {
+		s3PublicURL := os.Getenv("S3_PUBLIC_URL")
+		logger.Debug("Comment image already exists, skipping upload: %s", key)
+		return fmt.Sprintf("%s/%s", s3PublicURL, key), nil
+	}
+
+	reader := bytes.NewReader(imageData)
+	_, err = minioClient.PutObject(ctx, s3Bucket, key, reader, int64(len(imageData)), minio.PutObjectOptions{
+		ContentType:  contentType,
+		CacheControl: "public, max-age=31536000, immutable",
+	})
+	if err != nil {
+		logger.Error("S3 upload failed for comment image (user %s, key %s): %v", userID, key, err)
+		return "", fmt.Errorf("s3 upload failed: %w", err)
+	}
+
+	logger.Info("Comment image uploaded: %s by user %s (%d bytes)", key, userID, len(imageData))
+
+	s3PublicURL := os.Getenv("S3_PUBLIC_URL")
+	return fmt.Sprintf("%s/%s", s3PublicURL, key), nil
 }
 
 func GetTelegramWebhookSecret() string {

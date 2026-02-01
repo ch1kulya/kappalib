@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	SessionCookieName = "kpl_session"
-	MaxAvatarSize     = 1 << 20
+	SessionCookieName   = "kpl_session"
+	MaxAvatarSize       = 1 << 20
+	MaxCommentImageSize = 5 << 20
 )
 
 func clearSessionCookie() http.Cookie {
@@ -115,6 +116,18 @@ type UploadAvatarInput struct {
 	ProfileID string `path:"id" pattern:"^usr_[a-z0-9]{8}$"`
 	Body      struct {
 		Image string `json:"image" minLength:"1"`
+	}
+}
+
+type UploadCommentImageInput struct {
+	Body struct {
+		Image string `json:"image" minLength:"1"`
+	}
+}
+
+type CommentImageResponse struct {
+	Body struct {
+		URL string `json:"url"`
 	}
 }
 
@@ -326,10 +339,13 @@ func HandleLogout(ctx context.Context, input *struct{}) (*LogoutResponse, error)
 }
 
 func HandleGetComments(ctx context.Context, input *GetCommentsInput) (*CommentsPageResponse, error) {
-	comments, err := data.GetApprovedComments(ctx, input.ChapterID, input.Page)
+	userID := auth.GetUserIDFromContext(ctx)
+
+	comments, err := data.GetVisibleComments(ctx, input.ChapterID, userID, input.Page)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch comments")
 	}
+
 	return &CommentsPageResponse{Body: *comments}, nil
 }
 
@@ -519,4 +535,48 @@ func HandleGetCurrentUser(ctx context.Context, input *struct{}) (*ProfileRespons
 	}
 
 	return &ProfileResponse{Body: *profile}, nil
+}
+
+func HandleUploadCommentImage(ctx context.Context, input *UploadCommentImageInput) (*CommentImageResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	imageData, err := base64.StdEncoding.DecodeString(input.Body.Image)
+	if err != nil {
+		imageData, err = base64.RawStdEncoding.DecodeString(input.Body.Image)
+		if err != nil {
+			logger.Warn("Comment image upload: invalid base64 from user %s: %v", userID, err)
+			return nil, huma.Error400BadRequest("Invalid base64 image")
+		}
+	}
+
+	if len(imageData) > MaxCommentImageSize {
+		logger.Warn("Comment image upload: file too large (%d bytes) from user %s", len(imageData), userID)
+		return nil, huma.Error400BadRequest("Image too large (max 5MB)")
+	}
+
+	imageURL, err := data.UploadCommentImage(ctx, userID, imageData)
+	if err != nil {
+		if errors.Is(err, data.ErrUnsupportedFormat) {
+			logger.Warn("Comment image upload: unsupported format from user %s", userID)
+			return nil, huma.Error400BadRequest("Unsupported format (JPEG, PNG, GIF)")
+		}
+		if errors.Is(err, data.ErrRateLimitExceeded) {
+			return nil, huma.Error429TooManyRequests("Подождите перед загрузкой следующего изображения")
+		}
+		if errors.Is(err, data.ErrS3NotConfigured) {
+			logger.Error("Comment image upload: S3 not configured")
+			return nil, huma.Error500InternalServerError("Storage not configured")
+		}
+		logger.Error("Comment image upload failed for user %s: %v", userID, err)
+		return nil, huma.Error500InternalServerError("Upload failed")
+	}
+
+	return &CommentImageResponse{
+		Body: struct {
+			URL string `json:"url"`
+		}{URL: imageURL},
+	}, nil
 }

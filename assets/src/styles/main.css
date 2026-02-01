@@ -3251,6 +3251,48 @@ html {
     box-shadow: var(--shadow-primary);
 }
 
+.comment-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--secondary);
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.toolbar-btn:hover {
+    color: var(--primary);
+}
+
+.toolbar-btn:active {
+    color: var(--primary);
+}
+
+.toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
 .comment-textarea {
     position: relative;
     z-index: 2;
@@ -3297,14 +3339,12 @@ html {
     font-size: 0.8rem;
     color: var(--tertiary);
     font-weight: 500;
-}
-
-.comment-char-counter.warning {
-    color: var(--color-warning);
-}
-
-.comment-char-counter.error {
-    color: var(--color-danger);
+    &.count-warning {
+        color: var(--color-warning);
+    }
+    &.count-error {
+        color: var(--color-danger);
+    }
 }
 
 .comment-markdown-hint {
@@ -3354,8 +3394,13 @@ html {
 }
 
 .comment-item.comment-pending {
-    border-style: dashed;
     opacity: 0.8;
+    border: 1px dashed var(--color-warning);
+}
+
+.comment-item.comment-rejected {
+    opacity: 0.8;
+    border: 1px dashed var(--color-danger);
 }
 
 .comment-avatar {
@@ -3438,12 +3483,20 @@ html {
 
 .comment-moderation-badge {
     font-size: 0.7rem;
-    padding: 2px 6px;
+    padding: 1px 5px;
     background: color-mix(in srgb, var(--color-warning), transparent 80%);
     color: var(--color-warning);
     border: 1px solid var(--color-warning-glow);
     border-radius: 6px;
-    font-weight: 600;
+}
+
+.comment-rejected-badge {
+    font-size: 0.7rem;
+    padding: 1px 5px;
+    background: color-mix(in srgb, var(--color-danger), transparent 80%);
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger-glow);
+    border-radius: 6px;
 }
 
 .comment-content {
