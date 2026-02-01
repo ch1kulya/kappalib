@@ -3339,14 +3339,12 @@ html {
     font-size: 0.8rem;
     color: var(--tertiary);
     font-weight: 500;
-}
-
-.comment-char-counter.warning {
-    color: var(--color-warning);
-}
-
-.comment-char-counter.error {
-    color: var(--color-danger);
+    &.count-warning {
+        color: var(--color-warning);
+    }
+    &.count-error {
+        color: var(--color-danger);
+    }
 }
 
 .comment-markdown-hint {

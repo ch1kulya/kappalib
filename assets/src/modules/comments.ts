@@ -382,8 +382,8 @@ function updateCharCounter(textarea: HTMLTextAreaElement): void {
   if (counter) {
     const len = textarea.value.length;
     counter.textContent = `${len}/1000`;
-    counter.classList.toggle("warning", len > 900);
-    counter.classList.toggle("error", len >= 1000);
+    counter.classList.toggle("count-warning", len > 900);
+    counter.classList.toggle("count-error", len >= 1000);
   }
 }
 
@@ -698,7 +698,7 @@ async function uploadCommentImage(
 
     if (!res.ok) {
       const err = await res.json().catch(() => null);
-      throw new Error(err?.detail || "Upload failed");
+      throw new Error(err?.detail || `HTTP error! status: ${res.status}`);
     }
 
     const data: { url: string } = await res.json();
@@ -713,9 +713,15 @@ async function uploadCommentImage(
       );
     }
   } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") return;
+    if (uploadAnimationInterval) {
+      clearInterval(uploadAnimationInterval);
+      uploadAnimationInterval = null;
+    }
+
     const placeholderStart = textarea.value.indexOf(currentPlaceholder);
     if (placeholderStart !== -1) {
+      const needsNewlineBefore =
+        start > 0 && textarea.value[start - 1] !== "\n";
       const removeStart = needsNewlineBefore
         ? placeholderStart - 1
         : placeholderStart;
@@ -726,9 +732,14 @@ async function uploadCommentImage(
         "end",
       );
     }
-    alert(
-      err instanceof Error ? err.message : "Не удалось загрузить изображение",
-    );
+
+    if (err instanceof DOMException && err.name === "AbortError") {
+    } else {
+      console.error("Failed to upload image:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Не удалось загрузить изображение";
+      alert(errorMessage);
+    }
   } finally {
     if (uploadAnimationInterval) {
       clearInterval(uploadAnimationInterval);
