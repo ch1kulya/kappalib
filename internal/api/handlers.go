@@ -339,10 +339,13 @@ func HandleLogout(ctx context.Context, input *struct{}) (*LogoutResponse, error)
 }
 
 func HandleGetComments(ctx context.Context, input *GetCommentsInput) (*CommentsPageResponse, error) {
-	comments, err := data.GetApprovedComments(ctx, input.ChapterID, input.Page)
+	userID := auth.GetUserIDFromContext(ctx)
+
+	comments, err := data.GetVisibleComments(ctx, input.ChapterID, userID, input.Page)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch comments")
 	}
+
 	return &CommentsPageResponse{Body: *comments}, nil
 }
 

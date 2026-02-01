@@ -3,22 +3,8 @@ import { profileManager, getAvatarUrl } from "./profile";
 const API_URL = process.env.API_URL;
 const TURNSTILE_COMMENTS_SITE_KEY =
   process.env.TURNSTILE_COMMENTS_SITE_KEY || "";
-const PENDING_COMMENTS_KEY = "kappalib_pending_comments";
-const PENDING_TTL = 3 * 60 * 60 * 1000;
 const COMMENT_COOLDOWN = 30 * 1000;
 const LAST_COMMENT_TIME_KEY = "kappalib_last_comment_time";
-
-interface PendingComment {
-  id: string;
-  visibleId: string;
-  chapterId: string;
-  contentHtml: string;
-  createdAt: number;
-  userDisplayName: string;
-  userAvatarSeed: string;
-  userHasCustomAvatar: boolean;
-  userAvatarUpdatedAt: number;
-}
 
 interface Comment {
   id: string;
@@ -39,33 +25,6 @@ interface CommentsPage {
   page_size: number;
   total_count: number;
   total_pages: number;
-}
-
-function getPendingComments(): PendingComment[] {
-  try {
-    const raw = localStorage.getItem(PENDING_COMMENTS_KEY);
-    if (!raw) return [];
-    const comments: PendingComment[] = JSON.parse(raw);
-    const now = Date.now();
-    const valid = comments.filter((c) => now - c.createdAt < PENDING_TTL);
-    if (valid.length !== comments.length) {
-      localStorage.setItem(PENDING_COMMENTS_KEY, JSON.stringify(valid));
-    }
-    return valid;
-  } catch {
-    return [];
-  }
-}
-
-function addPendingComment(comment: PendingComment): void {
-  const comments = getPendingComments();
-  comments.unshift(comment);
-  localStorage.setItem(PENDING_COMMENTS_KEY, JSON.stringify(comments));
-}
-
-function removePendingComment(id: string): void {
-  const comments = getPendingComments().filter((c) => c.id !== id);
-  localStorage.setItem(PENDING_COMMENTS_KEY, JSON.stringify(comments));
 }
 
 function getLastCommentTime(): number {
@@ -97,8 +56,24 @@ function startCooldownTimer(button: HTMLButtonElement): void {
   updateButton();
 }
 
+function pluralize(
+  count: number,
+  one: string,
+  few: string,
+  many: string,
+): string {
+  const n = Math.abs(count) % 100;
+  const n1 = n % 10;
+  if (n > 10 && n < 20) return many;
+  if (n1 === 1) return one;
+  if (n1 >= 2 && n1 <= 4) return few;
+  return many;
+}
+
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const seconds = Math.floor(diff / 1000);
@@ -107,77 +82,64 @@ function formatRelativeTime(dateStr: string): string {
   const days = Math.floor(hours / 24);
 
   if (seconds < 60) return "только что";
-  if (minutes < 60) return `${minutes} мин. назад`;
-  if (hours < 24) return `${hours} ч. назад`;
-  if (days < 30) return `${days} дн. назад`;
-  return date.toLocaleDateString("ru-RU");
+  if (minutes < 60)
+    return `${minutes} ${pluralize(minutes, "минуту", "минуты", "минут")} назад`;
+  if (hours < 24)
+    return `${hours} ${pluralize(hours, "час", "часа", "часов")} назад`;
+  if (days < 30)
+    return `${days} ${pluralize(days, "день", "дня", "дней")} назад`;
+  if (days < 365) {
+    const months = Math.floor(days / 30);
+    return `${months} ${pluralize(months, "месяц", "месяца", "месяцев")} назад`;
+  }
+  const years = Math.floor(days / 365);
+  return `${years} ${pluralize(years, "год", "года", "лет")} назад`;
 }
 
-function createCommentHTML(
-  comment: Comment | PendingComment,
-  isPending: boolean = false,
-): string {
-  const isApiComment = "user_display_name" in comment;
-
-  const userId = isApiComment ? comment.user_id : comment.visibleId;
-  const displayName = isApiComment
-    ? comment.user_display_name
-    : comment.userDisplayName;
-  const avatarSeed = isApiComment
-    ? comment.user_avatar_seed
-    : comment.userAvatarSeed;
-  const hasCustomAvatar = isApiComment
-    ? comment.user_has_custom_avatar
-    : comment.userHasCustomAvatar;
-  const avatarUpdatedAt = isApiComment
-    ? comment.user_avatar_updated_at
-    : comment.userAvatarUpdatedAt;
-  const contentHtml = isApiComment ? comment.content_html : comment.contentHtml;
-  const createdAt = isApiComment
-    ? comment.created_at
-    : new Date(comment.createdAt).toISOString();
-
+function createCommentHTML(comment: Comment): string {
   const avatarUrl = getAvatarUrl(
-    userId,
-    hasCustomAvatar,
-    avatarSeed,
-    avatarUpdatedAt,
+    comment.user_id,
+    comment.user_has_custom_avatar,
+    comment.user_avatar_seed,
+    comment.user_avatar_updated_at,
   );
 
+  let statusBadge = "";
+  let extraClass = "";
+
+  switch (comment.status) {
+    case "pending":
+      statusBadge =
+        '<span class="comment-moderation-badge">На модерации</span>';
+      extraClass = " comment-pending";
+      break;
+    case "rejected":
+      statusBadge = '<span class="comment-rejected-badge">Отклонено</span>';
+      extraClass = " comment-rejected";
+      break;
+    default:
+      statusBadge = `<span class="comment-date">${formatRelativeTime(comment.created_at)}</span>`;
+  }
+
   return `
-    <div class="comment-item${isPending ? " comment-pending" : ""}" data-comment-id="${comment.id}">
-      <img src="${avatarUrl}" alt="${displayName}" class="comment-avatar" loading="lazy"/>
+    <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}">
+      <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
       <div class="comment-body">
         <div class="comment-header">
-          <span class="comment-author">${displayName}</span>
-          ${isPending ? '<span class="comment-moderation-badge">На модерации</span>' : `<span class="comment-date">${formatRelativeTime(createdAt)}</span>`}
+          <span class="comment-author">${comment.user_display_name}</span>
+          ${statusBadge}
         </div>
-        <div class="comment-content">${contentHtml}</div>
+        <div class="comment-content">${comment.content_html}</div>
       </div>
     </div>
   `;
 }
 
-function renderComments(
-  container: HTMLElement,
-  comments: Comment[],
-  pendingComments: PendingComment[],
-  chapterId: string,
-): void {
-  const chapterPending = pendingComments.filter(
-    (c) => c.chapterId === chapterId,
-  );
-  const pendingIds = new Set(chapterPending.map((c) => c.id));
-  const filteredComments = comments.filter((c) => !pendingIds.has(c.id));
-
+function renderComments(container: HTMLElement, comments: Comment[]): void {
   let html = "";
 
-  chapterPending.forEach((c) => {
-    html += createCommentHTML(c, true);
-  });
-
-  filteredComments.forEach((c) => {
-    html += createCommentHTML(c, false);
+  comments.forEach((c) => {
+    html += createCommentHTML(c);
   });
 
   const listEl = container.querySelector(".comments-list");
@@ -266,9 +228,11 @@ async function loadComments(
   container: HTMLElement,
   chapterId: string,
   page: number = 1,
+  noCache: boolean = false,
+  showLoader: boolean = true,
 ): Promise<void> {
   const listEl = container.querySelector(".comments-list");
-  if (listEl) {
+  if (listEl && showLoader) {
     listEl.innerHTML =
       '<div class="comments-loading">Загрузка комментариев...</div>';
   }
@@ -276,29 +240,24 @@ async function loadComments(
   try {
     const res = await fetch(
       `${API_URL}/chapters/${chapterId}/comments?page=${page}`,
+      noCache
+        ? { credentials: "include", cache: "no-cache" }
+        : { credentials: "include" },
     );
     if (!res.ok) throw new Error("Failed to load comments");
 
     const data: CommentsPage = await res.json();
 
-    data.comments.forEach((c) => {
-      removePendingComment(c.id);
-    });
-
-    renderComments(container, data.comments, getPendingComments(), chapterId);
+    renderComments(container, data.comments);
     renderPagination(container, data.page, data.total_pages, chapterId);
 
     const countEl = container.querySelector(".comments-count");
     if (countEl) {
-      const pendingCount = getPendingComments().filter(
-        (c) => c.chapterId === chapterId,
-      ).length;
-      const totalDisplay = data.total_count + pendingCount;
-      countEl.textContent = `${totalDisplay}`;
+      countEl.textContent = `${data.total_count}`;
     }
   } catch (err) {
     console.error("Failed to load comments", err);
-    if (listEl) {
+    if (listEl && showLoader) {
       listEl.innerHTML =
         '<div class="comments-error">Не удалось загрузить комментарии</div>';
     }
@@ -576,7 +535,10 @@ function wrapSelection(
     if (lastOpenIndex !== -1) {
       const closeIndex = textAfter.indexOf(after);
       if (closeIndex !== -1) {
-        const between = value.substring(lastOpenIndex + before.length, start + closeIndex);
+        const between = value.substring(
+          lastOpenIndex + before.length,
+          start + closeIndex,
+        );
         if (!between.includes(before) && !between.includes(after)) {
           textarea.setRangeText(
             between,
@@ -584,7 +546,8 @@ function wrapSelection(
             start + closeIndex + after.length,
             "end",
           );
-          textarea.selectionStart = textarea.selectionEnd = lastOpenIndex + between.length;
+          textarea.selectionStart = textarea.selectionEnd =
+            lastOpenIndex + between.length;
           textarea.focus();
           updateCharCounter(textarea);
           autoResizeTextarea(textarea);
@@ -753,7 +716,9 @@ async function uploadCommentImage(
     if (err instanceof DOMException && err.name === "AbortError") return;
     const placeholderStart = textarea.value.indexOf(currentPlaceholder);
     if (placeholderStart !== -1) {
-      const removeStart = needsNewlineBefore ? placeholderStart - 1 : placeholderStart;
+      const removeStart = needsNewlineBefore
+        ? placeholderStart - 1
+        : placeholderStart;
       textarea.setRangeText(
         "",
         removeStart,
@@ -891,20 +856,6 @@ function initFormHandlers(container: HTMLElement): void {
           throw new Error(err.detail || "Failed to create comment");
         }
 
-        const comment: Comment = await res.json();
-
-        addPendingComment({
-          id: comment.id,
-          visibleId: comment.user_id,
-          chapterId: comment.chapter_id,
-          contentHtml: comment.content_html,
-          createdAt: Date.now(),
-          userDisplayName: comment.user_display_name,
-          userAvatarSeed: comment.user_avatar_seed,
-          userHasCustomAvatar: comment.user_has_custom_avatar,
-          userAvatarUpdatedAt: comment.user_avatar_updated_at,
-        });
-
         textarea.value = "";
         updateCharCounter(textarea);
         autoResizeTextarea(textarea);
@@ -913,7 +864,7 @@ function initFormHandlers(container: HTMLElement): void {
           (window as any).turnstile.reset(turnstileWidgetId);
         }
 
-        await loadComments(container, chapterId);
+        await loadComments(container, chapterId, 1, true, false);
         setLastCommentTime();
         startCooldownTimer(submitBtn);
       } catch (err) {

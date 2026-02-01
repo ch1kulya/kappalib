@@ -29,12 +29,6 @@ import (
 //go:embed sql/comments_create.sql
 var queryCommentsCreate string
 
-//go:embed sql/comments_get_approved.sql
-var queryCommentsGetApproved string
-
-//go:embed sql/comments_count_approved.sql
-var queryCommentsCountApproved string
-
 //go:embed sql/comments_get_by_id.sql
 var queryCommentsGetByID string
 
@@ -234,7 +228,7 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 	return &comment, nil
 }
 
-func GetApprovedComments(ctx context.Context, chapterID string, page int) (*models.CommentsPage, error) {
+func GetVisibleComments(ctx context.Context, chapterID, userID string, page int) (*models.CommentsPage, error) {
 	pageSize := 12
 	offset := (page - 1) * pageSize
 
@@ -242,8 +236,18 @@ func GetApprovedComments(ctx context.Context, chapterID string, page int) (*mode
 	defer cancel()
 
 	var totalCount int
-	if err := database.DB.QueryRow(dbCtx, queryCommentsCountApproved, chapterID).Scan(&totalCount); err != nil {
-		logger.Error("Failed to count comments: %v", err)
+	err := database.DB.QueryRow(dbCtx, `
+        SELECT COUNT(*)
+        FROM comments c
+        WHERE c.chapter_id = $1
+          AND c.status != 'deleted'
+          AND (
+            c.status = 'approved'
+            OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
+          )
+    `, chapterID, userID).Scan(&totalCount)
+	if err != nil {
+		logger.Error("Failed to count visible comments: %v", err)
 		return nil, err
 	}
 
@@ -257,9 +261,23 @@ func GetApprovedComments(ctx context.Context, chapterID string, page int) (*mode
 		}, nil
 	}
 
-	rows, err := database.DB.Query(dbCtx, queryCommentsGetApproved, chapterID, pageSize, offset)
+	rows, err := database.DB.Query(dbCtx, `
+        SELECT
+            c.id, c.chapter_id, c.user_id, c.content_html, c.status, c.created_at,
+            u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at
+        FROM comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.chapter_id = $1
+          AND c.status != 'deleted'
+          AND (
+            c.status = 'approved'
+            OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
+          )
+        ORDER BY c.created_at DESC
+        LIMIT $3 OFFSET $4
+    `, chapterID, userID, pageSize, offset)
 	if err != nil {
-		logger.Error("Failed to get comments: %v", err)
+		logger.Error("Failed to get visible comments: %v", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -268,7 +286,11 @@ func GetApprovedComments(ctx context.Context, chapterID string, page int) (*mode
 	for rows.Next() {
 		var c models.Comment
 		var avatarUpdatedAt time.Time
-		if err := rows.Scan(&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed, &c.UserHasCustomAvatar, &avatarUpdatedAt); err != nil {
+		if err := rows.Scan(
+			&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status,
+			&c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed,
+			&c.UserHasCustomAvatar, &avatarUpdatedAt,
+		); err != nil {
 			logger.Warn("Comment row scan error: %v", err)
 			continue
 		}
