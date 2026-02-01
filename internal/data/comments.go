@@ -1,8 +1,11 @@
 package data
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -47,7 +50,7 @@ var (
 	telegramChatID          = os.Getenv("TELEGRAM_CHAT_ID")
 	telegramWebhookSecret   = os.Getenv("TELEGRAM_WEBHOOK_SECRET")
 	markdownPolicy          *bluemonday.Policy
-	spoilerRegex            = regexp.MustCompile(`\|\|(.+?)\|\|`)
+	spoilerRegex            = regexp.MustCompile(`(?s)\|\|(.+?)\|\|`)
 	telegramClient          = &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
@@ -131,6 +134,16 @@ func init() {
 		} else {
 			minioClient = client
 			logger.Info("MinIO client initialized for endpoint: %s", endpoint)
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+				_, err := client.BucketExists(ctx, s3Bucket)
+				if err != nil {
+					logger.Warn("S3 warmup failed: %v", err)
+				} else {
+					logger.Info("S3 connection warmed up")
+				}
+			}()
 		}
 	}
 }
@@ -162,12 +175,12 @@ func verifyCommentsTurnstile(token string) bool {
 }
 
 func renderMarkdown(content string) string {
-	content = spoilerRegex.ReplaceAllString(content, `<span class="spoiler">$1</span>`)
 	unsafe := blackfriday.Run([]byte(content),
 		blackfriday.WithExtensions(blackfriday.CommonExtensions&^blackfriday.Tables&^blackfriday.FencedCode),
 	)
 	safe := markdownPolicy.SanitizeBytes(unsafe)
-	result := strings.ReplaceAll(string(safe), "<img src=", `<img loading="lazy" src=`)
+	result := spoilerRegex.ReplaceAllString(string(safe), `<span class="spoiler">$1</span>`)
+	result = strings.ReplaceAll(result, "<img src=", `<img loading="lazy" src=`)
 	return strings.TrimSpace(result)
 }
 
@@ -461,6 +474,95 @@ func replaceImgTags(html string) string {
 		result = result[:start] + replacement + result[end+1:]
 	}
 	return result
+}
+
+var imageUploadLimiter = struct {
+	sync.Mutex
+	lastUpload map[string]time.Time
+}{
+	lastUpload: make(map[string]time.Time),
+}
+
+const imageUploadCooldown = 3 * time.Second
+
+func checkImageUploadRateLimit(userID string) bool {
+	imageUploadLimiter.Lock()
+	defer imageUploadLimiter.Unlock()
+	if last, exists := imageUploadLimiter.lastUpload[userID]; exists {
+		if time.Since(last) < imageUploadCooldown {
+			return false
+		}
+	}
+	return true
+}
+
+func recordImageUploadTime(userID string) {
+	imageUploadLimiter.Lock()
+	defer imageUploadLimiter.Unlock()
+	imageUploadLimiter.lastUpload[userID] = time.Now()
+}
+
+func detectImageFormat(data []byte) (string, string, error) {
+	if len(data) < 4 {
+		return "", "", ErrUnsupportedFormat
+	}
+	if data[0] == 0xFF && data[1] == 0xD8 {
+		return "image/jpeg", "jpg", nil
+	}
+	if data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 {
+		return "image/png", "png", nil
+	}
+	if data[0] == 0x47 && data[1] == 0x49 && data[2] == 0x46 {
+		return "image/gif", "gif", nil
+	}
+	return "", "", ErrUnsupportedFormat
+}
+
+func hashImageData(data []byte) string {
+	h := sha256.Sum256(data)
+	return hex.EncodeToString(h[:8])
+}
+
+func UploadCommentImage(ctx context.Context, userID string, imageData []byte) (string, error) {
+	if minioClient == nil {
+		return "", ErrS3NotConfigured
+	}
+
+	if !checkImageUploadRateLimit(userID) {
+		return "", ErrRateLimitExceeded
+	}
+
+	recordImageUploadTime(userID)
+
+	contentType, ext, err := detectImageFormat(imageData)
+	if err != nil {
+		return "", err
+	}
+
+	hash := hashImageData(imageData)
+	key := fmt.Sprintf("comments/%s_%s.%s", userID, hash, ext)
+
+	_, statErr := minioClient.StatObject(ctx, s3Bucket, key, minio.StatObjectOptions{})
+	if statErr == nil {
+		s3PublicURL := os.Getenv("S3_PUBLIC_URL")
+		logger.Debug("Comment image already exists, skipping upload: %s", key)
+		return fmt.Sprintf("%s/%s", s3PublicURL, key), nil
+	}
+
+	reader := bytes.NewReader(imageData)
+	_, err = minioClient.PutObject(ctx, s3Bucket, key, reader, int64(len(imageData)), minio.PutObjectOptions{
+		ContentType:  contentType,
+		CacheControl: "public, max-age=31536000, immutable",
+	})
+	if err != nil {
+		logger.Error("S3 upload failed for comment image (user %s, key %s): %v", userID, key, err)
+		return "", fmt.Errorf("s3 upload failed: %w", err)
+	}
+
+	logger.Info("Comment image uploaded: %s by user %s (%d bytes)", key, userID, len(imageData))
+
+	s3PublicURL := os.Getenv("S3_PUBLIC_URL")
+	return fmt.Sprintf("%s/%s", s3PublicURL, key), nil
 }
 
 func GetTelegramWebhookSecret() string {

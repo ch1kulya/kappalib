@@ -74,9 +74,7 @@ func buildAssets() error {
 		Define: map[string]string{
 			"process.env.API_URL":                     fmt.Sprintf("\"%s\"", apiUrl),
 			"process.env.TURNSTILE_COMMENTS_SITE_KEY": fmt.Sprintf("\"%s\"", os.Getenv("TURNSTILE_COMMENTS_SITE_KEY")),
-			"process.env.S3_ENDPOINT":                 fmt.Sprintf("\"%s\"", os.Getenv("S3_ENDPOINT")),
-			"process.env.S3_BUCKET":                   fmt.Sprintf("\"%s\"", os.Getenv("S3_BUCKET")),
-			"process.env.S3_USE_SSL":                  fmt.Sprintf("\"%s\"", os.Getenv("S3_USE_SSL")),
+			"process.env.S3_PUBLIC_URL":               fmt.Sprintf("\"%s\"", os.Getenv("S3_PUBLIC_URL")),
 		},
 	})
 
@@ -351,12 +349,22 @@ func main() {
 		}, api.HandleUpdateDisplayName)
 
 		huma.Register(humaApi, huma.Operation{
-			OperationID: "upload-avatar",
-			Method:      http.MethodPost,
-			Path:        "/profile/{id}/avatar",
-			Summary:     "Upload avatar",
-			Security:    []map[string][]string{{"sessionCookie": {}}},
+			OperationID:  "upload-avatar",
+			Method:       http.MethodPost,
+			Path:         "/profile/{id}/avatar",
+			Summary:      "Upload avatar",
+			Security:     []map[string][]string{{"sessionCookie": {}}},
+			MaxBodyBytes: 2 << 20,
 		}, api.HandleUploadAvatar)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID:  "upload-comment-image",
+			Method:       http.MethodPost,
+			Path:         "/comments/image",
+			Summary:      "Upload comment image",
+			Security:     []map[string][]string{{"sessionCookie": {}}},
+			MaxBodyBytes: 8 << 20,
+		}, api.HandleUploadCommentImage)
 	})
 
 	go func() {

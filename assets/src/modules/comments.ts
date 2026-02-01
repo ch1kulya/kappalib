@@ -137,7 +137,12 @@ function createCommentHTML(
     ? comment.created_at
     : new Date(comment.createdAt).toISOString();
 
-  const avatarUrl = getAvatarUrl(userId, hasCustomAvatar, avatarSeed, avatarUpdatedAt);
+  const avatarUrl = getAvatarUrl(
+    userId,
+    hasCustomAvatar,
+    avatarSeed,
+    avatarUpdatedAt,
+  );
 
   return `
     <div class="comment-item${isPending ? " comment-pending" : ""}" data-comment-id="${comment.id}">
@@ -446,8 +451,9 @@ export function initComments(): void {
   container.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
 
-    if (target.classList.contains("spoiler")) {
-      target.classList.toggle("revealed");
+    const spoiler = target.closest(".spoiler") as HTMLElement | null;
+    if (spoiler) {
+      spoiler.classList.toggle("revealed");
       return;
     }
 
@@ -468,6 +474,35 @@ function renderCommentForm(container: HTMLElement): void {
   if (profileManager.isLoggedIn()) {
     formWrapper.innerHTML = `
       <div class="comment-form">
+        <div class="comment-toolbar">
+          <button type="button" class="toolbar-btn" data-action="h1" title="Заголовок 1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="m17 12 3-2v8"/></svg>
+          </button>
+          <button type="button" class="toolbar-btn" data-action="h2" title="Заголовок 2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M21 18h-4c0-4 4-3 4-6 0-1.5-2-2.5-4-1"/></svg>
+          </button>
+          <button type="button" class="toolbar-btn" data-action="h3" title="Заголовок 3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M17.5 10.5c1.7-1 3.5 0 3.5 1.5a2 2 0 0 1-2 2"/><path d="M17 17.5c2 1.5 4 .3 4-1.5a2 2 0 0 0-2-2"/></svg>
+          </button>
+          <span class="toolbar-separator"></span>
+          <button type="button" class="toolbar-btn" data-action="bold" title="Жирный">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
+          </button>
+          <button type="button" class="toolbar-btn" data-action="italic" title="Курсив">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg>
+          </button>
+          <button type="button" class="toolbar-btn" data-action="spoiler" title="Спойлер">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button type="button" class="toolbar-btn" data-action="quote" title="Цитата">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>
+          </button>
+          <span class="toolbar-separator"></span>
+          <button type="button" class="toolbar-btn" data-action="image" title="Изображение (до 5 МБ)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          </button>
+          <input type="file" id="comment-image-input" accept="image/jpeg,image/png,image/gif" style="display:none"/>
+        </div>
         <textarea
           id="comment-textarea"
           class="comment-textarea"
@@ -493,6 +528,256 @@ function renderCommentForm(container: HTMLElement): void {
   }
 }
 
+function wrapSelection(
+  textarea: HTMLTextAreaElement,
+  before: string,
+  after: string,
+): void {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selected = textarea.value.substring(start, end);
+  const value = textarea.value;
+
+  if (
+    start >= before.length &&
+    value.substring(start - before.length, start) === before &&
+    value.substring(end, end + after.length) === after
+  ) {
+    textarea.setRangeText(
+      selected,
+      start - before.length,
+      end + after.length,
+      "select",
+    );
+    textarea.focus();
+    updateCharCounter(textarea);
+    autoResizeTextarea(textarea);
+    return;
+  }
+
+  if (
+    selected.startsWith(before) &&
+    selected.endsWith(after) &&
+    selected.length >= before.length + after.length
+  ) {
+    const unwrapped = selected.slice(before.length, -after.length);
+    textarea.setRangeText(unwrapped, start, end, "select");
+    textarea.focus();
+    updateCharCounter(textarea);
+    autoResizeTextarea(textarea);
+    return;
+  }
+
+  if (selected.length === 0) {
+    const textBefore = value.substring(0, start);
+    const textAfter = value.substring(start);
+    const lastOpenIndex = textBefore.lastIndexOf(before);
+
+    if (lastOpenIndex !== -1) {
+      const closeIndex = textAfter.indexOf(after);
+      if (closeIndex !== -1) {
+        const between = value.substring(lastOpenIndex + before.length, start + closeIndex);
+        if (!between.includes(before) && !between.includes(after)) {
+          textarea.setRangeText(
+            between,
+            lastOpenIndex,
+            start + closeIndex + after.length,
+            "end",
+          );
+          textarea.selectionStart = textarea.selectionEnd = lastOpenIndex + between.length;
+          textarea.focus();
+          updateCharCounter(textarea);
+          autoResizeTextarea(textarea);
+          return;
+        }
+      }
+    }
+  }
+
+  const replacement = `${before}${selected}${after}`;
+  textarea.setRangeText(replacement, start, end, "end");
+  if (selected.length === 0) {
+    textarea.selectionStart = textarea.selectionEnd = start + before.length;
+  }
+  textarea.focus();
+  updateCharCounter(textarea);
+  autoResizeTextarea(textarea);
+}
+
+const headingPrefixes = ["# ", "## ", "### "];
+
+function insertLinePrefix(
+  textarea: HTMLTextAreaElement,
+  prefix: string,
+  alternates?: string[],
+): void {
+  const start = textarea.selectionStart;
+  const lineStart = textarea.value.lastIndexOf("\n", start - 1) + 1;
+  const lineEnd = textarea.value.indexOf("\n", start);
+  const lineContent = textarea.value.substring(
+    lineStart,
+    lineEnd === -1 ? textarea.value.length : lineEnd,
+  );
+
+  if (lineContent.startsWith(prefix)) {
+    const before = textarea.value.substring(0, lineStart);
+    const after = textarea.value.substring(lineStart + prefix.length);
+    textarea.value = `${before}${after}`;
+    textarea.selectionStart = textarea.selectionEnd = Math.max(
+      lineStart,
+      start - prefix.length,
+    );
+    textarea.focus();
+    updateCharCounter(textarea);
+    autoResizeTextarea(textarea);
+    return;
+  }
+
+  if (alternates) {
+    for (const alt of alternates) {
+      if (alt !== prefix && lineContent.startsWith(alt)) {
+        const before = textarea.value.substring(0, lineStart);
+        const after = textarea.value.substring(lineStart + alt.length);
+        textarea.value = `${before}${prefix}${after}`;
+        textarea.selectionStart = textarea.selectionEnd =
+          start - alt.length + prefix.length;
+        textarea.focus();
+        updateCharCounter(textarea);
+        autoResizeTextarea(textarea);
+        return;
+      }
+    }
+  }
+
+  const before = textarea.value.substring(0, lineStart);
+  const after = textarea.value.substring(lineStart);
+  textarea.value = `${before}${prefix}${after}`;
+  textarea.selectionStart = textarea.selectionEnd = start + prefix.length;
+  textarea.focus();
+  updateCharCounter(textarea);
+  autoResizeTextarea(textarea);
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+let isUploadingImage = false;
+let uploadAbortController: AbortController | null = null;
+let uploadAnimationInterval: ReturnType<typeof setInterval> | null = null;
+
+async function uploadCommentImage(
+  file: File,
+  textarea: HTMLTextAreaElement,
+): Promise<void> {
+  if (isUploadingImage) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert("Файл слишком большой (максимум 5 МБ)");
+    return;
+  }
+
+  isUploadingImage = true;
+  const imageBtn = document.querySelector(
+    '.toolbar-btn[data-action="image"]',
+  ) as HTMLButtonElement | null;
+  if (imageBtn) imageBtn.disabled = true;
+
+  const base64 = await fileToBase64(file);
+  const fileName = file.name.replace(/\.[^.]+$/, "");
+
+  const basePlaceholder = `![Загрузка ${fileName}`;
+  let dotCount = 1;
+  const getPlaceholder = () => `${basePlaceholder}${".".repeat(dotCount)}]()`;
+
+  const start = textarea.selectionStart;
+  const needsNewlineBefore = start > 0 && textarea.value[start - 1] !== "\n";
+  const prefix = needsNewlineBefore ? "\n" : "";
+
+  let currentPlaceholder = getPlaceholder();
+  textarea.setRangeText(prefix + currentPlaceholder, start, start, "end");
+  updateCharCounter(textarea);
+  autoResizeTextarea(textarea);
+
+  uploadAnimationInterval = setInterval(() => {
+    const placeholderStart = textarea.value.indexOf(currentPlaceholder);
+    if (placeholderStart !== -1) {
+      dotCount = (dotCount % 3) + 1;
+      const newPlaceholder = getPlaceholder();
+      textarea.setRangeText(
+        newPlaceholder,
+        placeholderStart,
+        placeholderStart + currentPlaceholder.length,
+        "end",
+      );
+      currentPlaceholder = newPlaceholder;
+    }
+  }, 400);
+
+  uploadAbortController = new AbortController();
+
+  try {
+    const res = await fetch(`${API_URL}/comments/image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ image: base64 }),
+      signal: uploadAbortController.signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.detail || "Upload failed");
+    }
+
+    const data: { url: string } = await res.json();
+    const markdown = `![${fileName}](${data.url})`;
+    const placeholderStart = textarea.value.indexOf(currentPlaceholder);
+    if (placeholderStart !== -1) {
+      textarea.setRangeText(
+        markdown,
+        placeholderStart,
+        placeholderStart + currentPlaceholder.length,
+        "end",
+      );
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") return;
+    const placeholderStart = textarea.value.indexOf(currentPlaceholder);
+    if (placeholderStart !== -1) {
+      const removeStart = needsNewlineBefore ? placeholderStart - 1 : placeholderStart;
+      textarea.setRangeText(
+        "",
+        removeStart,
+        placeholderStart + currentPlaceholder.length,
+        "end",
+      );
+    }
+    alert(
+      err instanceof Error ? err.message : "Не удалось загрузить изображение",
+    );
+  } finally {
+    if (uploadAnimationInterval) {
+      clearInterval(uploadAnimationInterval);
+      uploadAnimationInterval = null;
+    }
+    isUploadingImage = false;
+    uploadAbortController = null;
+    if (imageBtn) imageBtn.disabled = false;
+  }
+
+  updateCharCounter(textarea);
+  autoResizeTextarea(textarea);
+}
+
 function initFormHandlers(container: HTMLElement): void {
   const textarea = container.querySelector(
     "#comment-textarea",
@@ -501,12 +786,56 @@ function initFormHandlers(container: HTMLElement): void {
     "#comment-submit",
   ) as HTMLButtonElement;
   const chapterId = container.dataset.chapterId;
+  const imageInput = container.querySelector(
+    "#comment-image-input",
+  ) as HTMLInputElement;
 
   if (!chapterId) return;
 
   if (submitBtn && getRemainingCooldown() > 0) {
     startCooldownTimer(submitBtn);
   }
+
+  container.querySelectorAll(".toolbar-btn").forEach((btn) => {
+    btn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      if (!textarea) return;
+      const action = (btn as HTMLElement).dataset.action;
+      switch (action) {
+        case "h1":
+          insertLinePrefix(textarea, "# ", headingPrefixes);
+          break;
+        case "h2":
+          insertLinePrefix(textarea, "## ", headingPrefixes);
+          break;
+        case "h3":
+          insertLinePrefix(textarea, "### ", headingPrefixes);
+          break;
+        case "bold":
+          wrapSelection(textarea, "**", "**");
+          break;
+        case "italic":
+          wrapSelection(textarea, "*", "*");
+          break;
+        case "spoiler":
+          wrapSelection(textarea, "||", "||");
+          break;
+        case "quote":
+          insertLinePrefix(textarea, "> ");
+          break;
+        case "image":
+          if (!isUploadingImage) imageInput?.click();
+          break;
+      }
+    });
+  });
+
+  imageInput?.addEventListener("change", async () => {
+    const file = imageInput.files?.[0];
+    if (!file || !textarea) return;
+    imageInput.value = "";
+    await uploadCommentImage(file, textarea);
+  });
 
   if (textarea) {
     textarea.addEventListener("input", () => {

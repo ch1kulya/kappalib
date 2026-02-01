@@ -1,7 +1,7 @@
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
 const PROFILE_PROVIDER_KEY = "kappalib_oauth_provider";
-const S3_URL = `${process.env.S3_USE_SSL !== "false" ? "https" : "http"}://${process.env.S3_ENDPOINT}/${process.env.S3_BUCKET}`;
+const S3_URL = process.env.S3_PUBLIC_URL;
 
 interface CookieValue {
   value: string;

@@ -3251,6 +3251,48 @@ html {
     box-shadow: var(--shadow-primary);
 }
 
+.comment-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--secondary);
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.toolbar-btn:hover {
+    color: var(--primary);
+}
+
+.toolbar-btn:active {
+    color: var(--primary);
+}
+
+.toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
 .comment-textarea {
     position: relative;
     z-index: 2;
