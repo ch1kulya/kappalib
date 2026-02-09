@@ -705,6 +705,60 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 	h.render(w, r, views.Chapter(props))
 }
 
+func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
+	var allUpdates []models.HomeUpdateItem
+
+	chapterUpdates, _ := data.GetLatestUpdates(r.Context(), 250)
+	appUpdates, _ := data.GetAppUpdates(r.Context(), 25)
+	novelAdditions, _ := data.GetRecentlyAddedNovels(r.Context(), 250)
+
+	for _, cu := range chapterUpdates {
+		allUpdates = append(allUpdates, models.HomeUpdateItem{
+			Type:          "chapter",
+			ChapterUpdate: &cu,
+			UpdatedAt:     cu.UpdatedAt,
+		})
+	}
+	for _, au := range appUpdates {
+		allUpdates = append(allUpdates, models.HomeUpdateItem{
+			Type:      "app",
+			AppUpdate: &au,
+			UpdatedAt: au.MergedAt,
+		})
+	}
+	for _, na := range novelAdditions {
+		allUpdates = append(allUpdates, models.HomeUpdateItem{
+			Type:          "novel",
+			NovelAddition: &na,
+			UpdatedAt:     na.CreatedAt,
+		})
+	}
+
+	sort.Slice(allUpdates, func(i, j int) bool {
+		return allUpdates[i].UpdatedAt.After(allUpdates[j].UpdatedAt)
+	})
+
+	if len(allUpdates) > 250 {
+		allUpdates = allUpdates[:250]
+	}
+
+	title := "Обновления — kappalib"
+	description := "История обновлений новелл и сайта."
+
+	props := views.UpdatesProps{
+		BaseProps: views.BaseProps{
+			Title:       title,
+			Description: description,
+			Canonical:   "https://kappalib.ru/updates",
+			Version:     h.assetVersion,
+			IsLoggedIn:  h.hasSession(r),
+		},
+		Updates: allUpdates,
+	}
+
+	h.render(w, r, views.Updates(props))
+}
+
 func (h *Handler) StaticPage(name, title string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const DOCS_URL = "https://s3.kappalib.ru"

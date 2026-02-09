@@ -1,0 +1,54 @@
+package views
+
+import "fmt"
+
+templ Updates(props UpdatesProps) {
+	@Base(props.BaseProps) {
+		<div class="chapters-header" style="margin-bottom: 1rem;">
+			<h2 style="margin: 0;">Последние обновления</h2>
+		</div>
+		<div class="updates-log">
+			for _, update := range props.Updates {
+				if update.Type == "chapter" && update.ChapterUpdate != nil {
+					<a href={ templ.SafeURL("/" + update.ChapterUpdate.NovelID) } class="update-log-item">
+						<span class="update-log-text">
+							@templ.Raw(FormatUpdateActionHTML(update.ChapterUpdate.ChapterMin, update.ChapterUpdate.ChapterMax, update.ChapterUpdate.ChapterCount))
+							для <span class="update-log-novel">{ update.ChapterUpdate.NovelTitle }</span>
+						</span>
+						<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+					</a>
+				} else if update.Type == "app" && update.AppUpdate != nil {
+					<a href={ templ.SafeURL(update.AppUpdate.URL) } class="update-log-item" target="_blank" rel="noopener">
+						<span class="update-log-text">
+							<span class="update-log-app">Обновление сайта</span> под номером <span class="update-log-app">#{ update.AppUpdate.PRNumber }</span> ({ update.AppUpdate.Title })
+						</span>
+						<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+					</a>
+				} else if update.Type == "novel" && update.NovelAddition != nil {
+					<a href={ templ.SafeURL("/" + update.NovelAddition.ID) } class="update-novel-item">
+						<div class="update-log-row">
+							<span class="update-log-text">
+								<span>Добавлена новая новелла</span>
+							</span>
+							<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+						</div>
+						<div class="update-novel-content">
+							<img src={ ResolveCover(update.NovelAddition.CoverURL) } alt={ update.NovelAddition.Title } loading="lazy"/>
+							<div class="update-novel-info">
+								<h3>{ update.NovelAddition.Title }</h3>
+								<div class="update-novel-meta">
+									<span class="badge">{ update.NovelAddition.Author }</span>
+									<span class="badge">{ fmt.Sprintf("%d", update.NovelAddition.YearStart) }</span>
+									<span class="badge">{ MapStatus(update.NovelAddition.Status) }</span>
+								</div>
+								if update.NovelAddition.Description != "" {
+									<p class="update-novel-desc">{ update.NovelAddition.Description }</p>
+								}
+							</div>
+						</div>
+					</a>
+				}
+			}
+		</div>
+	}
+}

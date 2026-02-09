@@ -174,6 +174,7 @@ func main() {
 	r.Get("/", h.Home)
 	r.Get("/catalog", h.Catalog)
 	r.Get("/history", h.History)
+	r.Get("/updates", h.Updates)
 	r.Get("/dmca", h.StaticPage("dmca", "DMCA"))
 	r.Get("/privacy", h.StaticPage("privacy", "Политика конфиденциальности"))
 	r.Get("/copyright", h.StaticPage("copyright", "Правообладателям"))
