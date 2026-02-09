@@ -1,0 +1,1 @@
+ALTER TABLE sources ADD COLUMN is_translator BOOLEAN NOT NULL DEFAULT false;
