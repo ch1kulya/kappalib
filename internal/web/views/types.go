@@ -106,3 +106,8 @@ type CatalogProps struct {
 type HistoryProps struct {
 	BaseProps
 }
+
+type UpdatesProps struct {
+	BaseProps
+	Updates []models.HomeUpdateItem
+}
