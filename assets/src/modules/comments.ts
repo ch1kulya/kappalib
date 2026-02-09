@@ -810,6 +810,7 @@ function initFormHandlers(container: HTMLElement): void {
     const file = imageInput.files?.[0];
     if (!file || !textarea) return;
     imageInput.value = "";
+    initTurnstileForComments(container);
     await uploadCommentImage(file, textarea);
   });
 
