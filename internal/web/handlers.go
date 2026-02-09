@@ -747,11 +747,12 @@ func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
 
 	props := views.UpdatesProps{
 		BaseProps: views.BaseProps{
-			Title:       title,
-			Description: description,
-			Canonical:   "https://kappalib.ru/updates",
-			Version:     h.assetVersion,
-			IsLoggedIn:  h.hasSession(r),
+			Title:          title,
+			Description:    description,
+			Canonical:      "https://kappalib.ru/updates",
+			Version:        h.assetVersion,
+			IsLoggedIn:     h.hasSession(r),
+			ReaderSettings: h.getReaderSettings(r),
 		},
 		Updates: allUpdates,
 	}
