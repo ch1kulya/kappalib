@@ -1261,7 +1261,7 @@ a:hover {
 .footer-nav {
     display: flex;
     flex-direction: column;
-    gap: 0.7rem;
+    gap: 0.6rem;
 }
 
 .footer-disclaimer {
