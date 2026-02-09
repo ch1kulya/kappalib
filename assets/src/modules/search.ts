@@ -77,7 +77,6 @@ export function initSearch(): void {
       results.style.display = "none";
       firstResultUrl = null;
       clearResults();
-      hideBackdrop();
       return;
     }
 

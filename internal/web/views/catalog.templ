@@ -101,7 +101,6 @@ templ Catalog(props CatalogProps) {
 			</div>
 			if props.Page < props.TotalPages && len(props.Novels) > 0 {
 				<div class="catalog-loader" id="catalog-loader">
-					<div class="catalog-loader-spinner"></div>
 					<span>Загрузка...</span>
 				</div>
 			}

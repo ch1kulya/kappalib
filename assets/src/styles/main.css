@@ -1666,6 +1666,8 @@ html {
     width: 100%;
     aspect-ratio: 2/3;
     border-radius: 8px;
+    overflow: visible;
+    contain: none;
 }
 
 .poster-wrapper::before {
@@ -1678,9 +1680,10 @@ html {
     background-position: center;
     filter: blur(10px) saturate(180%);
     opacity: 0.4;
-    transform: translateY(3px) scale(1.01);
+    transform: translateY(3px) scale(1.01) translateZ(0);
     border-radius: 12px;
     transition: opacity 0.3s;
+    will-change: filter, opacity;
     @media (prefers-color-scheme: dark) {
         opacity: 0.3;
     }
@@ -3719,20 +3722,10 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
     padding: 2rem;
     color: var(--secondary);
     font-size: 0.9rem;
     font-weight: 500;
-}
-
-.catalog-loader-spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--border);
-    border-top-color: var(--primary);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
 }
 
 /* Novel Extra Info */
