@@ -69,20 +69,23 @@ func GetChapter(ctx context.Context, id string) (*models.Chapter, error) {
 		defer cancel()
 
 		var c models.Chapter
-		var sourceName, sourceLogo *string
-		var sourceIsTranslator *bool
+		var sourceName, sourceLogo, sourceLabel *string
 
 		err := database.DB.QueryRow(dbCtx, queryChaptersGetOne, id).Scan(
 			&c.ID, &c.NovelID, &c.ChapterNum,
 			&c.Title, &c.TitleEn, &c.Content, &c.CreatedAt,
-			&sourceName, &sourceLogo, &sourceIsTranslator,
+			&sourceName, &sourceLogo, &sourceLabel,
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		if sourceName != nil {
-			c.Source = &models.Source{Name: *sourceName, LogoURL: sourceLogo, IsTranslator: *sourceIsTranslator}
+			label := "Источник перевода"
+			if sourceLabel != nil && *sourceLabel != "" {
+				label = *sourceLabel
+			}
+			c.Source = &models.Source{Name: *sourceName, LogoURL: sourceLogo, Label: label}
 		}
 
 		return &c, nil

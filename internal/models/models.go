@@ -71,9 +71,9 @@ type CatalogPage struct {
 }
 
 type Source struct {
-	Name         string  `json:"name"`
-	LogoURL      *string `json:"logo_url"`
-	IsTranslator bool    `json:"is_translator"`
+	Name    string  `json:"name"`
+	LogoURL *string `json:"logo_url"`
+	Label   string  `json:"label"`
 }
 
 type ChapterSummary struct {
