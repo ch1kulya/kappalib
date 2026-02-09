@@ -3719,20 +3719,10 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
     padding: 2rem;
     color: var(--secondary);
     font-size: 0.9rem;
     font-weight: 500;
-}
-
-.catalog-loader-spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--border);
-    border-top-color: var(--primary);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
 }
 
 /* Novel Extra Info */
