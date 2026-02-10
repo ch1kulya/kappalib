@@ -2669,26 +2669,6 @@ html {
         position: relative;
         z-index: 2;
         overflow: hidden;
-        & .pc-provider-bg {
-            position: absolute;
-            right: 1rem;
-            top: 0.75rem;
-            pointer-events: none;
-            opacity: 0.08;
-            & svg {
-                width: 65px;
-                height: 65px;
-            }
-            &[data-provider="google"] {
-                color: var(--oauth-google);
-            }
-            &[data-provider="github"] {
-                color: var(--oauth-github);
-            }
-            &[data-provider="yandex"] {
-                color: var(--oauth-yandex);
-            }
-        }
         & .pc-section {
             margin-bottom: 0;
             & .pc-desc {
@@ -2832,6 +2812,33 @@ html {
     flex-shrink: 0;
     width: 48px;
     height: 48px;
+    & .pc-provider-badge {
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        width: 15px;
+        height: 15px;
+        border-radius: 4px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        & svg {
+            width: 9px;
+            height: 9px;
+        }
+        &[data-provider="google"] {
+            color: var(--oauth-google);
+        }
+        &[data-provider="github"] {
+            color: var(--oauth-github);
+        }
+        &[data-provider="yandex"] {
+            color: var(--oauth-yandex);
+        }
+    }
 }
 
 .pc-avatar-wrapper .pc-avatar {
