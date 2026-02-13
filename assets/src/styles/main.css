@@ -233,6 +233,12 @@ a:hover {
     background: var(--bg-primary);
     box-shadow: var(--shadow-primary);
     overflow: hidden;
+    border-radius: 10px;
+    min-width: 24px;
+    text-decoration: none;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
     &:active {
         cursor: pointer;
         border-color: var(--tertiary);
