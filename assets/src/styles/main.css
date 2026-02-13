@@ -3052,6 +3052,8 @@ html {
     text-decoration: none;
     color: inherit;
     border-bottom: 1px solid var(--border);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 .update-log-item:last-child {
