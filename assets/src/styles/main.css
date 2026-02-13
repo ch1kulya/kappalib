@@ -199,32 +199,20 @@ a:hover {
 }
 
 .header {
-    padding: 1rem 0;
     border-bottom: 1px solid var(--border);
     background: var(--bg-primary);
+    padding: 0.5rem 0;
     position: sticky;
     top: 0;
     z-index: 60;
     width: 100%;
-    box-shadow: var(--shadow-primary);
-    height: 70px;
+    box-shadow: var(--shadow-secondary);
 }
 
 .header.static {
     position: relative;
     top: auto;
     background: var(--bg-primary);
-}
-
-.header-logo {
-    width: 1.3em;
-    height: 1.3em;
-    flex-shrink: 0;
-    vertical-align: -0.3em;
-    margin-right: 0.2em;
-    color: var(--secondary);
-    filter: drop-shadow(0 0 0.5px var(--secondary));
-    will-change: filter;
 }
 
 .header-content {
@@ -237,16 +225,30 @@ a:hover {
 }
 
 .header-left {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--primary);
-    text-decoration: none;
-    letter-spacing: -0.025em;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border: 1px solid var(--border);
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-primary);
     overflow: hidden;
-    text-overflow: ellipsis;
+    &:active {
+        cursor: pointer;
+        border-color: var(--tertiary);
+        box-shadow: var(--shadow-focus);
+    }
     margin-right: 1rem;
-    text-shadow: 0 0 1px var(--secondary);
+}
+
+.header-logo {
+    width: 24px;
+    height: 24px;
+    min-height: 24px;
+    color: var(--tertiary);
+    filter: none;
+    margin: 0;
+    vertical-align: unset;
 }
 
 .header-right {
@@ -289,7 +291,7 @@ a:hover {
 /* Settings Card */
 .settings-card {
     position: fixed;
-    top: 80px;
+    top: 60px;
     right: calc(50% - 380px);
     width: 400px;
     background: var(--bg-primary);
@@ -690,7 +692,7 @@ a:hover {
     }
     & .search-results {
         position: fixed;
-        top: 80px;
+        top: 60px;
         left: 50%;
         transform: translateX(-50%);
         width: calc(100% - 1.5rem);
@@ -2441,7 +2443,7 @@ html {
 /* Profile Card */
 .profile-card {
     position: fixed;
-    top: 80px;
+    top: 60px;
     right: calc(50% - 380px);
     width: 400px;
     background: var(--bg-primary);
