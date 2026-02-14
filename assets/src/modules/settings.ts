@@ -1,5 +1,6 @@
 import Dropdown from "./dropdown";
 import { setKappalibCookie } from "./profile";
+import { uiManager } from "./ui";
 
 const SETTINGS_COOKIE_KEY = "kappalib_reader_settings";
 
@@ -306,8 +307,6 @@ export function initSettings(): void {
 export function initSettingsModal(): void {
   const settingsCard = document.getElementById("settings-card");
   const settingsBtn = document.getElementById("header-settings-btn");
-  const backdrop = document.getElementById("header-backdrop");
-  const profileCard = document.getElementById("profile-card");
 
   if (!settingsCard || !settingsBtn) return;
 
@@ -315,26 +314,9 @@ export function initSettingsModal(): void {
     e.preventDefault();
     e.stopPropagation();
 
-    const profileBtn = document.getElementById("header-profile-btn");
-    if (profileCard?.style.display === "block") {
-      profileCard.style.display = "none";
-      profileBtn?.classList.remove("active");
-    }
-
+    uiManager.toggleSettings();
     if (settingsCard.style.display === "block") {
-      closeSettingsCard();
-    } else {
-      openSettingsCard();
-    }
-  });
-
-  backdrop?.addEventListener("click", () => {
-    closeSettingsCard();
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && settingsCard.style.display === "block") {
-      closeSettingsCard();
+      renderSettingsView();
     }
   });
 
@@ -344,41 +326,11 @@ export function initSettingsModal(): void {
       !settingsCard.contains(e.target as Node) &&
       !settingsBtn.contains(e.target as Node)
     ) {
-      closeSettingsCard();
+      uiManager.closeAll();
     }
   });
 
   settingsManager.applyAll();
-}
-
-function openSettingsCard(): void {
-  const settingsCard = document.getElementById("settings-card");
-  const settingsBtn = document.getElementById("header-settings-btn");
-  const backdrop = document.getElementById("header-backdrop");
-  if (!settingsCard) return;
-
-  settingsCard.style.display = "block";
-  settingsBtn?.classList.add("active");
-  backdrop?.classList.add("active");
-  document.body.style.overflow = "hidden";
-
-  renderSettingsView();
-}
-
-function closeSettingsCard(): void {
-  const settingsCard = document.getElementById("settings-card");
-  const settingsBtn = document.getElementById("header-settings-btn");
-  const backdrop = document.getElementById("header-backdrop");
-  const profileCard = document.getElementById("profile-card");
-  if (!settingsCard) return;
-
-  settingsCard.style.display = "none";
-  settingsBtn?.classList.remove("active");
-
-  if (profileCard?.style.display !== "block") {
-    backdrop?.classList.remove("active");
-    document.body.style.overflow = "";
-  }
 }
 
 function cloneTemplate(id: string): DocumentFragment {

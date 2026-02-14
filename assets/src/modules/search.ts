@@ -1,3 +1,5 @@
+import { uiManager } from "./ui";
+
 interface NovelSearchResult {
   id: string;
   title: string;
@@ -17,9 +19,6 @@ export function initSearch(): void {
     "search-input",
   ) as HTMLInputElement | null;
   const results = document.getElementById("search-results");
-  const header = document.getElementById("main-header");
-  const backdrop = document.getElementById("header-backdrop");
-  const profileCard = document.getElementById("profile-card");
 
   if (!input || !results) return;
 
@@ -30,30 +29,13 @@ export function initSearch(): void {
   const PLACEHOLDER_IMG =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect fill='%23ecf0f1' width='200' height='300'/%3E%3C/svg%3E";
 
-  const showBackdrop = () => {
-    if (profileCard?.style.display !== "block") {
-      backdrop?.classList.add("active");
-      document.body.style.overflow = "hidden";
-    }
-  };
-
-  const hideBackdrop = () => {
-    if (profileCard?.style.display !== "block") {
-      backdrop?.classList.remove("active");
-      document.body.style.overflow = "";
-    }
-  };
-
   const clearResults = () => {
     results.innerHTML = "";
     firstResultUrl = null;
   };
 
   input.onfocus = () => {
-    if (window.innerWidth <= 600 && header) {
-      header.classList.add("search-expanded");
-    }
-    showBackdrop();
+    uiManager.openSearch();
   };
 
   input.onkeydown = (e: KeyboardEvent) => {
@@ -80,7 +62,7 @@ export function initSearch(): void {
       return;
     }
 
-    showBackdrop();
+    uiManager.openSearch();
 
     timeout = window.setTimeout(async () => {
       try {
@@ -88,6 +70,7 @@ export function initSearch(): void {
         results.style.display = "block";
 
         let loadingTimeout: number | null = setTimeout(() => {
+          if (!uiManager.isSearchActive()) return;
           loadingTimeout = null;
           results.innerHTML = "";
           const loadingDiv = document.createElement("div");
@@ -180,6 +163,7 @@ export function initSearch(): void {
         results.appendChild(fragment);
       } catch (err) {
         console.error("Search API request failed", err);
+        if (!uiManager.isSearchActive()) return;
         results.innerHTML = "";
         firstResultUrl = null;
         const errorDiv = document.createElement("div");
@@ -195,25 +179,10 @@ export function initSearch(): void {
       !input.contains(e.target as Node) &&
       !results.contains(e.target as Node)
     ) {
-      results.style.display = "none";
+      uiManager.closeAll();
       input.value = "";
       firstResultUrl = null;
       clearResults();
-      hideBackdrop();
-      if (header) {
-        header.classList.remove("search-expanded");
-      }
-    }
-  });
-
-  backdrop?.addEventListener("click", () => {
-    results.style.display = "none";
-    input.value = "";
-    firstResultUrl = null;
-    clearResults();
-    hideBackdrop();
-    if (header) {
-      header.classList.remove("search-expanded");
     }
   });
 }
