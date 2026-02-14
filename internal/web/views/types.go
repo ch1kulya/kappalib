@@ -56,6 +56,7 @@ type ChapterProps struct {
 	PrevID        string
 	NextID        string
 	TotalChapters int
+	Announcement  *models.Announcement
 }
 
 type DocumentProps struct {

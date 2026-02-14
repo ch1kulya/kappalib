@@ -187,3 +187,11 @@ type HomeUpdateItem struct {
 	NovelAddition *NovelAddition
 	UpdatedAt     time.Time
 }
+
+type Announcement struct {
+	ID          int     `json:"id"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	ActionLabel *string `json:"action_label"`
+	ActionURL   *string `json:"action_url"`
+}

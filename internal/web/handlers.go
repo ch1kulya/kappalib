@@ -680,6 +680,8 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 		prefetchURL = fmt.Sprintf("/%s/chapter/%s", novelID, nextID)
 	}
 
+	announcement, _ := data.GetRandomAnnouncement(r.Context())
+
 	props := views.ChapterProps{
 		BaseProps: views.BaseProps{
 			Title:          chapterTitle,
@@ -700,6 +702,7 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 		PrevID:        prevID,
 		NextID:        nextID,
 		TotalChapters: novel.ChapterCount,
+		Announcement:  announcement,
 	}
 
 	h.render(w, r, views.Chapter(props))
