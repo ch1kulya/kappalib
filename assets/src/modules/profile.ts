@@ -1,3 +1,5 @@
+import { uiManager } from "./ui";
+
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
 const PROFILE_PROVIDER_KEY = "kappalib_oauth_provider";
@@ -278,8 +280,6 @@ function fillTemplate(
 export function initProfileModal(): void {
   const profileCard = document.getElementById("profile-card");
   const profileBtn = document.getElementById("header-profile-btn");
-  const backdrop = document.getElementById("header-backdrop");
-  const settingsCard = document.getElementById("settings-card");
 
   if (!profileCard || !profileBtn) return;
 
@@ -287,27 +287,14 @@ export function initProfileModal(): void {
     e.preventDefault();
     e.stopPropagation();
 
-    const settingsBtn = document.getElementById("header-settings-btn");
-    if (settingsCard?.style.display === "block") {
-      settingsCard.style.display = "none";
-      settingsBtn?.classList.remove("active");
-    }
+    const searchInput = document.getElementById(
+      "search-input",
+    ) as HTMLInputElement | null;
+    if (searchInput) searchInput.value = "";
 
-    if (profileCard.style.display === "block") {
-      closeProfileCard();
-    } else {
-      openProfileCard();
-    }
-  });
-
-  backdrop?.addEventListener("click", () => {
-    closeProfileCard();
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && profileCard.style.display === "block") {
-      closeProfileCard();
-    }
+    uiManager.toggleProfile(() => {
+      renderProfileCard();
+    });
   });
 
   document.addEventListener("click", (e) => {
@@ -316,50 +303,9 @@ export function initProfileModal(): void {
       !profileCard.contains(e.target as Node) &&
       !profileBtn.contains(e.target as Node)
     ) {
-      closeProfileCard();
+      uiManager.closeAll();
     }
   });
-}
-
-function openProfileCard(): void {
-  const profileCard = document.getElementById("profile-card");
-  const profileBtn = document.getElementById("header-profile-btn");
-  const backdrop = document.getElementById("header-backdrop");
-  if (!profileCard) return;
-
-  profileCard.style.display = "block";
-  profileBtn?.classList.add("active");
-  backdrop?.classList.add("active");
-  document.body.style.overflow = "hidden";
-
-  renderProfileCard();
-}
-
-function closeProfileCard(): void {
-  const profileCard = document.getElementById("profile-card");
-  const profileBtn = document.getElementById("header-profile-btn");
-  const backdrop = document.getElementById("header-backdrop");
-  const settingsCard = document.getElementById("settings-card");
-  if (!profileCard) return;
-
-  profileCard.style.display = "none";
-  profileBtn?.classList.remove("active");
-
-  if (settingsCard?.style.display !== "block") {
-    backdrop?.classList.remove("active");
-    document.body.style.overflow = "";
-  }
-}
-
-export function setBackdropActive(active: boolean): void {
-  const backdrop = document.getElementById("header-backdrop");
-  if (active) {
-    backdrop?.classList.add("active");
-    document.body.style.overflow = "hidden";
-  } else {
-    backdrop?.classList.remove("active");
-    document.body.style.overflow = "";
-  }
 }
 
 function renderProfileCard(): void {
