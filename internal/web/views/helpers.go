@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"math"
+	"math/rand/v2"
 	"regexp"
 	"strings"
 	"time"
@@ -334,4 +335,8 @@ func buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSe
 		return warnings[0] + "."
 	}
 	return strings.Join(warnings[:len(warnings)-1], ", ") + " и " + warnings[len(warnings)-1] + "."
+}
+
+func shouldShowAnnouncement() bool {
+	return rand.IntN(7) == 0
 }

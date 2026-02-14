@@ -4,3 +4,4 @@
 .air.toml
 .github/workflows
 *.sh
+.claude
