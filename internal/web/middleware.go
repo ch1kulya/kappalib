@@ -136,8 +136,8 @@ func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 		}
 		cspBuilder.WriteString("; ")
 		cspBuilder.WriteString("frame-src 'self' https://challenges.cloudflare.com; ")
-		cspBuilder.WriteString("style-src 'self' 'unsafe-inline' https://rsms.me https://cdn.jsdelivr.net; ")
-		cspBuilder.WriteString("font-src 'self' data: https://rsms.me https://fonts.scalar.com https://cdn.jsdelivr.net; ")
+		cspBuilder.WriteString("style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; ")
+		cspBuilder.WriteString("font-src 'self' data: https://fonts.scalar.com https://cdn.jsdelivr.net; ")
 
 		w.Header().Set("Content-Security-Policy", cspBuilder.String())
 		ctx := templ.WithNonce(r.Context(), nonce)
