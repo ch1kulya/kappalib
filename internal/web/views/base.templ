@@ -25,10 +25,9 @@ templ Base(props BaseProps) {
 			if props.PrefetchURL != "" {
 				<link rel="prefetch" href={ props.PrefetchURL } as="document"/>
 			}
-			<link rel="preconnect" href="https://s3.kappalib.ru/"/>
-			<link rel="preconnect" href="https://rsms.me/"/>
+			<link rel="preconnect" href="https://s3.kappalib.ru"/>
+			<link rel="preconnect" href="https://cdn.jsdelivr.net"/>
 			<link rel="preconnect" href="https://challenges.cloudflare.com"/>
-			<link rel="preconnect" href="https://cdn.jsdelivr.net/"/>
 			<!-- Favicon -->
 			<link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico"/>
 			<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png"/>
@@ -47,7 +46,6 @@ templ Base(props BaseProps) {
 			} else {
 				<meta name="twitter:card" content="summary"/>
 			}
-			<link rel="stylesheet" crossorigin href="https://rsms.me/inter/inter.css"/>
 			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" class="lazy-font"/>
 			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/noto-sans-cjk-jp@1.0.1/index.min.css" media="print" class="lazy-font"/>
 			<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/@ibm/plex-mono@1.1.0/css/ibm-plex-mono-all.min.css" media="print" class="lazy-font"/>
