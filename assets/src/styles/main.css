@@ -252,10 +252,22 @@ a:hover {
     width: 24px;
     height: 24px;
     min-height: 24px;
-    color: var(--tertiary);
-    filter: none;
+    color: var(--primary);
     margin: 0;
     vertical-align: unset;
+    filter: drop-shadow(0 0 0.5px var(--secondary));
+    will-change: filter;
+    &:hover {
+        opacity: 0.8;
+    }
+    &.back {
+        color: var(--tertiary);
+        filter: none;
+        will-change: auto;
+        &:hover {
+            opacity: 1;
+        }
+    }
 }
 
 .header-right {
