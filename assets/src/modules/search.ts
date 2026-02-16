@@ -175,6 +175,7 @@ export function initSearch(): void {
   };
 
   document.addEventListener("click", (e: Event) => {
+    if (!uiManager.isSearchActive()) return;
     if (
       !input.contains(e.target as Node) &&
       !results.contains(e.target as Node)
