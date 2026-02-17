@@ -3005,7 +3005,12 @@ html {
     line-height: 1.2;
     cursor: pointer;
     transition: color 0.15s;
-    &:hover {
+    @media (hover: hover) {
+        &:hover {
+            color: var(--secondary);
+        }
+    }
+    &:active {
         color: var(--secondary);
     }
 }
