@@ -130,10 +130,13 @@ func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 		cspBuilder.WriteString("default-src 'self'; ")
 		cspBuilder.WriteString("connect-src 'self' https://stats.ch1kulya.ru https://cdn.jsdelivr.net/; ")
 		cspBuilder.WriteString("img-src 'self' https: data:; ")
-		cspBuilder.WriteString(fmt.Sprintf("script-src 'self' 'nonce-%s' https://stats.ch1kulya.ru https://challenges.cloudflare.com https://cdn.jsdelivr.net", nonce))
+
+		fmt.Fprintf(&cspBuilder, "script-src 'self' 'nonce-%s' https://stats.ch1kulya.ru https://challenges.cloudflare.com https://cdn.jsdelivr.net", nonce)
+
 		if airHash != "" {
-			cspBuilder.WriteString(fmt.Sprintf(" '%s'", airHash))
+			fmt.Fprintf(&cspBuilder, " '%s'", airHash)
 		}
+
 		cspBuilder.WriteString("; ")
 		cspBuilder.WriteString("frame-src 'self' https://challenges.cloudflare.com; ")
 		cspBuilder.WriteString("style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; ")
