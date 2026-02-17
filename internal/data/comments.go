@@ -188,7 +188,7 @@ func renderMarkdown(content string) string {
 }
 
 func CreateComment(ctx context.Context, userID string, input models.CreateCommentInput) (*models.Comment, error) {
-	if len(input.Content) == 0 || len(input.Content) > 1000 {
+	if len(input.Content) == 0 || len(input.Content) > 3000 {
 		return nil, ErrInvalidContentLength
 	}
 

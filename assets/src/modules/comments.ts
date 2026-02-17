@@ -409,9 +409,9 @@ function updateCharCounter(textarea: HTMLTextAreaElement): void {
   const counter = document.getElementById("comment-char-counter");
   if (counter) {
     const len = textarea.value.length;
-    counter.textContent = `${len}/1000`;
-    counter.classList.toggle("count-warning", len > 900);
-    counter.classList.toggle("count-error", len >= 1000);
+    counter.textContent = `${len}/3000`;
+    counter.classList.toggle("count-warning", len > 2500);
+    counter.classList.toggle("count-error", len >= 3000);
   }
 }
 
@@ -574,11 +574,11 @@ function renderCommentForm(container: HTMLElement): void {
           id="comment-textarea"
           class="comment-textarea"
           placeholder="Написать комментарий..."
-          maxlength="1000"
+          maxlength="3000"
           rows="2"
         ></textarea>
         <div class="comment-form-footer">
-          <span id="comment-char-counter" class="comment-char-counter">0/1000</span>
+          <span id="comment-char-counter" class="comment-char-counter">0/3000</span>
           <a href="/markdown" target="_blank" class="comment-markdown-hint">Форматирование</a>
           <div id="comments-turnstile-container"></div>
           <button id="comment-submit" class="action-btn btn-primary comment-submit-btn">Отправить</button>
@@ -937,8 +937,8 @@ function initFormHandlers(container: HTMLElement): void {
     submitBtn.addEventListener("click", async () => {
       const content = textarea.value.trim();
       if (!content) return;
-      if (content.length > 1000) {
-        alert("Комментарий слишком длинный (максимум 1000 символов)");
+      if (content.length > 3000) {
+        alert("Комментарий слишком длинный (максимум 3000 символов)");
         return;
       }
 

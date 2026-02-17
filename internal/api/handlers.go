@@ -95,7 +95,7 @@ type GetCommentsInput struct {
 type CreateCommentInput struct {
 	ChapterID string `path:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
 	Body      struct {
-		Content        string `json:"content" minLength:"1" maxLength:"1000"`
+		Content        string `json:"content" minLength:"1" maxLength:"3000"`
 		TurnstileToken string `json:"turnstile_token" minLength:"1"`
 	}
 }
@@ -383,7 +383,7 @@ func HandleCreateComment(ctx context.Context, input *CreateCommentInput) (*Comme
 		case errors.Is(err, data.ErrCaptchaFailed):
 			return nil, huma.Error400BadRequest("Captcha verification failed")
 		case errors.Is(err, data.ErrInvalidContentLength):
-			return nil, huma.Error400BadRequest("Comment must be 1-1000 characters")
+			return nil, huma.Error400BadRequest("Comment must be 1-3000 characters")
 		case errors.Is(err, data.ErrChapterNotFound):
 			return nil, huma.Error404NotFound("Chapter not found")
 		default:
@@ -620,4 +620,3 @@ func HandleVoteComment(ctx context.Context, input *VoteCommentInput) (*VoteComme
 		}{Score: score, UserVote: input.Body.Value},
 	}, nil
 }
-
