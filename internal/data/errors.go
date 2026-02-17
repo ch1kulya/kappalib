@@ -14,4 +14,6 @@ var (
 	ErrNameEmpty            = errors.New("name is empty")
 	ErrNameTooLong          = errors.New("name too long")
 	ErrInvalidCharacters    = errors.New("invalid characters in name")
+	ErrInvalidVoteValue     = errors.New("invalid vote value")
+	ErrCommentNotFound      = errors.New("comment not found")
 )

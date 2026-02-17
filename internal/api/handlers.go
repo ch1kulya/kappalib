@@ -131,6 +131,20 @@ type CommentImageResponse struct {
 	}
 }
 
+type VoteCommentInput struct {
+	CommentID string `path:"commentId" pattern:"^cmt_[a-z0-9]{8}$"`
+	Body      struct {
+		Value int `json:"value" minimum:"-1" maximum:"1"`
+	}
+}
+
+type VoteCommentResponse struct {
+	Body struct {
+		Score    int `json:"score"`
+		UserVote int `json:"user_vote"`
+	}
+}
+
 type APIStatus struct {
 	Status   string `json:"status"`
 	Database string `json:"database"`
@@ -580,3 +594,30 @@ func HandleUploadCommentImage(ctx context.Context, input *UploadCommentImageInpu
 		}{URL: imageURL},
 	}, nil
 }
+
+func HandleVoteComment(ctx context.Context, input *VoteCommentInput) (*VoteCommentResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	score, err := data.VoteComment(ctx, input.CommentID, userID, input.Body.Value)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrInvalidVoteValue):
+			return nil, huma.Error400BadRequest("Value must be -1, 0, or 1")
+		case errors.Is(err, data.ErrCommentNotFound):
+			return nil, huma.Error404NotFound("Comment not found")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to vote")
+		}
+	}
+
+	return &VoteCommentResponse{
+		Body: struct {
+			Score    int `json:"score"`
+			UserVote int `json:"user_vote"`
+		}{Score: score, UserVote: input.Body.Value},
+	}, nil
+}
+

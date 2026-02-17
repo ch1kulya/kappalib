@@ -367,6 +367,15 @@ func main() {
 			Security:     []map[string][]string{{"sessionCookie": {}}},
 			MaxBodyBytes: 8 << 20,
 		}, api.HandleUploadCommentImage)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "vote-comment",
+			Method:      http.MethodPost,
+			Path:        "/comments/{commentId}/vote",
+			Summary:     "Vote on comment",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+		}, api.HandleVoteComment)
+
 	})
 
 	go func() {

@@ -131,6 +131,8 @@ type Comment struct {
 	UserAvatarSeed      string    `json:"user_avatar_seed,omitempty"`
 	UserHasCustomAvatar bool      `json:"user_has_custom_avatar,omitempty"`
 	UserAvatarUpdatedAt int64     `json:"user_avatar_updated_at,omitempty"`
+	Score               int       `json:"score"`
+	UserVote            int       `json:"user_vote"`
 }
 
 type CommentsPage struct {
