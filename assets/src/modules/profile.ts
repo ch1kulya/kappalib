@@ -234,6 +234,14 @@ export function initProfile(): void {
   });
 }
 
+export function updateKappalibCookieQuietly(name: string, value: string): void {
+  if (!name.startsWith("kappalib_")) {
+    name = `kappalib_${name}`;
+  }
+  const encodedValue = encodeURIComponent(value);
+  document.cookie = `${name}=${encodedValue}; path=/; max-age=31536000; SameSite=Lax`;
+}
+
 export function setKappalibCookie(name: string, value: string): void {
   if (!name.startsWith("kappalib_")) {
     name = `kappalib_${name}`;

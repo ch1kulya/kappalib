@@ -1,4 +1,4 @@
-import { setKappalibCookie } from "./profile";
+import { setKappalibCookie, updateKappalibCookieQuietly } from "./profile";
 
 const API_URL = process.env.API_URL;
 
@@ -42,7 +42,7 @@ export function getProgressCookie(): ProgressCookie {
   return { novels: {}, lastRead: null };
 }
 
-export function saveProgressCookie(data: ProgressCookie): void {
+function trimProgressCookie(data: ProgressCookie): string {
   let json = JSON.stringify(data);
 
   while (json.length > MAX_COOKIE_SIZE && Object.keys(data.novels).length > 1) {
@@ -63,7 +63,15 @@ export function saveProgressCookie(data: ProgressCookie): void {
     json = JSON.stringify(data);
   }
 
-  setKappalibCookie(COOKIE_NAME, json);
+  return json;
+}
+
+export function saveProgressCookie(data: ProgressCookie): void {
+  setKappalibCookie(COOKIE_NAME, trimProgressCookie(data));
+}
+
+function saveProgressCookieQuietly(data: ProgressCookie): void {
+  updateKappalibCookieQuietly(COOKIE_NAME, trimProgressCookie(data));
 }
 
 export function initReadingProgressSaver(): void {
@@ -92,7 +100,7 @@ export function initReadingProgressSaver(): void {
     data.lastRead.totalChapters < totalChapters
   ) {
     data.lastRead.totalChapters = totalChapters;
-    saveProgressCookie(data);
+    saveProgressCookieQuietly(data);
   }
 
   const saveProgress = (
@@ -178,7 +186,7 @@ export async function refreshLastReadTotalChapters(): Promise<void> {
       novel.chapter_count > data.lastRead.totalChapters
     ) {
       data.lastRead.totalChapters = novel.chapter_count;
-      saveProgressCookie(data);
+      saveProgressCookieQuietly(data);
     }
   } catch {
     // ignore
