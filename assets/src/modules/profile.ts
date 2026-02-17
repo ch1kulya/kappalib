@@ -379,7 +379,6 @@ function renderLoggedInView(profile: ProfilePublic): void {
     fillTemplate("tpl-pc-profile", {
       avatarUrl,
       displayName: profile.display_name,
-      profileId: profile.id,
       createdAt: formatDate(profile.created_at),
     }),
   );
@@ -401,7 +400,6 @@ function initProfileInteractions(profile: ProfilePublic): void {
     "pc-avatar-input",
   ) as HTMLInputElement;
   const nameText = document.getElementById("pc-name-text");
-  const nameEdit = document.getElementById("pc-name-edit");
   const nameInput = document.getElementById(
     "pc-name-input",
   ) as HTMLInputElement;
@@ -441,10 +439,9 @@ function initProfileInteractions(profile: ProfilePublic): void {
     }
   });
 
-  nameEdit?.addEventListener("click", () => {
+  nameText?.addEventListener("click", () => {
     if (!nameText || !nameInput) return;
     nameText.style.display = "none";
-    nameEdit.style.display = "none";
     nameInput.style.display = "block";
     nameInput.value = "";
     nameInput.placeholder = currentProfile.display_name;
@@ -467,7 +464,7 @@ function initProfileInteractions(profile: ProfilePublic): void {
   });
 
   async function saveName() {
-    if (!nameText || !nameInput || !nameEdit) return;
+    if (!nameText || !nameInput) return;
     if (isSavingName) return;
 
     const newName = nameInput.value.trim();
@@ -494,11 +491,10 @@ function initProfileInteractions(profile: ProfilePublic): void {
   }
 
   function cancelNameEdit() {
-    if (!nameText || !nameInput || !nameEdit) return;
+    if (!nameText || !nameInput) return;
     nameInput.style.display = "none";
     nameInput.value = "";
     nameText.style.display = "inline";
-    nameEdit.style.display = "inline-flex";
   }
 
   document.getElementById("pc-logout")?.addEventListener("click", async () => {
@@ -508,18 +504,6 @@ function initProfileInteractions(profile: ProfilePublic): void {
       profileCard.dataset.hasSession = "false";
     }
     renderGuestView();
-  });
-
-  document.getElementById("pc-delete")?.addEventListener("click", async () => {
-    if (!confirm("Удалить аккаунт? Это действие необратимо.")) return;
-    const deleted = await profileManager.deleteProfile();
-    if (deleted) {
-      const profileCard = document.getElementById("profile-card");
-      if (profileCard) {
-        profileCard.dataset.hasSession = "false";
-      }
-      renderGuestView();
-    }
   });
 }
 
