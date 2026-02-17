@@ -150,13 +150,59 @@ func validateCookies(cookies map[string]models.CookieValue) map[string]models.Co
 	return valid
 }
 
+func mergeProgressCookies(existing, incoming models.CookieValue) models.CookieValue {
+	var existingProgress, incomingProgress progressCookieSchema
+	if err := json.Unmarshal([]byte(existing.Value), &existingProgress); err != nil {
+		return incoming
+	}
+	if err := json.Unmarshal([]byte(incoming.Value), &incomingProgress); err != nil {
+		return existing
+	}
+
+	merged := progressCookieSchema{
+		Novels:   make(map[string]progressNovel),
+		LastRead: existingProgress.LastRead,
+	}
+
+	for id, novel := range existingProgress.Novels {
+		merged.Novels[id] = novel
+	}
+	for id, novel := range incomingProgress.Novels {
+		if ex, ok := merged.Novels[id]; !ok || novel.ChapterNum > ex.ChapterNum || (novel.ChapterNum == ex.ChapterNum && novel.ReadAt > ex.ReadAt) {
+			merged.Novels[id] = novel
+		}
+	}
+
+	if incomingProgress.LastRead != nil {
+		if merged.LastRead == nil || incomingProgress.LastRead.ReadAt > merged.LastRead.ReadAt {
+			merged.LastRead = incomingProgress.LastRead
+		}
+	}
+
+	if merged.LastRead != nil {
+		if novel, ok := merged.Novels[merged.LastRead.NovelID]; ok && novel.ChapterNum > merged.LastRead.ChapterNum {
+			merged.LastRead.ChapterID = novel.ChapterID
+			merged.LastRead.ChapterNum = novel.ChapterNum
+		}
+	}
+
+	data, _ := json.Marshal(merged)
+	updatedAt := existing.UpdatedAt
+	if incoming.UpdatedAt > updatedAt {
+		updatedAt = incoming.UpdatedAt
+	}
+	return models.CookieValue{Value: string(data), UpdatedAt: updatedAt}
+}
+
 func mergeCookies(existing, incoming map[string]models.CookieValue) map[string]models.CookieValue {
 	result := make(map[string]models.CookieValue)
 	maps.Copy(result, existing)
 
 	for name, incomingCv := range incoming {
 		if existingCv, exists := result[name]; exists {
-			if incomingCv.UpdatedAt > existingCv.UpdatedAt {
+			if name == "kappalib_progress" {
+				result[name] = mergeProgressCookies(existingCv, incomingCv)
+			} else if incomingCv.UpdatedAt > existingCv.UpdatedAt {
 				result[name] = incomingCv
 			}
 		} else {
