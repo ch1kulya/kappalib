@@ -17,6 +17,8 @@ interface Comment {
   user_avatar_seed: string;
   user_has_custom_avatar: boolean;
   user_avatar_updated_at: number;
+  score: number;
+  user_vote: number;
 }
 
 interface CommentsPage {
@@ -121,9 +123,35 @@ function createCommentHTML(comment: Comment): string {
       statusBadge = `<span class="comment-date">${formatRelativeTime(comment.created_at)}</span>`;
   }
 
+  const isApproved = comment.status === "approved";
+  const upActive = comment.user_vote === 1 ? " vote-active" : "";
+  const downActive = comment.user_vote === -1 ? " vote-active" : "";
+
+  const voteHTML = isApproved
+    ? `<div class="comment-votes">
+        <button class="vote-btn vote-up${upActive}" data-vote="1" data-comment-id="${comment.id}" aria-label="Лайк">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+        </button>
+        <span class="vote-score" data-comment-id="${comment.id}">${comment.score}</span>
+        <button class="vote-btn vote-down${downActive}" data-vote="-1" data-comment-id="${comment.id}" aria-label="Дизлайк">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+      </div>`
+    : "";
+
+  const replyHTML = isApproved
+    ? `<button class="comment-reply-btn" data-comment-id="${comment.id}" data-author="${comment.user_display_name}" aria-label="Ответить">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+      </button>`
+    : "";
+
   return `
     <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}">
-      <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
+      <div class="comment-aside">
+        <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
+        ${voteHTML}
+        ${replyHTML}
+      </div>
       <div class="comment-body">
         <div class="comment-header">
           <span class="comment-author">${comment.user_display_name}</span>
@@ -416,6 +444,20 @@ export function initComments(): void {
       return;
     }
 
+    const voteBtn = target.closest(".vote-btn") as HTMLElement | null;
+    if (voteBtn) {
+      e.preventDefault();
+      handleVote(voteBtn, container, chapterId);
+      return;
+    }
+
+    const replyBtn = target.closest(".comment-reply-btn") as HTMLElement | null;
+    if (replyBtn) {
+      e.preventDefault();
+      handleReply(replyBtn, container);
+      return;
+    }
+
     const pageBtn = target.closest(".page-link[data-page]") as HTMLElement;
     if (pageBtn && !pageBtn.classList.contains("disabled")) {
       const page = parseInt(pageBtn.dataset.page || "1", 10);
@@ -424,6 +466,72 @@ export function initComments(): void {
       container.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
+}
+
+async function handleVote(
+  btn: HTMLElement,
+  container: HTMLElement,
+  chapterId: string,
+): Promise<void> {
+  if (!profileManager.isLoggedIn()) return;
+
+  const commentId = btn.dataset.commentId;
+  if (!commentId) return;
+
+  const requestedValue = parseInt(btn.dataset.vote || "0", 10);
+  const commentItem = btn.closest(".comment-item") as HTMLElement;
+  if (!commentItem) return;
+
+  const upBtn = commentItem.querySelector('.vote-btn[data-vote="1"]');
+  const downBtn = commentItem.querySelector('.vote-btn[data-vote="-1"]');
+  const scoreEl = commentItem.querySelector(".vote-score");
+  if (!upBtn || !downBtn || !scoreEl) return;
+
+  const wasActive = btn.classList.contains("vote-active");
+  const value = wasActive ? 0 : requestedValue;
+
+  try {
+    const res = await fetch(`${API_URL}/comments/${commentId}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) return;
+
+    const data: { score: number; user_vote: number } = await res.json();
+    scoreEl.textContent = String(data.score);
+    upBtn.classList.toggle("vote-active", data.user_vote === 1);
+    downBtn.classList.toggle("vote-active", data.user_vote === -1);
+
+    const activePage =
+      container.querySelector(".page-link.active")?.textContent || "1";
+    fetch(`${API_URL}/chapters/${chapterId}/comments?page=${activePage}`, {
+      credentials: "include",
+      cache: "no-cache",
+    });
+  } catch {
+    // silent
+  }
+}
+
+function handleReply(btn: HTMLElement, container: HTMLElement): void {
+  const author = btn.dataset.author;
+  if (!author) return;
+
+  const textarea = container.querySelector(
+    "#comment-textarea",
+  ) as HTMLTextAreaElement;
+  if (!textarea) return;
+
+  const prefix = `${author}, `;
+  textarea.value = prefix;
+  textarea.focus();
+  textarea.selectionStart = textarea.selectionEnd = prefix.length;
+  updateCharCounter(textarea);
+  autoResizeTextarea(textarea);
+
+  textarea.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function renderCommentForm(container: HTMLElement): void {

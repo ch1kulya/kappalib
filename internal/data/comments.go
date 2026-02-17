@@ -38,6 +38,15 @@ var queryCommentsUpdateStatus string
 //go:embed sql/comments_set_telegram_message_id.sql
 var queryCommentsSetTelegramMessageID string
 
+//go:embed sql/comment_votes_upsert.sql
+var queryCommentVotesUpsert string
+
+//go:embed sql/comment_votes_delete.sql
+var queryCommentVotesDelete string
+
+//go:embed sql/comment_votes_score.sql
+var queryCommentVotesScore string
+
 var (
 	commentsTurnstileSecret = os.Getenv("TURNSTILE_COMMENTS_SECRET")
 	telegramBotToken        = os.Getenv("TELEGRAM_BOT_TOKEN")
@@ -264,7 +273,9 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 	rows, err := database.DB.Query(dbCtx, `
         SELECT
             c.id, c.chapter_id, c.user_id, c.content_html, c.status, c.created_at,
-            u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at
+            u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at,
+            COALESCE((SELECT SUM(value) FROM comment_votes WHERE comment_id = c.id), 0)::int,
+            COALESCE((SELECT value FROM comment_votes WHERE comment_id = c.id AND user_id = $2), 0)::int
         FROM comments c
         JOIN users u ON c.user_id = u.id
         WHERE c.chapter_id = $1
@@ -290,6 +301,7 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 			&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status,
 			&c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed,
 			&c.UserHasCustomAvatar, &avatarUpdatedAt,
+			&c.Score, &c.UserVote,
 		); err != nil {
 			logger.Warn("Comment row scan error: %v", err)
 			continue
@@ -306,6 +318,42 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 		TotalCount: totalCount,
 		TotalPages: totalPages,
 	}, nil
+}
+
+func VoteComment(ctx context.Context, commentID, userID string, value int) (int, error) {
+	if value != -1 && value != 0 && value != 1 {
+		return 0, ErrInvalidVoteValue
+	}
+
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var exists bool
+	err := database.DB.QueryRow(dbCtx,
+		`SELECT EXISTS(SELECT 1 FROM comments WHERE id = $1 AND status = 'approved')`,
+		commentID,
+	).Scan(&exists)
+	if err != nil || !exists {
+		return 0, ErrCommentNotFound
+	}
+
+	if value == 0 {
+		_, err = database.DB.Exec(dbCtx, queryCommentVotesDelete, commentID, userID)
+	} else {
+		_, err = database.DB.Exec(dbCtx, queryCommentVotesUpsert, commentID, userID, value)
+	}
+	if err != nil {
+		logger.Error("Failed to vote on comment: %v", err)
+		return 0, err
+	}
+
+	var score int
+	err = database.DB.QueryRow(dbCtx, queryCommentVotesScore, commentID).Scan(&score)
+	if err != nil {
+		return 0, err
+	}
+
+	return score, nil
 }
 
 func UpdateCommentStatus(ctx context.Context, commentID, status string) error {

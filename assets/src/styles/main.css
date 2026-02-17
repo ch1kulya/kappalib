@@ -3508,6 +3508,14 @@ html {
     border: 1px dashed var(--color-danger);
 }
 
+.comment-aside {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
 .comment-avatar {
     position: relative;
     z-index: 1;
@@ -3695,6 +3703,105 @@ html {
 
     .comment-content {
         font-size: 0.9rem;
+    }
+}
+
+/* Comment Votes */
+.comment-votes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.vote-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--tertiary);
+    cursor: pointer;
+    padding: 0;
+    transition:
+        color 0.15s,
+        background 0.15s;
+}
+
+@media (hover: hover) {
+    .vote-btn:hover {
+        color: var(--primary);
+    }
+}
+
+.vote-btn:active {
+    color: var(--primary);
+}
+
+.vote-btn.vote-active.vote-up {
+    color: var(--accent-primary);
+}
+
+.vote-btn.vote-active.vote-down {
+    color: var(--color-danger);
+}
+
+.vote-score {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--secondary);
+    line-height: 1;
+    min-width: 16px;
+    text-align: center;
+}
+
+/* Comment Reply Button */
+.comment-reply-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--tertiary);
+    cursor: pointer;
+    padding: 0;
+    transition:
+        color 0.15s,
+        background 0.15s;
+}
+
+@media (hover: hover) {
+    .comment-reply-btn:hover {
+        color: var(--primary);
+    }
+}
+
+.comment-reply-btn:active {
+    color: var(--primary);
+}
+
+@media (max-width: 500px) {
+    .comment-votes {
+        gap: 0;
+    }
+
+    .vote-btn {
+        width: 24px;
+        height: 24px;
+    }
+
+    .vote-score {
+        font-size: 0.75rem;
+    }
+
+    .comment-reply-btn {
+        font-size: 0.75rem;
     }
 }
 
