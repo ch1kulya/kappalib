@@ -38,6 +38,12 @@ var queryCommentsUpdateStatus string
 //go:embed sql/comments_set_telegram_message_id.sql
 var queryCommentsSetTelegramMessageID string
 
+//go:embed sql/comments_get_by_user.sql
+var queryCommentsGetByUser string
+
+//go:embed sql/comments_count_by_user.sql
+var queryCommentsCountByUser string
+
 //go:embed sql/comment_votes_upsert.sql
 var queryCommentVotesUpsert string
 
@@ -320,6 +326,60 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 	}, nil
 }
 
+func GetUserComments(ctx context.Context, userID string, page int) (*models.UserCommentsPage, error) {
+	pageSize := 12
+	offset := (page - 1) * pageSize
+
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var totalCount int
+	err := database.DB.QueryRow(dbCtx, queryCommentsCountByUser, userID).Scan(&totalCount)
+	if err != nil {
+		logger.Error("Failed to count user comments: %v", err)
+		return nil, err
+	}
+
+	if totalCount == 0 {
+		return &models.UserCommentsPage{
+			Comments:   []models.UserComment{},
+			Page:       page,
+			PageSize:   pageSize,
+			TotalCount: 0,
+			TotalPages: 0,
+		}, nil
+	}
+
+	rows, err := database.DB.Query(dbCtx, queryCommentsGetByUser, userID, pageSize, offset)
+	if err != nil {
+		logger.Error("Failed to get user comments: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	comments := make([]models.UserComment, 0)
+	for rows.Next() {
+		var c models.UserComment
+		if err := rows.Scan(
+			&c.ID, &c.ChapterID, &c.ContentHTML, &c.Status, &c.CreatedAt,
+			&c.ChapterNum, &c.NovelID, &c.NovelTitle, &c.Score, &c.UserVote,
+		); err != nil {
+			logger.Warn("User comment row scan error: %v", err)
+			continue
+		}
+		comments = append(comments, c)
+	}
+
+	totalPages := (totalCount + pageSize - 1) / pageSize
+	return &models.UserCommentsPage{
+		Comments:   comments,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: totalCount,
+		TotalPages: totalPages,
+	}, nil
+}
+
 func VoteComment(ctx context.Context, commentID, userID string, value int) (int, error) {
 	if value != -1 && value != 0 && value != 1 {
 		return 0, ErrInvalidVoteValue
@@ -368,6 +428,36 @@ func UpdateCommentStatus(ctx context.Context, commentID, status string) error {
 	}
 
 	logger.Info("Comment %s status updated to %s", commentID, status)
+	return nil
+}
+
+func DeleteComment(ctx context.Context, commentID, userID string) error {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var ownerID string
+	var status string
+	err := database.DB.QueryRow(dbCtx,
+		`SELECT user_id, status FROM comments WHERE id = $1`,
+		commentID,
+	).Scan(&ownerID, &status)
+	if err != nil {
+		return ErrCommentNotFound
+	}
+
+	if ownerID != userID {
+		return ErrNotCommentAuthor
+	}
+
+	if status != "approved" {
+		return ErrCannotDeleteComment
+	}
+
+	if err := UpdateCommentStatus(ctx, commentID, "deleted"); err != nil {
+		return err
+	}
+
+	logger.Info("Comment %s deleted by user %s", commentID, userID)
 	return nil
 }
 

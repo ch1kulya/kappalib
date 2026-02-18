@@ -11,7 +11,7 @@ import { initChaptersSort, initCatalogSort } from "./modules/sort";
 import { initTocFilter } from "./modules/toc";
 import { initDescription } from "./modules/description";
 import { initProfile, initProfileModal } from "./modules/profile";
-import { initComments } from "./modules/comments";
+import { initComments, initMyCommentsPage } from "./modules/comments";
 import { initSettings, initSettingsModal } from "./modules/settings";
 import { initHistoryPage } from "./modules/history";
 
@@ -53,6 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initCatalogPage();
     initComments();
     initHistoryPage();
+    initMyCommentsPage();
 
     if (document.querySelector(".cr-wrapper")) {
       refreshLastReadTotalChapters();

@@ -920,15 +920,25 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
-	props := views.HistoryProps{
-		BaseProps: views.BaseProps{
-			Title:          "История чтения — kappalib",
-			Description:    "История прочитанных веб-новелл и ранобэ.",
-			Canonical:      "https://kappalib.ru/history",
-			Version:        h.assetVersion,
-			IsLoggedIn:     h.hasSession(r),
-			ReaderSettings: h.getReaderSettings(r),
-		},
+	props := views.BaseProps{
+		Title:          "История чтения — kappalib",
+		Description:    "История прочитанных веб-новелл и ранобэ.",
+		Canonical:      "https://kappalib.ru/history",
+		Version:        h.assetVersion,
+		IsLoggedIn:     h.hasSession(r),
+		ReaderSettings: h.getReaderSettings(r),
 	}
 	h.render(w, r, views.History(props))
+}
+
+func (h *Handler) MyComments(w http.ResponseWriter, r *http.Request) {
+	props := views.BaseProps{
+		Title:          "Мои комментарии — kappalib",
+		Description:    "Ваши комментарии к веб-новеллам.",
+		Canonical:      "https://kappalib.ru/comments",
+		Version:        h.assetVersion,
+		IsLoggedIn:     h.hasSession(r),
+		ReaderSettings: h.getReaderSettings(r),
+	}
+	h.render(w, r, views.MyComments(props))
 }
