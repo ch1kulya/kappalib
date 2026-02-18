@@ -156,12 +156,12 @@ function createCommentHTML(comment: Comment): string {
       <div class="comment-aside">
         <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
         ${voteHTML}
-        ${actionHTML}
       </div>
       <div class="comment-body">
         <div class="comment-header">
           <span class="comment-author">${comment.user_display_name}</span>
           ${statusBadge}
+          ${actionHTML}
         </div>
         <div class="comment-content">${comment.content_html}</div>
       </div>
@@ -1005,12 +1005,12 @@ function createUserCommentHTML(comment: UserComment): string {
         <div class="comment-aside">
           <img src="${avatarUrl}" alt="${displayName}" class="comment-avatar" loading="lazy"/>
           ${voteHTML}
-          ${deleteHTML}
         </div>
         <div class="comment-body">
           <div class="comment-header">
             <span class="comment-author">${displayName}</span>
             ${statusBadge}
+            ${deleteHTML}
           </div>
           <div class="comment-content">${comment.content_html}</div>
         </div>

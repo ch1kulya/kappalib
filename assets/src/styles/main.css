@@ -3743,18 +3743,27 @@ html {
     align-items: baseline;
     gap: 0.5rem;
     margin-bottom: 0.5rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+}
+
+.comment-header .comment-reply-btn,
+.comment-header .comment-delete-btn {
+    margin-left: auto;
 }
 
 .comment-author {
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--primary);
+    white-space: nowrap;
 }
 
 .comment-date {
     font-size: 0.8rem;
     color: var(--tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .comment-moderation-badge {
@@ -3878,7 +3887,7 @@ html {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 0;
 }
 
 .vote-btn {
@@ -3942,6 +3951,8 @@ html {
     transition:
         color 0.15s,
         background 0.15s;
+    position: relative;
+    bottom: -0.15rem;
 }
 
 @media (hover: hover) {
@@ -3969,6 +3980,8 @@ html {
     transition:
         color 0.15s,
         background 0.15s;
+    position: relative;
+    bottom: -0.15rem;
 }
 
 @media (hover: hover) {
@@ -3982,10 +3995,6 @@ html {
 }
 
 @media (max-width: 500px) {
-    .comment-votes {
-        gap: 0;
-    }
-
     .vote-btn {
         width: 24px;
         height: 24px;
