@@ -33,6 +33,7 @@ export function getAvatarUrl(
 
 class ProfileManager {
   private profileId: string | null = null;
+  private cachedProfile: ProfilePublic | null = null;
 
   constructor() {
     this.profileId = localStorage.getItem(PROFILE_ID_KEY);
@@ -61,6 +62,10 @@ class ProfileManager {
     return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${profile.avatar_seed}&backgroundType=solid,gradientLinear`;
   }
 
+  getProfileCache(): ProfilePublic | null {
+    return this.cachedProfile;
+  }
+
   async fetchProfile(): Promise<ProfilePublic | null> {
     try {
       const url = `${API_URL}/profile/me`;
@@ -68,6 +73,7 @@ class ProfileManager {
       if (res.ok) {
         const profile = await res.json();
         this.profileId = profile.id;
+        this.cachedProfile = profile;
         localStorage.setItem(PROFILE_ID_KEY, profile.id);
         return profile;
       }
@@ -187,6 +193,7 @@ class ProfileManager {
 
   private clearLocal(): void {
     this.profileId = null;
+    this.cachedProfile = null;
     localStorage.removeItem(PROFILE_ID_KEY);
     localStorage.removeItem(PROFILE_PROVIDER_KEY);
     localStorage.removeItem("kappalib_pending_comments");

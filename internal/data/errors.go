@@ -16,4 +16,6 @@ var (
 	ErrInvalidCharacters    = errors.New("invalid characters in name")
 	ErrInvalidVoteValue     = errors.New("invalid vote value")
 	ErrCommentNotFound      = errors.New("comment not found")
+	ErrNotCommentAuthor     = errors.New("not comment author")
+	ErrCannotDeleteComment  = errors.New("cannot delete comment with current status")
 )

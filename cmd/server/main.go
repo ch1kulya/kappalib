@@ -175,6 +175,7 @@ func main() {
 	r.Get("/", h.Home)
 	r.Get("/catalog", h.Catalog)
 	r.Get("/history", h.History)
+	r.Get("/comments", h.MyComments)
 	r.Get("/updates", h.Updates)
 	r.Get("/dmca", h.StaticPage("dmca", "DMCA"))
 	r.Get("/privacy", h.StaticPage("privacy", "Политика конфиденциальности"))
@@ -375,6 +376,22 @@ func main() {
 			Summary:     "Vote on comment",
 			Security:    []map[string][]string{{"sessionCookie": {}}},
 		}, api.HandleVoteComment)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-user-comments",
+			Method:      http.MethodGet,
+			Path:        "/profile/me/comments",
+			Summary:     "Get current user's comments",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+		}, api.HandleGetUserComments)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "delete-comment",
+			Method:      http.MethodDelete,
+			Path:        "/comments/{commentId}",
+			Summary:     "Delete own comment",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+		}, api.HandleDeleteComment)
 
 	})
 

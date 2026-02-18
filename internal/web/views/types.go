@@ -104,10 +104,6 @@ type CatalogProps struct {
 	IsPartial   bool
 }
 
-type HistoryProps struct {
-	BaseProps
-}
-
 type UpdatesProps struct {
 	BaseProps
 	Updates []models.HomeUpdateItem

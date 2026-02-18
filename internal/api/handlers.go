@@ -182,6 +182,14 @@ type CommentsPageResponse struct {
 	Body models.CommentsPage
 }
 
+type UserCommentsPageResponse struct {
+	Body models.UserCommentsPage
+}
+
+type GetUserCommentsInput struct {
+	Page int `query:"page" default:"1" minimum:"1" maximum:"9999"`
+}
+
 type SitemapResponse struct {
 	Body []models.SitemapItem
 }
@@ -619,4 +627,45 @@ func HandleVoteComment(ctx context.Context, input *VoteCommentInput) (*VoteComme
 			UserVote int `json:"user_vote"`
 		}{Score: score, UserVote: input.Body.Value},
 	}, nil
+}
+
+type DeleteCommentInput struct {
+	CommentID string `path:"commentId" pattern:"^cmt_[a-z0-9]{8}$"`
+}
+
+func HandleDeleteComment(ctx context.Context, input *DeleteCommentInput) (*EmptyResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = data.DeleteComment(ctx, input.CommentID, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrCommentNotFound):
+			return nil, huma.Error404NotFound("Comment not found")
+		case errors.Is(err, data.ErrNotCommentAuthor):
+			return nil, huma.Error403Forbidden("You can only delete your own comments")
+		case errors.Is(err, data.ErrCannotDeleteComment):
+			return nil, huma.Error400BadRequest("Only approved comments can be deleted")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to delete comment")
+		}
+	}
+
+	return &EmptyResponse{Status: 204}, nil
+}
+
+func HandleGetUserComments(ctx context.Context, input *GetUserCommentsInput) (*UserCommentsPageResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	comments, err := data.GetUserComments(ctx, userID, input.Page)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to fetch comments")
+	}
+
+	return &UserCommentsPageResponse{Body: *comments}, nil
 }

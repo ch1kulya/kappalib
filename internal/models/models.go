@@ -143,6 +143,27 @@ type CommentsPage struct {
 	TotalPages int       `json:"total_pages"`
 }
 
+type UserComment struct {
+	ID         string    `json:"id"`
+	ChapterID  string    `json:"chapter_id"`
+	ContentHTML string   `json:"content_html"`
+	Status     string    `json:"status"`
+	CreatedAt  time.Time `json:"created_at"`
+	ChapterNum int       `json:"chapter_num"`
+	NovelID    string    `json:"novel_id"`
+	NovelTitle string    `json:"novel_title"`
+	Score      int       `json:"score"`
+	UserVote   int       `json:"user_vote"`
+}
+
+type UserCommentsPage struct {
+	Comments   []UserComment `json:"comments"`
+	Page       int           `json:"page"`
+	PageSize   int           `json:"page_size"`
+	TotalCount int           `json:"total_count"`
+	TotalPages int           `json:"total_pages"`
+}
+
 type CreateCommentInput struct {
 	ChapterID      string `json:"chapter_id"`
 	Content        string `json:"content"`

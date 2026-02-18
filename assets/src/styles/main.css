@@ -2656,7 +2656,7 @@ html {
                 );
             }
         }
-        &.pc-btn-logout {
+        &.pc-btn-action {
             width: 100%;
             display: flex;
             align-items: center;
@@ -2664,10 +2664,19 @@ html {
             gap: 0.4rem;
             background: var(--bg-primary);
             color: var(--primary);
+            text-decoration: none;
+            line-height: 1.4;
+            box-sizing: border-box;
+            @media (hover: hover) {
+                &:hover {
+                    box-shadow: var(--shadow-focus);
+                }
+            }
+        }
+        &.pc-btn-action.pc-btn-danger {
             @media (hover: hover) {
                 &:hover {
                     color: var(--color-danger);
-                    box-shadow: var(--shadow-focus);
                 }
             }
             &:active {
@@ -2827,6 +2836,8 @@ html {
     }
     & .pc-footer {
         display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
     }
     @media (max-width: 440px) {
         .pc-body {
@@ -3107,7 +3118,7 @@ html {
 .pc-skeleton-logout {
     display: block;
     width: 100%;
-    height: 34px;
+    height: 40px;
     border-radius: 8px;
 }
 
@@ -3336,6 +3347,133 @@ html {
 
     .update-novel-desc {
         font-size: 0.75rem;
+    }
+}
+
+/* My Comments Page */
+.mc-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--tertiary);
+    font-size: 0.95rem;
+}
+
+.mc-count {
+    font-size: 0.9rem;
+    color: var(--secondary);
+    font-weight: 500;
+}
+
+.mc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.mc-comment-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.mc-chapter-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    text-decoration: none;
+    color: var(--secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    min-width: 0;
+}
+
+@media (hover: hover) {
+    .mc-chapter-link:hover {
+        color: var(--primary);
+        & .mc-chapter-num {
+            color: var(--primary);
+        }
+    }
+}
+
+.mc-chapter-link:active {
+    color: var(--primary);
+    & .mc-chapter-num {
+        color: var(--primary);
+    }
+}
+
+.mc-novel-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 0.2s;
+}
+
+.mc-chapter-num {
+    color: var(--tertiary);
+    font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
+    transition: color 0.2s;
+}
+
+.mc-pagination {
+    margin-top: 1.5rem;
+}
+
+.mc-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.mc-skeleton-chapter-link {
+    width: 40%;
+    height: 0.85rem;
+    border-radius: 4px;
+}
+
+.mc-skeleton-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+}
+
+.mc-skeleton-author {
+    width: 80px;
+    height: 0.9rem;
+    border-radius: 4px;
+}
+
+.mc-skeleton-date {
+    width: 60px;
+    height: 0.75rem;
+    border-radius: 4px;
+}
+
+.mc-skeleton-content {
+    margin-top: 0.5rem;
+}
+
+.mc-skeleton-line {
+    height: 0.85rem;
+    border-radius: 4px;
+}
+
+.mc-skeleton-line-long {
+    width: 90%;
+    margin-bottom: 0.35rem;
+}
+
+.mc-skeleton-line-short {
+    width: 45%;
+}
+
+@media (max-width: 500px) {
+    .mc-chapter-link {
+        font-size: 0.8rem;
     }
 }
 
@@ -3605,18 +3743,27 @@ html {
     align-items: baseline;
     gap: 0.5rem;
     margin-bottom: 0.5rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+}
+
+.comment-header .comment-reply-btn,
+.comment-header .comment-delete-btn {
+    margin-left: auto;
 }
 
 .comment-author {
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--primary);
+    white-space: nowrap;
 }
 
 .comment-date {
     font-size: 0.8rem;
     color: var(--tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .comment-moderation-badge {
@@ -3626,6 +3773,8 @@ html {
     color: var(--color-warning);
     border: 1px solid var(--color-warning-glow);
     border-radius: 6px;
+    position: relative;
+    top: -0.1rem;
 }
 
 .comment-rejected-badge {
@@ -3635,6 +3784,8 @@ html {
     color: var(--color-danger);
     border: 1px solid var(--color-danger-glow);
     border-radius: 6px;
+    position: relative;
+    top: -0.1rem;
 }
 
 .comment-content {
@@ -3736,7 +3887,7 @@ html {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 0;
 }
 
 .vote-btn {
@@ -3781,6 +3932,7 @@ html {
     line-height: 1;
     min-width: 16px;
     text-align: center;
+    padding-top: 0.1rem;
 }
 
 /* Comment Reply Button */
@@ -3799,6 +3951,8 @@ html {
     transition:
         color 0.15s,
         background 0.15s;
+    position: relative;
+    bottom: -0.15rem;
 }
 
 @media (hover: hover) {
@@ -3811,11 +3965,36 @@ html {
     color: var(--primary);
 }
 
-@media (max-width: 500px) {
-    .comment-votes {
-        gap: 0;
-    }
+.comment-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--tertiary);
+    cursor: pointer;
+    padding: 0;
+    transition:
+        color 0.15s,
+        background 0.15s;
+    position: relative;
+    bottom: -0.15rem;
+}
 
+@media (hover: hover) {
+    .comment-delete-btn:hover {
+        color: var(--color-danger);
+    }
+}
+
+.comment-delete-btn:active {
+    color: var(--color-danger);
+}
+
+@media (max-width: 500px) {
     .vote-btn {
         width: 24px;
         height: 24px;

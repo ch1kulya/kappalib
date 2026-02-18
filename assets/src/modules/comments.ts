@@ -139,23 +139,29 @@ function createCommentHTML(comment: Comment): string {
       </div>`
     : "";
 
-  const replyHTML = isApproved
-    ? `<button class="comment-reply-btn" data-comment-id="${comment.id}" data-author="${comment.user_display_name}" aria-label="Ответить">
+  const isOwn = comment.user_id === profileManager.getProfileId();
+  let actionHTML = "";
+  if (isOwn && isApproved) {
+    actionHTML = `<button class="comment-delete-btn" data-comment-id="${comment.id}" aria-label="Удалить">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+      </button>`;
+  } else if (isApproved) {
+    actionHTML = `<button class="comment-reply-btn" data-comment-id="${comment.id}" data-author="${comment.user_display_name}" aria-label="Ответить">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-      </button>`
-    : "";
+      </button>`;
+  }
 
   return `
     <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}">
       <div class="comment-aside">
         <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
         ${voteHTML}
-        ${replyHTML}
       </div>
       <div class="comment-body">
         <div class="comment-header">
           <span class="comment-author">${comment.user_display_name}</span>
           ${statusBadge}
+          ${actionHTML}
         </div>
         <div class="comment-content">${comment.content_html}</div>
       </div>
@@ -181,18 +187,7 @@ function renderComments(container: HTMLElement, comments: Comment[]): void {
   }
 }
 
-function renderPagination(
-  container: HTMLElement,
-  page: number,
-  totalPages: number,
-  chapterId: string,
-): void {
-  const paginationEl = container.querySelector(".comments-pagination");
-  if (!paginationEl || totalPages <= 1) {
-    if (paginationEl) paginationEl.innerHTML = "";
-    return;
-  }
-
+function buildPaginationHTML(page: number, totalPages: number): string {
   let html = "";
 
   if (page > 1) {
@@ -218,7 +213,21 @@ function renderPagination(
     html += `<span class="page-link prev-next disabled">→</span>`;
   }
 
-  paginationEl.innerHTML = html;
+  return html;
+}
+
+function renderPagination(
+  container: HTMLElement,
+  page: number,
+  totalPages: number,
+): void {
+  const paginationEl = container.querySelector(".comments-pagination");
+  if (!paginationEl || totalPages <= 1) {
+    if (paginationEl) paginationEl.innerHTML = "";
+    return;
+  }
+
+  paginationEl.innerHTML = buildPaginationHTML(page, totalPages);
 }
 
 function calculatePagination(current: number, total: number): number[] {
@@ -277,7 +286,7 @@ async function loadComments(
     const data: CommentsPage = await res.json();
 
     renderComments(container, data.comments);
-    renderPagination(container, data.page, data.total_pages, chapterId);
+    renderPagination(container, data.page, data.total_pages);
 
     const countEl = container.querySelector(".comments-count");
     if (countEl) {
@@ -458,6 +467,15 @@ export function initComments(): void {
       return;
     }
 
+    const deleteBtn = target.closest(
+      ".comment-delete-btn",
+    ) as HTMLElement | null;
+    if (deleteBtn) {
+      e.preventDefault();
+      handleDeleteComment(deleteBtn, container, chapterId);
+      return;
+    }
+
     const pageBtn = target.closest(".page-link[data-page]") as HTMLElement;
     if (pageBtn && !pageBtn.classList.contains("disabled")) {
       const page = parseInt(pageBtn.dataset.page || "1", 10);
@@ -470,8 +488,8 @@ export function initComments(): void {
 
 async function handleVote(
   btn: HTMLElement,
-  container: HTMLElement,
-  chapterId: string,
+  container?: HTMLElement,
+  chapterId?: string,
 ): Promise<void> {
   if (!profileManager.isLoggedIn()) return;
 
@@ -504,12 +522,14 @@ async function handleVote(
     upBtn.classList.toggle("vote-active", data.user_vote === 1);
     downBtn.classList.toggle("vote-active", data.user_vote === -1);
 
-    const activePage =
-      container.querySelector(".page-link.active")?.textContent || "1";
-    fetch(`${API_URL}/chapters/${chapterId}/comments?page=${activePage}`, {
-      credentials: "include",
-      cache: "no-cache",
-    });
+    if (container && chapterId) {
+      const activePage =
+        container.querySelector(".page-link.active")?.textContent || "1";
+      fetch(`${API_URL}/chapters/${chapterId}/comments?page=${activePage}`, {
+        credentials: "include",
+        cache: "no-cache",
+      });
+    }
   } catch {
     // silent
   }
@@ -532,6 +552,44 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
   autoResizeTextarea(textarea);
 
   textarea.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+async function handleDeleteComment(
+  btn: HTMLElement,
+  container?: HTMLElement,
+  chapterId?: string,
+  currentPage?: number,
+): Promise<void> {
+  const commentId = btn.dataset.commentId;
+  if (!commentId) return;
+
+  if (!confirm("Вы уверены, что хотите удалить этот комментарий?")) return;
+
+  try {
+    const res = await fetch(`${API_URL}/comments/${commentId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!res.ok) return;
+
+    if (container && chapterId) {
+      const wrapper = btn.closest(".mc-comment-wrapper");
+      const item = wrapper || btn.closest(".comment-item");
+      if (item) item.remove();
+
+      const activePage =
+        container.querySelector(".page-link.active")?.textContent || "1";
+      fetch(`${API_URL}/chapters/${chapterId}/comments?page=${activePage}`, {
+        credentials: "include",
+        cache: "no-cache",
+      });
+    } else if (currentPage !== undefined) {
+      loadMyComments(currentPage);
+    }
+  } catch {
+    // silent
+  }
 }
 
 function renderCommentForm(container: HTMLElement): void {
@@ -579,7 +637,7 @@ function renderCommentForm(container: HTMLElement): void {
         ></textarea>
         <div class="comment-form-footer">
           <span id="comment-char-counter" class="comment-char-counter">0/3000</span>
-          <a href="/markdown" target="_blank" class="comment-markdown-hint">Форматирование</a>
+          <a href="/markdown" target="_blank" class="comment-markdown-hint">Формат</a>
           <div id="comments-turnstile-container"></div>
           <button id="comment-submit" class="action-btn btn-primary comment-submit-btn">Отправить</button>
         </div>
@@ -860,6 +918,232 @@ async function uploadCommentImage(
 
   updateCharCounter(textarea);
   autoResizeTextarea(textarea);
+}
+
+interface UserComment {
+  id: string;
+  chapter_id: string;
+  content_html: string;
+  status: string;
+  created_at: string;
+  chapter_num: number;
+  novel_id: string;
+  novel_title: string;
+  score: number;
+  user_vote: number;
+}
+
+interface UserCommentsPage {
+  comments: UserComment[];
+  page: number;
+  page_size: number;
+  total_count: number;
+  total_pages: number;
+}
+
+function createUserCommentHTML(comment: UserComment): string {
+  const profile = profileManager.getProfileCache();
+  const avatarUrl = profile
+    ? getAvatarUrl(
+        profile.id,
+        profile.has_custom_avatar,
+        profile.avatar_seed,
+        profile.avatar_updated_at,
+      )
+    : "";
+  const displayName = profile ? profile.display_name : "";
+
+  let statusBadge = "";
+  let extraClass = "";
+
+  switch (comment.status) {
+    case "pending":
+      statusBadge =
+        '<span class="comment-moderation-badge">На модерации</span>';
+      extraClass = " comment-pending";
+      break;
+    case "rejected":
+      statusBadge = '<span class="comment-rejected-badge">Отклонено</span>';
+      extraClass = " comment-rejected";
+      break;
+    default:
+      statusBadge = `<span class="comment-date">${formatRelativeTime(comment.created_at)}</span>`;
+  }
+
+  const isApproved = comment.status === "approved";
+  const upActive = comment.user_vote === 1 ? " vote-active" : "";
+  const downActive = comment.user_vote === -1 ? " vote-active" : "";
+
+  const voteHTML = isApproved
+    ? `<div class="comment-votes">
+        <button class="vote-btn vote-up${upActive}" data-vote="1" data-comment-id="${comment.id}" aria-label="Лайк">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+        </button>
+        <span class="vote-score" data-comment-id="${comment.id}">${comment.score}</span>
+        <button class="vote-btn vote-down${downActive}" data-vote="-1" data-comment-id="${comment.id}" aria-label="Дизлайк">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+      </div>`
+    : "";
+
+  const chapterUrl = `/${comment.novel_id}/chapter/${comment.chapter_id}`;
+  const chapterLinkHTML = `<a href="${chapterUrl}" class="mc-chapter-link">
+      <span class="mc-novel-title">${comment.novel_title}</span>
+      <span class="mc-chapter-num">Глава ${comment.chapter_num}</span>
+    </a>`;
+
+  const deleteHTML = isApproved
+    ? `<button class="comment-delete-btn" data-comment-id="${comment.id}" aria-label="Удалить">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+      </button>`
+    : "";
+
+  return `
+    <div class="mc-comment-wrapper">
+      ${chapterLinkHTML}
+      <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}">
+        <div class="comment-aside">
+          <img src="${avatarUrl}" alt="${displayName}" class="comment-avatar" loading="lazy"/>
+          ${voteHTML}
+        </div>
+        <div class="comment-body">
+          <div class="comment-header">
+            <span class="comment-author">${displayName}</span>
+            ${statusBadge}
+            ${deleteHTML}
+          </div>
+          <div class="comment-content">${comment.content_html}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function loadMyComments(page: number = 1): Promise<void> {
+  const listEl = document.getElementById("mc-list");
+  const emptyEl = document.getElementById("mc-empty");
+  const skeletonEl = document.getElementById("mc-skeleton");
+  const paginationEl = document.getElementById("mc-pagination");
+  const countEl = document.getElementById("mc-count");
+
+  if (!listEl || !emptyEl || !paginationEl) return;
+
+  if (page === 1 && skeletonEl) {
+    const skeletonTemplate = document.getElementById(
+      "tpl-mc-skeleton",
+    ) as HTMLTemplateElement;
+    if (skeletonTemplate && skeletonEl.children.length === 0) {
+      for (let i = 0; i < 5; i++) {
+        skeletonEl.appendChild(skeletonTemplate.content.cloneNode(true));
+      }
+    }
+    skeletonEl.style.display = "";
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/profile/me/comments?page=${page}`, {
+      credentials: "include",
+    });
+
+    if (res.status === 401) {
+      if (skeletonEl) skeletonEl.style.display = "none";
+      emptyEl.style.display = "block";
+      emptyEl.querySelector("p")!.textContent =
+        "Войдите в аккаунт, чтобы видеть свои комментарии";
+      return;
+    }
+
+    if (!res.ok) throw new Error("Failed to load comments");
+
+    const data: UserCommentsPage = await res.json();
+
+    if (skeletonEl) skeletonEl.style.display = "none";
+
+    if (data.total_count === 0) {
+      emptyEl.style.display = "block";
+      listEl.innerHTML = "";
+      paginationEl.innerHTML = "";
+      if (countEl) countEl.textContent = "";
+      return;
+    }
+
+    emptyEl.style.display = "none";
+    if (countEl) countEl.textContent = `${data.total_count}`;
+
+    let html = "";
+    data.comments.forEach((c) => {
+      html += createUserCommentHTML(c);
+    });
+    listEl.innerHTML = html;
+
+    if (data.total_pages > 1) {
+      paginationEl.innerHTML = buildPaginationHTML(data.page, data.total_pages);
+    } else {
+      paginationEl.innerHTML = "";
+    }
+  } catch (err) {
+    console.error("Failed to load user comments", err);
+    if (skeletonEl) skeletonEl.style.display = "none";
+    listEl.innerHTML =
+      '<div class="comments-error">Не удалось загрузить комментарии</div>';
+  }
+}
+
+export function initMyCommentsPage(): void {
+  const content = document.getElementById("mc-content");
+  if (!content) return;
+
+  if (!profileManager.isLoggedIn()) {
+    const emptyEl = document.getElementById("mc-empty");
+    if (emptyEl) {
+      emptyEl.style.display = "block";
+      emptyEl.querySelector("p")!.textContent =
+        "Войдите в аккаунт, чтобы видеть свои комментарии";
+    }
+    return;
+  }
+
+  loadMyComments(1);
+
+  content.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+
+    const spoiler = target.closest(".spoiler") as HTMLElement | null;
+    if (spoiler) {
+      spoiler.classList.toggle("revealed");
+      return;
+    }
+
+    const voteBtn = target.closest(".vote-btn") as HTMLElement | null;
+    if (voteBtn) {
+      e.preventDefault();
+      handleVote(voteBtn);
+      return;
+    }
+
+    const deleteBtn = target.closest(
+      ".comment-delete-btn",
+    ) as HTMLElement | null;
+    if (deleteBtn) {
+      e.preventDefault();
+      const activePage =
+        content.querySelector(".page-link.active")?.textContent || "1";
+      handleDeleteComment(
+        deleteBtn,
+        undefined,
+        undefined,
+        parseInt(activePage, 10),
+      );
+      return;
+    }
+
+    const pageBtn = target.closest(".page-link[data-page]") as HTMLElement;
+    if (pageBtn && !pageBtn.classList.contains("disabled")) {
+      const page = parseInt(pageBtn.dataset.page || "1", 10);
+      loadMyComments(page);
+      content.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
 }
 
 function initFormHandlers(container: HTMLElement): void {
