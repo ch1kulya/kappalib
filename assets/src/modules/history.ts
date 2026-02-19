@@ -209,7 +209,7 @@ export function initHistoryPage(): void {
             chapterId: nextProgress.chapterId,
             chapterNum: next.chapterNum,
             totalChapters: next.totalChapters,
-            readAt: next.readAt,
+            readAt: Date.now(),
           };
         } else {
           progress.lastRead = null;
