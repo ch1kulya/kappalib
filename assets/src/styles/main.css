@@ -2828,7 +2828,7 @@ html {
                     gap: 0.3rem;
                     & svg {
                         flex-shrink: 0;
-                        opacity: 0.7;
+                        color: var(--tertiary);
                     }
                 }
             }
