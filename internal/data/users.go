@@ -160,25 +160,39 @@ func mergeProgressCookies(existing, incoming models.CookieValue) models.CookieVa
 	}
 
 	merged := progressCookieSchema{
-		Novels:   make(map[string]progressNovel),
-		LastRead: existingProgress.LastRead,
+		Novels: make(map[string]progressNovel),
 	}
 
-	for id, novel := range existingProgress.Novels {
-		merged.Novels[id] = novel
-	}
-	for id, novel := range incomingProgress.Novels {
-		if ex, ok := merged.Novels[id]; !ok || novel.ChapterNum > ex.ChapterNum || (novel.ChapterNum == ex.ChapterNum && novel.ReadAt > ex.ReadAt) {
+	if incoming.UpdatedAt > existing.UpdatedAt {
+		for id, novel := range incomingProgress.Novels {
 			merged.Novels[id] = novel
+		}
+		for id, ex := range existingProgress.Novels {
+			if inc, ok := incomingProgress.Novels[id]; ok {
+				if ex.ChapterNum > inc.ChapterNum || (ex.ChapterNum == inc.ChapterNum && ex.ReadAt > inc.ReadAt) {
+					merged.Novels[id] = ex
+				}
+			}
+		}
+	} else {
+		for id, novel := range existingProgress.Novels {
+			merged.Novels[id] = novel
+		}
+		for id, inc := range incomingProgress.Novels {
+			if ex, ok := existingProgress.Novels[id]; ok {
+				if inc.ChapterNum > ex.ChapterNum || (inc.ChapterNum == ex.ChapterNum && inc.ReadAt > ex.ReadAt) {
+					merged.Novels[id] = inc
+				}
+			}
 		}
 	}
 
+	merged.LastRead = existingProgress.LastRead
 	if incomingProgress.LastRead != nil {
 		if merged.LastRead == nil || incomingProgress.LastRead.ReadAt > merged.LastRead.ReadAt {
 			merged.LastRead = incomingProgress.LastRead
 		}
 	}
-
 	if merged.LastRead != nil {
 		if novel, ok := merged.Novels[merged.LastRead.NovelID]; ok && novel.ChapterNum > merged.LastRead.ChapterNum {
 			merged.LastRead.ChapterID = novel.ChapterID
