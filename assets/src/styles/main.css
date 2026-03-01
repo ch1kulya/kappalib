@@ -13,6 +13,8 @@ html.theme-transitioning *::after {
     padding: 0;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
 }
 
 html::selection {
@@ -3167,8 +3169,6 @@ html {
     text-decoration: none;
     color: inherit;
     border-bottom: 1px solid var(--border);
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
 }
 
 .update-log-item:last-child {
