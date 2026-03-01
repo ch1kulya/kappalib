@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26.0-alpine AS builder
 
 WORKDIR /app
 
@@ -29,9 +29,9 @@ RUN chown -R appuser:appgroup /app
 
 USER appuser
 
-EXPOSE 8080
+EXPOSE 1666
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/healthz || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:1666/healthz || exit 1
 
 CMD ["./server"]

@@ -404,7 +404,7 @@ func main() {
 		}
 	}()
 
-	port := "8080"
+	port := "1666"
 
 	srv := &http.Server{
 		Addr:         ":" + port,

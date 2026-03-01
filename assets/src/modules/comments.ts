@@ -1020,6 +1020,10 @@ function createUserCommentHTML(comment: UserComment): string {
 }
 
 async function loadMyComments(page: number = 1): Promise<void> {
+  if (!profileManager.getProfileCache()) {
+    await profileManager.fetchProfile();
+  }
+
   const listEl = document.getElementById("mc-list");
   const emptyEl = document.getElementById("mc-empty");
   const skeletonEl = document.getElementById("mc-skeleton");
