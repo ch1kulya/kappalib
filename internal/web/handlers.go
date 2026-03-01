@@ -562,6 +562,11 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	description := "Бесплатная библиотека веб-новелл и ранобэ. Читайте популярные веб-новеллы онлайн в хорошем переводе."
 	title := "Открытая коллекция веб-новелл — kappalib"
 
+	if page > 1 {
+		title = fmt.Sprintf("Открытая коллекция веб-новелл, страница %d — kappalib", page)
+		description = fmt.Sprintf("Страница %d. Бесплатная библиотека веб-новелл и ранобэ. Читайте популярные веб-новеллы онлайн в хорошем переводе.", page)
+	}
+
 	schema, err := templates.RenderSchemaWebsite(templates.SchemaWebsiteData{
 		Domain:      "https://kappalib.ru",
 		Canonical:   canonical,
