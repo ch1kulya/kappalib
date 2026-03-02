@@ -190,7 +190,7 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 		case "popular":
 			fallthrough
 		default:
-			orderByClause = "ORDER BY views_count DESC, title ASC"
+			orderByClause = "ORDER BY views_count / SQRT(GREATEST(chapters_count, 1)) DESC, title ASC"
 		}
 
 		finalQuery := fmt.Sprintf("%s %s LIMIT $1 OFFSET $2", baseQuery, orderByClause)
@@ -352,7 +352,7 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 		case "oldest":
 			orderByClause = "ORDER BY year_start ASC, title ASC"
 		case "popular":
-			orderByClause = "ORDER BY views_count DESC, title ASC"
+			orderByClause = "ORDER BY views_count / SQRT(GREATEST(chapters_count, 1)) DESC, title ASC"
 		default:
 			orderByClause = "ORDER BY relevance DESC, created_at DESC"
 		}
@@ -532,7 +532,7 @@ func GetCatalogNovels(ctx context.Context, page int, sort string, search string)
 	case "popular":
 		fallthrough
 	default:
-		orderByClause = "ORDER BY views_count DESC, title ASC"
+		orderByClause = "ORDER BY views_count / SQRT(GREATEST(chapters_count, 1)) DESC, title ASC"
 	}
 
 	selectQuery := fmt.Sprintf(
