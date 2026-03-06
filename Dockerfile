@@ -3,29 +3,32 @@ FROM golang:1.26.0-alpine AS builder
 WORKDIR /app
 
 COPY go.mod go.sum ./
-RUN go mod download
 
-RUN go install github.com/a-h/templ/cmd/templ@$(go list -m -f '{{.Version}}' github.com/a-h/templ)
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go install github.com/a-h/templ/cmd/templ@$(go list -m -f '{{.Version}}' github.com/a-h/templ)
 
 COPY . .
 
 RUN templ generate
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o server ./cmd/server
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o server ./cmd/server
 
-FROM alpine:latest
+FROM alpine:3.23
 
-RUN apk --no-cache add ca-certificates tzdata
-
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN apk --no-cache add ca-certificates tzdata && \
+    addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-COPY --from=builder /app/server .
-COPY --from=builder /app/assets ./assets
-COPY --from=builder /app/migrations ./migrations
-
-RUN chown -R appuser:appgroup /app
+COPY --from=builder --chown=appuser:appgroup /app/server .
+COPY --from=builder --chown=appuser:appgroup /app/assets ./assets
+COPY --from=builder --chown=appuser:appgroup /app/migrations ./migrations
 
 USER appuser
 
