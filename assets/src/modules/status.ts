@@ -1,10 +1,12 @@
 interface StatusData {
-  indicator: "none" | "minor" | "major" | "critical" | "maintenance" | string;
+  indicator: "none" | "minor" | "major" | "critical" | "maintenance" | "unknown" | string;
   description: string;
 }
 
 interface StatusResponse {
   status: StatusData;
+  availability?: number;
+  updated_at?: string;
 }
 
 export function initStatusBadge(): void {

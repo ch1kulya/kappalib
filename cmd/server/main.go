@@ -32,7 +32,8 @@ var docsHTML string
 
 var requiredEnvVars = []string{
 	"DATABASE_URL",
-	"BETTERSTACK_TOKEN",
+	"PHARE_TOKEN",
+	"PHARE_ID",
 	"TURNSTILE_COMMENTS_SITE_KEY",
 	"TURNSTILE_COMMENTS_SECRET",
 	"TELEGRAM_BOT_TOKEN",
@@ -231,6 +232,7 @@ func main() {
 			Method:      http.MethodGet,
 			Path:        "/",
 			Summary:     "API Status",
+			Tags:        []string{"System"},
 		}, api.HandleStatus)
 
 		huma.Register(humaApi, huma.Operation{
@@ -238,6 +240,7 @@ func main() {
 			Method:      http.MethodGet,
 			Path:        "/novels",
 			Summary:     "List novels",
+			Tags:        []string{"Novels"},
 		}, api.HandleGetNovels)
 
 		huma.Register(humaApi, huma.Operation{
@@ -245,6 +248,7 @@ func main() {
 			Method:      http.MethodGet,
 			Path:        "/novels/sitemap-data",
 			Summary:     "Get sitemap data",
+			Tags:        []string{"Novels"},
 		}, api.HandleGetSitemapData)
 
 		huma.Register(humaApi, huma.Operation{
@@ -252,6 +256,7 @@ func main() {
 			Method:      http.MethodGet,
 			Path:        "/novels/search",
 			Summary:     "Search novels",
+			Tags:        []string{"Novels"},
 		}, api.HandleSearchNovels)
 
 		huma.Register(humaApi, huma.Operation{
@@ -259,6 +264,7 @@ func main() {
 			Method:      http.MethodGet,
 			Path:        "/novels/{id}",
 			Summary:     "Get novel by ID",
+			Tags:        []string{"Novels"},
 		}, api.HandleGetNovel)
 
 		huma.Register(humaApi, huma.Operation{
@@ -266,6 +272,7 @@ func main() {
 			Method:      http.MethodPost,
 			Path:        "/novels/batch",
 			Summary:     "Get multiple novels by IDs",
+			Tags:        []string{"Novels"},
 		}, api.HandleGetNovelsBatch)
 
 		huma.Register(humaApi, huma.Operation{
@@ -273,6 +280,7 @@ func main() {
 			Method:      http.MethodGet,
 			Path:        "/novels/{id}/chapters",
 			Summary:     "List chapters for novel",
+			Tags:        []string{"Novels"},
 		}, api.HandleGetChaptersList)
 
 		huma.Register(humaApi, huma.Operation{
@@ -280,6 +288,7 @@ func main() {
 			Method:      http.MethodGet,
 			Path:        "/chapters/{id}",
 			Summary:     "Get chapter by ID",
+			Tags:        []string{"Chapters"},
 		}, api.HandleGetChapter)
 
 		huma.Register(humaApi, huma.Operation{
@@ -287,6 +296,7 @@ func main() {
 			Method:      http.MethodGet,
 			Path:        "/profile/{id}",
 			Summary:     "Get user profile",
+			Tags:        []string{"Profile"},
 		}, api.HandleGetProfile)
 
 		huma.Register(humaApi, huma.Operation{
@@ -294,6 +304,7 @@ func main() {
 			Method:      http.MethodGet,
 			Path:        "/chapters/{chapterId}/comments",
 			Summary:     "Get chapter comments",
+			Tags:        []string{"Chapters"},
 		}, api.HandleGetComments)
 
 		huma.Register(humaApi, huma.Operation{
@@ -301,6 +312,7 @@ func main() {
 			Method:      http.MethodPost,
 			Path:        "/webhook/telegram",
 			Summary:     "Telegram webhook",
+			Tags:        []string{"Webhook"},
 		}, api.HandleTelegramWebhook)
 
 		huma.Register(humaApi, huma.Operation{
@@ -309,6 +321,7 @@ func main() {
 			Path:        "/profile/me",
 			Summary:     "Get current authenticated user",
 			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Profile"},
 		}, api.HandleGetCurrentUser)
 
 		huma.Register(humaApi, huma.Operation{
@@ -317,6 +330,7 @@ func main() {
 			Path:        "/profile/{id}",
 			Summary:     "Delete user profile",
 			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Profile"},
 		}, api.HandleDeleteProfile)
 
 		huma.Register(humaApi, huma.Operation{
@@ -325,6 +339,7 @@ func main() {
 			Path:        "/profile/logout",
 			Summary:     "Logout and clear session cookie",
 			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Profile"},
 		}, api.HandleLogout)
 
 		huma.Register(humaApi, huma.Operation{
@@ -333,6 +348,7 @@ func main() {
 			Path:        "/profile/sync-cookies",
 			Summary:     "Sync cookies",
 			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Profile"},
 		}, api.HandleSyncCookies)
 
 		huma.Register(humaApi, huma.Operation{
@@ -341,6 +357,7 @@ func main() {
 			Path:        "/chapters/{chapterId}/comments",
 			Summary:     "Create comment",
 			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Chapters"},
 		}, api.HandleCreateComment)
 
 		huma.Register(humaApi, huma.Operation{
@@ -349,6 +366,7 @@ func main() {
 			Path:        "/profile/{id}/name",
 			Summary:     "Update display name",
 			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Profile"},
 		}, api.HandleUpdateDisplayName)
 
 		huma.Register(humaApi, huma.Operation{
@@ -358,6 +376,7 @@ func main() {
 			Summary:      "Upload avatar",
 			Security:     []map[string][]string{{"sessionCookie": {}}},
 			MaxBodyBytes: 2 << 20,
+			Tags:         []string{"Profile"},
 		}, api.HandleUploadAvatar)
 
 		huma.Register(humaApi, huma.Operation{
@@ -367,6 +386,7 @@ func main() {
 			Summary:      "Upload comment image",
 			Security:     []map[string][]string{{"sessionCookie": {}}},
 			MaxBodyBytes: 8 << 20,
+			Tags:         []string{"Comments"},
 		}, api.HandleUploadCommentImage)
 
 		huma.Register(humaApi, huma.Operation{
@@ -375,6 +395,7 @@ func main() {
 			Path:        "/comments/{commentId}/vote",
 			Summary:     "Vote on comment",
 			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Comments"},
 		}, api.HandleVoteComment)
 
 		huma.Register(humaApi, huma.Operation{
@@ -383,6 +404,7 @@ func main() {
 			Path:        "/profile/me/comments",
 			Summary:     "Get current user's comments",
 			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Profile"},
 		}, api.HandleGetUserComments)
 
 		huma.Register(humaApi, huma.Operation{
@@ -391,6 +413,7 @@ func main() {
 			Path:        "/comments/{commentId}",
 			Summary:     "Delete own comment",
 			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Comments"},
 		}, api.HandleDeleteComment)
 
 	})
