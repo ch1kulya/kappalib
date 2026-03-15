@@ -128,7 +128,7 @@ func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 
 		var cspBuilder strings.Builder
 		cspBuilder.WriteString("default-src 'self'; ")
-		cspBuilder.WriteString("connect-src 'self' https://stats.ch1kulya.ru https://cdn.jsdelivr.net/; ")
+		cspBuilder.WriteString("connect-src 'self' https://stats.ch1kulya.ru https://cdn.jsdelivr.net/ https://proxy.scalar.com; ")
 		cspBuilder.WriteString("img-src 'self' https: data:; ")
 
 		fmt.Fprintf(&cspBuilder, "script-src 'self' 'nonce-%s' https://stats.ch1kulya.ru https://challenges.cloudflare.com https://cdn.jsdelivr.net", nonce)
