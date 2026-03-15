@@ -44,13 +44,13 @@ func GetSystemStatus() (SystemStatus, error) {
 		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode == http.StatusUnauthorized {
-			return SystemStatus{Impact: "unknown"}, fmt.Errorf("Phare API error: unauthorized")
+			return SystemStatus{Impact: "unknown"}, fmt.Errorf("phare API error: unauthorized")
 		}
 		if resp.StatusCode == http.StatusForbidden {
-			return SystemStatus{Impact: "unknown"}, fmt.Errorf("Phare API error: forbidden")
+			return SystemStatus{Impact: "unknown"}, fmt.Errorf("phare API error: forbidden")
 		}
 		if resp.StatusCode != http.StatusOK {
-			return SystemStatus{Impact: "unknown"}, fmt.Errorf("Phare API error: %d", resp.StatusCode)
+			return SystemStatus{Impact: "unknown"}, fmt.Errorf("phare API error: %d", resp.StatusCode)
 		}
 
 		var phareResponse struct {
