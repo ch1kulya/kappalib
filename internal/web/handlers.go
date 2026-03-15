@@ -810,7 +810,7 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 
-	state, err := data.GetSystemStatus()
+	status, err := data.GetSystemStatus()
 
 	var indicator string
 	var description string
@@ -820,16 +820,19 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		indicator = "unknown"
 		description = "Не удалось получить статус"
 	} else {
-		switch state {
+		switch status.Impact {
 		case "operational":
 			indicator = "none"
 			description = "Все системы в норме"
-		case "degraded":
+		case "degraded_performance":
 			indicator = "minor"
 			description = "Наблюдаются сбои"
-		case "downtime":
+		case "partial_outage":
 			indicator = "major"
 			description = "Серьезный сбой"
+		case "major_outage":
+			indicator = "critical"
+			description = "Критический сбой"
 		case "maintenance":
 			indicator = "maintenance"
 			description = "Технические работы"
@@ -844,6 +847,8 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 			"indicator":   indicator,
 			"description": description,
 		},
+		"availability": status.Availability,
+		"updated_at":   status.UpdatedAt,
 	}
 
 	_ = json.NewEncoder(w).Encode(response)
