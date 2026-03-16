@@ -526,20 +526,6 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 		"reply_markup": {string(keyboardJSON)},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(data.Encode()))
-	if err != nil {
-		logger.Error("Failed to create telegram request: %v", err)
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := telegramClient.Do(req)
-	if err != nil {
-		logger.Error("Failed to send telegram message: %v", err)
-		return
-	}
-	defer func() { _ = resp.Body.Close() }()
-
 	var result struct {
 		OK     bool `json:"ok"`
 		Result struct {
@@ -547,18 +533,51 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 		} `json:"result"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		logger.Error("Failed to decode telegram response: %v", err)
-		return
+	var lastErr error
+	for attempt := range 3 {
+		if attempt > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Second):
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(data.Encode()))
+		if err != nil {
+			logger.Error("Failed to create telegram request: %v", err)
+			return
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		resp, err := telegramClient.Do(req)
+		if err != nil {
+			logger.Warn("Failed to send telegram message (attempt %d/3): %v", attempt+1, err)
+			lastErr = err
+			continue
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			logger.Warn("Failed to decode telegram response (attempt %d/3): %v", attempt+1, err)
+			lastErr = err
+			continue
+		}
+
+		if result.OK {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if _, err := database.DB.Exec(ctx, queryCommentsSetTelegramMessageID, result.Result.MessageID, comment.ID); err != nil {
+				logger.Warn("Failed to set telegram message ID for comment %s: %v", comment.ID, err)
+			}
+			return
+		}
+
+		logger.Warn("Telegram API returned error (attempt %d/3): ok=false", attempt+1)
+		lastErr = fmt.Errorf("telegram API returned ok=false")
 	}
 
-	if result.OK {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if _, err := database.DB.Exec(ctx, queryCommentsSetTelegramMessageID, result.Result.MessageID, comment.ID); err != nil {
-			logger.Warn("Failed to set telegram message ID for comment %s: %v", comment.ID, err)
-		}
-	}
+	logger.Error("Failed to send telegram message after 3 attempts: %v", lastErr)
 }
 
 func htmlToTelegramHTML(html string) string {
