@@ -826,12 +826,12 @@ func sendToTelegram(ctx context.Context, kind, id, authorName, contextID, conten
 		}
 
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			logger.Warn("Failed to decode telegram response (attempt %d/3): %v", attempt+1, err)
 			lastErr = err
 			continue
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		if result.OK {
 			dbCtx, dbCancel := context.WithTimeout(context.Background(), 5*time.Second)
