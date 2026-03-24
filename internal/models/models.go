@@ -120,8 +120,28 @@ type ProfilePublic struct {
 }
 
 type Comment struct {
+	ID                  string          `json:"id"`
+	ChapterID           string          `json:"chapter_id"`
+	UserID              string          `json:"user_id"`
+	ContentHTML         string          `json:"content_html"`
+	Status              string          `json:"status"`
+	TelegramMessageID   *int64          `json:"telegram_message_id,omitempty"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UserDisplayName     string          `json:"user_display_name,omitempty"`
+	UserAvatarSeed      string          `json:"user_avatar_seed,omitempty"`
+	UserHasCustomAvatar bool            `json:"user_has_custom_avatar,omitempty"`
+	UserAvatarUpdatedAt int64           `json:"user_avatar_updated_at,omitempty"`
+	Score               int             `json:"score"`
+	UserVote            int             `json:"user_vote"`
+	Answers             []CommentAnswer `json:"answers,omitempty"`
+	ChapterNum          int             `json:"chapter_num,omitempty"`
+	NovelID             string          `json:"novel_id,omitempty"`
+	NovelTitle          string          `json:"novel_title,omitempty"`
+}
+
+type CommentAnswer struct {
 	ID                  string    `json:"id"`
-	ChapterID           string    `json:"chapter_id"`
+	CommentID           string    `json:"comment_id"`
 	UserID              string    `json:"user_id"`
 	ContentHTML         string    `json:"content_html"`
 	Status              string    `json:"status"`
@@ -131,8 +151,6 @@ type Comment struct {
 	UserAvatarSeed      string    `json:"user_avatar_seed,omitempty"`
 	UserHasCustomAvatar bool      `json:"user_has_custom_avatar,omitempty"`
 	UserAvatarUpdatedAt int64     `json:"user_avatar_updated_at,omitempty"`
-	Score               int       `json:"score"`
-	UserVote            int       `json:"user_vote"`
 }
 
 type CommentsPage struct {
@@ -143,29 +161,40 @@ type CommentsPage struct {
 	TotalPages int       `json:"total_pages"`
 }
 
-type UserComment struct {
-	ID         string    `json:"id"`
-	ChapterID  string    `json:"chapter_id"`
-	ContentHTML string   `json:"content_html"`
-	Status     string    `json:"status"`
-	CreatedAt  time.Time `json:"created_at"`
-	ChapterNum int       `json:"chapter_num"`
-	NovelID    string    `json:"novel_id"`
-	NovelTitle string    `json:"novel_title"`
-	Score      int       `json:"score"`
-	UserVote   int       `json:"user_vote"`
+type UserCommentsPage struct {
+	Comments   []Comment `json:"comments"`
+	Page       int       `json:"page"`
+	PageSize   int       `json:"page_size"`
+	TotalCount int       `json:"total_count"`
+	TotalPages int       `json:"total_pages"`
 }
 
-type UserCommentsPage struct {
-	Comments   []UserComment `json:"comments"`
-	Page       int           `json:"page"`
-	PageSize   int           `json:"page_size"`
-	TotalCount int           `json:"total_count"`
-	TotalPages int           `json:"total_pages"`
+type UserAnswer struct {
+	ID                    string    `json:"id"`
+	CommentID             string    `json:"comment_id"`
+	ContentHTML           string    `json:"content_html"`
+	Status                string    `json:"status"`
+	CreatedAt             time.Time `json:"created_at"`
+	ChapterID             string    `json:"chapter_id"`
+	ChapterNum            int       `json:"chapter_num"`
+	NovelID               string    `json:"novel_id"`
+	NovelTitle            string    `json:"novel_title"`
+	ParentUserID          string    `json:"parent_user_id"`
+	ParentDisplayName     string    `json:"parent_display_name"`
+	ParentAvatarSeed      string    `json:"parent_avatar_seed"`
+	ParentHasCustomAvatar bool      `json:"parent_has_custom_avatar"`
+	ParentAvatarUpdatedAt int64     `json:"parent_avatar_updated_at"`
+	ParentContentHTML     string    `json:"parent_content_html"`
 }
 
 type CreateCommentInput struct {
 	ChapterID      string `json:"chapter_id"`
+	Content        string `json:"content"`
+	TurnstileToken string `json:"turnstile_token"`
+}
+
+type CreateCommentAnswerInput struct {
+	CommentID      string `json:"comment_id"`
 	Content        string `json:"content"`
 	TurnstileToken string `json:"turnstile_token"`
 }

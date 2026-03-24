@@ -6,6 +6,19 @@ const TURNSTILE_COMMENTS_SITE_KEY =
 const COMMENT_COOLDOWN = 30 * 1000;
 const LAST_COMMENT_TIME_KEY = "kappalib_last_comment_time";
 
+interface CommentAnswer {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  content_html: string;
+  status: string;
+  created_at: string;
+  user_display_name: string;
+  user_avatar_seed: string;
+  user_has_custom_avatar: boolean;
+  user_avatar_updated_at: number;
+}
+
 interface Comment {
   id: string;
   chapter_id: string;
@@ -19,6 +32,10 @@ interface Comment {
   user_avatar_updated_at: number;
   score: number;
   user_vote: number;
+  answers?: CommentAnswer[];
+  chapter_num?: number;
+  novel_id?: string;
+  novel_title?: string;
 }
 
 interface CommentsPage {
@@ -124,47 +141,125 @@ function createCommentHTML(comment: Comment): string {
   }
 
   const isApproved = comment.status === "approved";
+  const isOwn = comment.user_id === profileManager.getProfileId();
+
   const upActive = comment.user_vote === 1 ? " vote-active" : "";
   const downActive = comment.user_vote === -1 ? " vote-active" : "";
 
   const voteHTML = isApproved
     ? `<div class="comment-votes">
         <button class="vote-btn vote-up${upActive}" data-vote="1" data-comment-id="${comment.id}" aria-label="Лайк">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-6a1 1 0 0 1 1-1h3.293a.707.707 0 0 0 .5-1.207l-7.086-7.086a1 1 0 0 0-1.414 0l-7.086 7.086a.707.707 0 0 0 .5 1.207H8a1 1 0 0 1 1 1z"/>
+          </svg>
         </button>
         <span class="vote-score" data-comment-id="${comment.id}">${comment.score}</span>
         <button class="vote-btn vote-down${downActive}" data-vote="-1" data-comment-id="${comment.id}" aria-label="Дизлайк">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 0 1 1h3.293a.707.707 0 0 1 .5 1.207l-7.086 7.086a1 1 0 0 1-1.414 0l-7.086-7.086a.707.707 0 0 1 .5-1.207H8a1 1 0 0 0 1-1z"/>
+          </svg>
         </button>
       </div>`
-    : "";
+    : `<div class="comment-votes">
+        <button class="vote-btn vote-disabled" aria-label="Лайк" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-6a1 1 0 0 1 1-1h3.293a.707.707 0 0 0 .5-1.207l-7.086-7.086a1 1 0 0 0-1.414 0l-7.086 7.086a.707.707 0 0 0 .5 1.207H8a1 1 0 0 1 1 1z"/>
+          </svg>
+        </button>
+        <span class="vote-score">0</span>
+        <button class="vote-btn vote-disabled" aria-label="Дизлайк" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 0 1 1h3.293a.707.707 0 0 1 .5 1.207l-7.086 7.086a1 1 0 0 1-1.414 0l-7.086-7.086a.707.707 0 0 1 .5-1.207H8a1 1 0 0 0 1-1z"/>
+          </svg>
+        </button>
+      </div>`;
 
-  const isOwn = comment.user_id === profileManager.getProfileId();
   let actionHTML = "";
   if (isOwn && isApproved) {
     actionHTML = `<button class="comment-delete-btn" data-comment-id="${comment.id}" aria-label="Удалить">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
       </button>`;
-  } else if (isApproved) {
-    actionHTML = `<button class="comment-reply-btn" data-comment-id="${comment.id}" data-author="${comment.user_display_name}" aria-label="Ответить">
+  }
+
+  const replyHTML = isApproved
+    ? `<button class="comment-reply-btn" data-comment-id="${comment.id}" data-author="${comment.user_display_name}">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-      </button>`;
+        <span>Ответить</span>
+      </button>`
+    : "";
+
+  const footerHTML =
+    voteHTML || replyHTML
+      ? `<div class="comment-footer">${voteHTML}${replyHTML}</div>`
+      : "";
+
+  let answersHTML = "";
+  if (comment.answers && comment.answers.length > 0) {
+    answersHTML = `<div class="comment-answers">`;
+    for (const answer of comment.answers) {
+      answersHTML += createAnswerHTML(answer);
+    }
+    answersHTML += `</div>`;
   }
 
   return `
     <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}">
-      <div class="comment-aside">
+      <div class="comment-header">
         <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
-        ${voteHTML}
+        <span class="comment-author">${comment.user_display_name} ${statusBadge}</span>
+        ${actionHTML}
       </div>
       <div class="comment-body">
-        <div class="comment-header">
-          <span class="comment-author">${comment.user_display_name}</span>
-          ${statusBadge}
-          ${actionHTML}
-        </div>
         <div class="comment-content">${comment.content_html}</div>
+        ${footerHTML}
       </div>
+      ${answersHTML}
+    </div>
+  `;
+}
+
+function createAnswerHTML(answer: CommentAnswer): string {
+  const avatarUrl = getAvatarUrl(
+    answer.user_id,
+    answer.user_has_custom_avatar,
+    answer.user_avatar_seed,
+    answer.user_avatar_updated_at,
+  );
+
+  let statusBadge = "";
+  let extraClass = "";
+
+  switch (answer.status) {
+    case "pending":
+      statusBadge =
+        '<span class="comment-moderation-badge">На модерации</span>';
+      extraClass = " comment-pending";
+      break;
+    case "rejected":
+      statusBadge = '<span class="comment-rejected-badge">Отклонено</span>';
+      extraClass = " comment-rejected";
+      break;
+    default:
+      statusBadge = `<span class="comment-date">${formatRelativeTime(answer.created_at)}</span>`;
+  }
+
+  const isOwn = answer.user_id === profileManager.getProfileId();
+
+  let actionHTML = "";
+  if (isOwn && answer.status === "approved") {
+    actionHTML = `<button class="comment-delete-btn" data-answer-id="${answer.id}" aria-label="Удалить">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+      </button>`;
+  }
+
+  return `
+    <div class="comment-answer${extraClass}" data-answer-id="${answer.id}">
+      <div class="comment-header">
+        <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
+        <span class="comment-author">${answer.user_display_name} ${statusBadge}</span>
+        ${actionHTML}
+      </div>
+      <div class="comment-body">${answer.content_html}</div>
     </div>
   `;
 }
@@ -418,9 +513,11 @@ function updateCharCounter(textarea: HTMLTextAreaElement): void {
   const counter = document.getElementById("comment-char-counter");
   if (counter) {
     const len = textarea.value.length;
-    counter.textContent = `${len}/3000`;
-    counter.classList.toggle("count-warning", len > 2500);
-    counter.classList.toggle("count-error", len >= 3000);
+    const maxLen = replyTargetCommentId ? 500 : 3000;
+    const warnThreshold = replyTargetCommentId ? 400 : 2500;
+    counter.textContent = `${len}/${maxLen}`;
+    counter.classList.toggle("count-warning", len > warnThreshold);
+    counter.classList.toggle("count-error", len >= maxLen);
   }
 }
 
@@ -472,7 +569,12 @@ export function initComments(): void {
     ) as HTMLElement | null;
     if (deleteBtn) {
       e.preventDefault();
-      handleDeleteComment(deleteBtn, container, chapterId);
+      const answerId = deleteBtn.dataset.answerId;
+      if (answerId) {
+        handleDeleteAnswer(answerId, container, chapterId);
+      } else {
+        handleDeleteComment(deleteBtn, container, chapterId);
+      }
       return;
     }
 
@@ -535,23 +637,89 @@ async function handleVote(
   }
 }
 
-function handleReply(btn: HTMLElement, container: HTMLElement): void {
-  const author = btn.dataset.author;
-  if (!author) return;
+let replyTargetCommentId: string | null = null;
 
-  const textarea = container.querySelector(
+function handleReply(btn: HTMLElement, container: HTMLElement): void {
+  if (!profileManager.isLoggedIn()) return;
+
+  const commentId = btn.dataset.commentId;
+  const author = btn.dataset.author;
+  if (!commentId || !author) return;
+
+  replyTargetCommentId = commentId;
+
+  const formWrapper = container.querySelector(".comment-form-wrapper");
+  const form = formWrapper?.querySelector(".comment-form");
+  if (!form) return;
+
+  const existingBanner = form.querySelector(".comment-reply-banner");
+  if (existingBanner) existingBanner.remove();
+
+  const banner = document.createElement("div");
+  banner.className = "comment-reply-banner";
+  banner.innerHTML = `
+    <span>Ответ пользователю <strong>${author}</strong></span>
+    <button type="button" class="reply-banner-cancel" aria-label="Отмена">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  `;
+  form.insertBefore(banner, form.firstChild);
+
+  banner
+    .querySelector(".reply-banner-cancel")!
+    .addEventListener("click", () => {
+      cancelReplyMode(container);
+    });
+
+  const textarea = form.querySelector(
     "#comment-textarea",
   ) as HTMLTextAreaElement;
-  if (!textarea) return;
+  if (textarea) {
+    textarea.maxLength = 500;
+    textarea.placeholder = `Ваш ответ...`;
+  }
 
-  const prefix = `${author}, `;
-  textarea.value = prefix;
-  textarea.focus();
-  textarea.selectionStart = textarea.selectionEnd = prefix.length;
-  updateCharCounter(textarea);
-  autoResizeTextarea(textarea);
+  const counter = form.querySelector("#comment-char-counter") as HTMLElement;
+  if (counter) {
+    const currentLen = textarea?.value.length || 0;
+    counter.textContent = `${currentLen}/500`;
+    counter.classList.remove("count-warning", "count-error");
+  }
 
-  textarea.scrollIntoView({ behavior: "smooth", block: "center" });
+  form.scrollIntoView({ behavior: "smooth", block: "center" });
+  textarea?.focus();
+}
+
+function cancelReplyMode(container: HTMLElement): void {
+  replyTargetCommentId = null;
+
+  const formWrapper = container.querySelector(".comment-form-wrapper");
+  const form = formWrapper?.querySelector(".comment-form");
+  if (!form) return;
+
+  const banner = form.querySelector(".comment-reply-banner");
+  if (banner) banner.remove();
+
+  const textarea = form.querySelector(
+    "#comment-textarea",
+  ) as HTMLTextAreaElement;
+  if (textarea) {
+    textarea.maxLength = 3000;
+    textarea.placeholder = "Ваш комментарий...";
+  }
+
+  const counter = form.querySelector("#comment-char-counter") as HTMLElement;
+  if (counter && textarea) {
+    const currentLen = textarea.value.length;
+    counter.textContent = `${currentLen}/3000`;
+    counter.classList.toggle("count-warning", currentLen > 2500);
+    counter.classList.toggle("count-error", currentLen >= 3000);
+  }
+}
+
+function getCurrentPage(container: HTMLElement): number {
+  const activePage = container.querySelector(".page-link.active")?.textContent;
+  return activePage ? parseInt(activePage, 10) : 1;
 }
 
 async function handleDeleteComment(
@@ -587,6 +755,58 @@ async function handleDeleteComment(
     } else if (currentPage !== undefined) {
       loadMyComments(currentPage);
     }
+  } catch {
+    // silent
+  }
+}
+
+async function handleDeleteAnswer(
+  answerId: string,
+  container: HTMLElement,
+  chapterId: string,
+): Promise<void> {
+  if (!confirm("Вы уверены, что хотите удалить этот ответ?")) return;
+
+  try {
+    const res = await fetch(`${API_URL}/comment-answers/${answerId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!res.ok) return;
+
+    const answerEl = container.querySelector(
+      `.comment-answer[data-answer-id="${answerId}"]`,
+    );
+    if (answerEl) answerEl.remove();
+
+    fetch(
+      `${API_URL}/chapters/${chapterId}/comments?page=${getCurrentPage(container)}`,
+      {
+        credentials: "include",
+        cache: "no-cache",
+      },
+    );
+  } catch {
+    // silent
+  }
+}
+
+async function handleDeleteMyAnswer(
+  answerId: string,
+  currentPage: number,
+): Promise<void> {
+  if (!confirm("Вы уверены, что хотите удалить этот ответ?")) return;
+
+  try {
+    const res = await fetch(`${API_URL}/comment-answers/${answerId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!res.ok) return;
+
+    loadMyComments(currentPage);
   } catch {
     // silent
   }
@@ -631,7 +851,7 @@ function renderCommentForm(container: HTMLElement): void {
         <textarea
           id="comment-textarea"
           class="comment-textarea"
-          placeholder="Написать комментарий..."
+          placeholder="Ваш комментарий..."
           maxlength="3000"
           rows="2"
         ></textarea>
@@ -920,103 +1140,34 @@ async function uploadCommentImage(
   autoResizeTextarea(textarea);
 }
 
-interface UserComment {
-  id: string;
-  chapter_id: string;
-  content_html: string;
-  status: string;
-  created_at: string;
-  chapter_num: number;
-  novel_id: string;
-  novel_title: string;
-  score: number;
-  user_vote: number;
-}
-
 interface UserCommentsPage {
-  comments: UserComment[];
+  comments: Comment[];
   page: number;
   page_size: number;
   total_count: number;
   total_pages: number;
 }
 
-function createUserCommentHTML(comment: UserComment): string {
-  const profile = profileManager.getProfileCache();
-  const avatarUrl = profile
-    ? getAvatarUrl(
-        profile.id,
-        profile.has_custom_avatar,
-        profile.avatar_seed,
-        profile.avatar_updated_at,
-      )
-    : "";
-  const displayName = profile ? profile.display_name : "";
-
-  let statusBadge = "";
-  let extraClass = "";
-
-  switch (comment.status) {
-    case "pending":
-      statusBadge =
-        '<span class="comment-moderation-badge">На модерации</span>';
-      extraClass = " comment-pending";
-      break;
-    case "rejected":
-      statusBadge = '<span class="comment-rejected-badge">Отклонено</span>';
-      extraClass = " comment-rejected";
-      break;
-    default:
-      statusBadge = `<span class="comment-date">${formatRelativeTime(comment.created_at)}</span>`;
+function renderMyComments(listEl: HTMLElement, comments: Comment[]): void {
+  if (comments.length === 0) {
+    listEl.innerHTML = "";
+    return;
   }
 
-  const isApproved = comment.status === "approved";
-  const upActive = comment.user_vote === 1 ? " vote-active" : "";
-  const downActive = comment.user_vote === -1 ? " vote-active" : "";
-
-  const voteHTML = isApproved
-    ? `<div class="comment-votes">
-        <button class="vote-btn vote-up${upActive}" data-vote="1" data-comment-id="${comment.id}" aria-label="Лайк">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-        </button>
-        <span class="vote-score" data-comment-id="${comment.id}">${comment.score}</span>
-        <button class="vote-btn vote-down${downActive}" data-vote="-1" data-comment-id="${comment.id}" aria-label="Дизлайк">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-      </div>`
-    : "";
-
-  const chapterUrl = `/${comment.novel_id}/chapter/${comment.chapter_id}`;
-  const chapterLinkHTML = `<a href="${chapterUrl}" class="mc-chapter-link">
-      <span class="mc-novel-title">${comment.novel_title}</span>
-      <span class="mc-chapter-num">Глава ${comment.chapter_num}</span>
-    </a>`;
-
-  const deleteHTML = isApproved
-    ? `<button class="comment-delete-btn" data-comment-id="${comment.id}" aria-label="Удалить">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-      </button>`
-    : "";
-
-  return `
-    <div class="mc-comment-wrapper">
-      ${chapterLinkHTML}
-      <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}">
-        <div class="comment-aside">
-          <img src="${avatarUrl}" alt="${displayName}" class="comment-avatar" loading="lazy"/>
-          ${voteHTML}
-        </div>
-        <div class="comment-body">
-          <div class="comment-header">
-            <span class="comment-author">${displayName}</span>
-            ${statusBadge}
-            ${deleteHTML}
-          </div>
-          <div class="comment-content">${comment.content_html}</div>
-        </div>
+  let html = "";
+  comments.forEach((c) => {
+    const chapterUrl = `/${c.novel_id || ""}/chapter/${c.chapter_id}`;
+    html += `<div class="mc-comment-wrapper">
+      <div class="mc-chapter-separator">
+        <a href="${chapterUrl}" class="mc-chapter-link">
+          <span class="mc-novel-title">${c.novel_title || ""}</span>
+          <span class="mc-chapter-num">Глава ${c.chapter_num || ""}</span>
+        </a>
       </div>
-    </div>
-  `;
+      ${createCommentHTML(c)}
+    </div>`;
+  });
+  listEl.innerHTML = html;
 }
 
 async function loadMyComments(page: number = 1): Promise<void> {
@@ -1026,23 +1177,13 @@ async function loadMyComments(page: number = 1): Promise<void> {
 
   const listEl = document.getElementById("mc-list");
   const emptyEl = document.getElementById("mc-empty");
-  const skeletonEl = document.getElementById("mc-skeleton");
+  const loadingEl = document.getElementById("mc-loading");
   const paginationEl = document.getElementById("mc-pagination");
   const countEl = document.getElementById("mc-count");
 
   if (!listEl || !emptyEl || !paginationEl) return;
 
-  if (page === 1 && skeletonEl) {
-    const skeletonTemplate = document.getElementById(
-      "tpl-mc-skeleton",
-    ) as HTMLTemplateElement;
-    if (skeletonTemplate && skeletonEl.children.length === 0) {
-      for (let i = 0; i < 5; i++) {
-        skeletonEl.appendChild(skeletonTemplate.content.cloneNode(true));
-      }
-    }
-    skeletonEl.style.display = "";
-  }
+  if (loadingEl) loadingEl.style.display = "block";
 
   try {
     const res = await fetch(`${API_URL}/profile/me/comments?page=${page}`, {
@@ -1050,7 +1191,7 @@ async function loadMyComments(page: number = 1): Promise<void> {
     });
 
     if (res.status === 401) {
-      if (skeletonEl) skeletonEl.style.display = "none";
+      if (loadingEl) loadingEl.style.display = "none";
       emptyEl.style.display = "block";
       emptyEl.querySelector("p")!.textContent =
         "Войдите в аккаунт, чтобы видеть свои комментарии";
@@ -1061,7 +1202,7 @@ async function loadMyComments(page: number = 1): Promise<void> {
 
     const data: UserCommentsPage = await res.json();
 
-    if (skeletonEl) skeletonEl.style.display = "none";
+    if (loadingEl) loadingEl.style.display = "none";
 
     if (data.total_count === 0) {
       emptyEl.style.display = "block";
@@ -1074,11 +1215,7 @@ async function loadMyComments(page: number = 1): Promise<void> {
     emptyEl.style.display = "none";
     if (countEl) countEl.textContent = `${data.total_count}`;
 
-    let html = "";
-    data.comments.forEach((c) => {
-      html += createUserCommentHTML(c);
-    });
-    listEl.innerHTML = html;
+    renderMyComments(listEl, data.comments);
 
     if (data.total_pages > 1) {
       paginationEl.innerHTML = buildPaginationHTML(data.page, data.total_pages);
@@ -1087,7 +1224,7 @@ async function loadMyComments(page: number = 1): Promise<void> {
     }
   } catch (err) {
     console.error("Failed to load user comments", err);
-    if (skeletonEl) skeletonEl.style.display = "none";
+    if (loadingEl) loadingEl.style.display = "none";
     listEl.innerHTML =
       '<div class="comments-error">Не удалось загрузить комментарии</div>';
   }
@@ -1132,12 +1269,18 @@ export function initMyCommentsPage(): void {
       e.preventDefault();
       const activePage =
         content.querySelector(".page-link.active")?.textContent || "1";
-      handleDeleteComment(
-        deleteBtn,
-        undefined,
-        undefined,
-        parseInt(activePage, 10),
-      );
+
+      const answerId = deleteBtn.dataset.answerId;
+      if (answerId) {
+        handleDeleteMyAnswer(answerId, parseInt(activePage, 10));
+      } else {
+        handleDeleteComment(
+          deleteBtn,
+          undefined,
+          undefined,
+          parseInt(activePage, 10),
+        );
+      }
       return;
     }
 
@@ -1225,8 +1368,16 @@ function initFormHandlers(container: HTMLElement): void {
     submitBtn.addEventListener("click", async () => {
       const content = textarea.value.trim();
       if (!content) return;
-      if (content.length > 3000) {
-        alert("Комментарий слишком длинный (максимум 3000 символов)");
+
+      const isReplyMode = !!replyTargetCommentId;
+      const maxLen = isReplyMode ? 500 : 3000;
+
+      if (content.length > maxLen) {
+        alert(
+          isReplyMode
+            ? "Ответ слишком длинный (максимум 500 символов)"
+            : "Комментарий слишком длинный (максимум 3000 символов)",
+        );
         return;
       }
 
@@ -1249,7 +1400,12 @@ function initFormHandlers(container: HTMLElement): void {
       submitBtn.textContent = "Отправка...";
 
       try {
-        const res = await fetch(`${API_URL}/chapters/${chapterId}/comments`, {
+        const targetCommentId = replyTargetCommentId;
+        const url = isReplyMode
+          ? `${API_URL}/comments/${targetCommentId}/answers`
+          : `${API_URL}/chapters/${chapterId}/comments`;
+
+        const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -1261,12 +1417,16 @@ function initFormHandlers(container: HTMLElement): void {
 
         if (!res.ok) {
           const err = await res.json();
-          throw new Error(err.detail || "Failed to create comment");
+          throw new Error(err.detail || "Failed to submit");
         }
 
         textarea.value = "";
         updateCharCounter(textarea);
         autoResizeTextarea(textarea);
+
+        if (isReplyMode) {
+          cancelReplyMode(container);
+        }
 
         if (turnstileWidgetId) {
           (window as any).turnstile.reset(turnstileWidgetId);
@@ -1276,8 +1436,8 @@ function initFormHandlers(container: HTMLElement): void {
         setLastCommentTime();
         startCooldownTimer(submitBtn);
       } catch (err) {
-        console.error("Failed to submit comment", err);
-        alert("Не удалось отправить комментарий. Попробуйте ещё раз.");
+        console.error("Failed to submit", err);
+        alert("Не удалось отправить. Попробуйте ещё раз.");
       } finally {
         if (!submitBtn.disabled) {
           submitBtn.disabled = false;

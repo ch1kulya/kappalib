@@ -190,6 +190,22 @@ type GetUserCommentsInput struct {
 	Page int `query:"page" default:"1" minimum:"1" maximum:"9999"`
 }
 
+type CreateCommentAnswerInput struct {
+	CommentID string `path:"commentId" pattern:"^cmt_[a-z0-9]{8}$"`
+	Body      struct {
+		Content        string `json:"content" minLength:"1" maxLength:"500"`
+		TurnstileToken string `json:"turnstile_token" minLength:"1"`
+	}
+}
+
+type DeleteCommentAnswerInput struct {
+	AnswerID string `path:"answerId" pattern:"^can_[a-z0-9]{8}$"`
+}
+
+type CommentAnswerResponse struct {
+	Body models.CommentAnswer
+}
+
 type SitemapResponse struct {
 	Body []models.SitemapItem
 }
@@ -448,7 +464,7 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*E
 		return &EmptyResponse{Status: http.StatusNoContent}, nil
 	}
 
-	action, commentID := parts[0], parts[1]
+	action, entityID := parts[0], parts[1]
 
 	var status, statusText string
 	switch action {
@@ -456,14 +472,25 @@ func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*E
 		status, statusText = "approved", "✅ Подтверждено"
 	case "reject":
 		status, statusText = "rejected", "❌ Отклонено"
+	case "approve_answer":
+		status, statusText = "approved", "✅ Подтверждено"
+	case "reject_answer":
+		status, statusText = "rejected", "❌ Отклонено"
 	default:
 		logger.Warn("Unknown action in callback: %s", action)
 		return &EmptyResponse{Status: http.StatusNoContent}, nil
 	}
 
-	if err := data.UpdateCommentStatus(ctx, commentID, status); err != nil {
-		logger.Error("Failed to update comment via webhook: %v", err)
-		return &EmptyResponse{Status: http.StatusNoContent}, nil
+	if action == "approve_answer" || action == "reject_answer" {
+		if err := data.UpdateCommentAnswerStatus(ctx, entityID, status); err != nil {
+			logger.Error("Failed to update comment answer via webhook: %v", err)
+			return &EmptyResponse{Status: http.StatusNoContent}, nil
+		}
+	} else {
+		if err := data.UpdateCommentStatus(ctx, entityID, status); err != nil {
+			logger.Error("Failed to update comment via webhook: %v", err)
+			return &EmptyResponse{Status: http.StatusNoContent}, nil
+		}
 	}
 
 	if err := data.DeleteTelegramMessage(callback.Message.Chat.ID, callback.Message.MessageID); err != nil {
@@ -668,4 +695,59 @@ func HandleGetUserComments(ctx context.Context, input *GetUserCommentsInput) (*U
 	}
 
 	return &UserCommentsPageResponse{Body: *comments}, nil
+}
+
+func HandleCreateCommentAnswer(ctx context.Context, input *CreateCommentAnswerInput) (*CommentAnswerResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	answerInput := models.CreateCommentAnswerInput{
+		CommentID:      input.CommentID,
+		Content:        input.Body.Content,
+		TurnstileToken: input.Body.TurnstileToken,
+	}
+
+	answer, err := data.CreateCommentAnswer(ctx, userID, answerInput)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRateLimitExceeded):
+			return nil, huma.Error429TooManyRequests("Подождите 30 секунд перед отправкой следующего ответа")
+		case errors.Is(err, data.ErrCaptchaFailed):
+			return nil, huma.Error400BadRequest("Captcha verification failed")
+		case errors.Is(err, data.ErrInvalidAnswerLength):
+			return nil, huma.Error400BadRequest("Answer must be 1-500 characters")
+		case errors.Is(err, data.ErrCommentNotFound):
+			return nil, huma.Error404NotFound("Comment not found")
+		case errors.Is(err, data.ErrCommentNotApproved):
+			return nil, huma.Error400BadRequest("Comment must be approved to answer")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to create answer")
+		}
+	}
+	return &CommentAnswerResponse{Body: *answer}, nil
+}
+
+func HandleDeleteCommentAnswer(ctx context.Context, input *DeleteCommentAnswerInput) (*EmptyResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = data.DeleteCommentAnswer(ctx, input.AnswerID, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrCommentAnswerNotFound):
+			return nil, huma.Error404NotFound("Answer not found")
+		case errors.Is(err, data.ErrNotAnswerAuthor):
+			return nil, huma.Error403Forbidden("You can only delete your own answers")
+		case errors.Is(err, data.ErrCannotDeleteAnswer):
+			return nil, huma.Error400BadRequest("Only approved answers can be deleted")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to delete answer")
+		}
+	}
+
+	return &EmptyResponse{Status: 204}, nil
 }
