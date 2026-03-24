@@ -38,12 +38,6 @@ var queryCommentsUpdateStatus string
 //go:embed sql/comments_set_telegram_message_id.sql
 var queryCommentsSetTelegramMessageID string
 
-//go:embed sql/comments_get_by_user.sql
-var queryCommentsGetByUser string
-
-//go:embed sql/comments_count_by_user.sql
-var queryCommentsCountByUser string
-
 //go:embed sql/comment_votes_upsert.sql
 var queryCommentVotesUpsert string
 
@@ -52,6 +46,18 @@ var queryCommentVotesDelete string
 
 //go:embed sql/comment_votes_score.sql
 var queryCommentVotesScore string
+
+//go:embed sql/comment_answers_create.sql
+var queryCommentAnswersCreate string
+
+//go:embed sql/comment_answers_update_status.sql
+var queryCommentAnswersUpdateStatus string
+
+//go:embed sql/comment_answers_set_telegram_message_id.sql
+var queryCommentAnswersSetTelegramMessageID string
+
+//go:embed sql/user_comment_threads.sql
+var queryUserCommentThreads string
 
 var (
 	commentsTurnstileSecret = os.Getenv("TURNSTILE_COMMENTS_SECRET")
@@ -316,6 +322,55 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 		comments = append(comments, c)
 	}
 
+	if len(comments) > 0 {
+		commentIDs := make([]string, len(comments))
+		for i, c := range comments {
+			commentIDs[i] = c.ID
+		}
+
+		answerRows, err := database.DB.Query(dbCtx, `
+			SELECT
+				ca.id, ca.comment_id, ca.user_id, ca.content_html, ca.status, ca.created_at,
+				u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at
+			FROM comment_answers ca
+			JOIN users u ON ca.user_id = u.id
+			WHERE ca.comment_id = ANY($1)
+			  AND ca.status != 'deleted'
+			  AND (
+			    ca.status = 'approved'
+			    OR (ca.status IN ('pending', 'rejected') AND ca.user_id = $2)
+			  )
+			ORDER BY ca.comment_id, ca.created_at ASC
+		`, commentIDs, userID)
+		if err != nil {
+			logger.Warn("Failed to batch-load comment answers: %v", err)
+		} else {
+			defer answerRows.Close()
+
+			answersMap := make(map[string][]models.CommentAnswer)
+			for answerRows.Next() {
+				var a models.CommentAnswer
+				var avatarUpdatedAt time.Time
+				if err := answerRows.Scan(
+					&a.ID, &a.CommentID, &a.UserID, &a.ContentHTML, &a.Status,
+					&a.CreatedAt, &a.UserDisplayName, &a.UserAvatarSeed,
+					&a.UserHasCustomAvatar, &avatarUpdatedAt,
+				); err != nil {
+					logger.Warn("Answer row scan error: %v", err)
+					continue
+				}
+				a.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+				answersMap[a.CommentID] = append(answersMap[a.CommentID], a)
+			}
+
+			for i := range comments {
+				if ans, ok := answersMap[comments[i].ID]; ok {
+					comments[i].Answers = ans
+				}
+			}
+		}
+	}
+
 	totalPages := (totalCount + pageSize - 1) / pageSize
 	return &models.CommentsPage{
 		Comments:   comments,
@@ -333,16 +388,31 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	var totalCount int
-	err := database.DB.QueryRow(dbCtx, queryCommentsCountByUser, userID).Scan(&totalCount)
-	if err != nil {
-		logger.Error("Failed to count user comments: %v", err)
-		return nil, err
+	type idWithDate struct {
+		ID        string
+		CreatedAt time.Time
 	}
 
-	if totalCount == 0 {
+	rows, err := database.DB.Query(dbCtx, queryUserCommentThreads, userID, pageSize, offset)
+	if err != nil {
+		logger.Error("Failed to get user comment threads: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []idWithDate
+	for rows.Next() {
+		var item idWithDate
+		if err := rows.Scan(&item.ID, &item.CreatedAt); err != nil {
+			logger.Warn("Thread row scan error: %v", err)
+			continue
+		}
+		items = append(items, item)
+	}
+
+	if len(items) == 0 {
 		return &models.UserCommentsPage{
-			Comments:   []models.UserComment{},
+			Comments:   []models.Comment{},
 			Page:       page,
 			PageSize:   pageSize,
 			TotalCount: 0,
@@ -350,24 +420,104 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 		}, nil
 	}
 
-	rows, err := database.DB.Query(dbCtx, queryCommentsGetByUser, userID, pageSize, offset)
+	commentIDs := make([]string, len(items))
+	for i, item := range items {
+		commentIDs[i] = item.ID
+	}
+
+	commentsByID := make(map[string]*models.Comment, len(commentIDs))
+
+	commentRows, err := database.DB.Query(dbCtx, `
+		SELECT
+			c.id, c.chapter_id, c.user_id, c.content_html, c.status, c.created_at,
+			u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at,
+			COALESCE((SELECT SUM(value) FROM comment_votes WHERE comment_id = c.id), 0)::int,
+			COALESCE((SELECT value FROM comment_votes WHERE comment_id = c.id AND user_id = $2), 0)::int,
+			ch.chapter_num, ch.novel_id,
+			n.title
+		FROM comments c
+		JOIN users u ON c.user_id = u.id
+		JOIN chapters ch ON c.chapter_id = ch.id
+		JOIN novels n ON ch.novel_id = n.id
+		WHERE c.id = ANY($1)
+	`, commentIDs, userID)
 	if err != nil {
-		logger.Error("Failed to get user comments: %v", err)
+		logger.Error("Failed to get user thread comments: %v", err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer commentRows.Close()
 
-	comments := make([]models.UserComment, 0)
-	for rows.Next() {
-		var c models.UserComment
-		if err := rows.Scan(
-			&c.ID, &c.ChapterID, &c.ContentHTML, &c.Status, &c.CreatedAt,
-			&c.ChapterNum, &c.NovelID, &c.NovelTitle, &c.Score, &c.UserVote,
+	for commentRows.Next() {
+		var c models.Comment
+		var avatarUpdatedAt time.Time
+		if err := commentRows.Scan(
+			&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status,
+			&c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed,
+			&c.UserHasCustomAvatar, &avatarUpdatedAt,
+			&c.Score, &c.UserVote,
+			&c.ChapterNum, &c.NovelID, &c.NovelTitle,
 		); err != nil {
-			logger.Warn("User comment row scan error: %v", err)
+			logger.Warn("Comment row scan error: %v", err)
 			continue
 		}
-		comments = append(comments, c)
+		c.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+		commentsByID[c.ID] = &c
+	}
+
+	answerRows, err := database.DB.Query(dbCtx, `
+		SELECT
+			ca.id, ca.comment_id, ca.user_id, ca.content_html, ca.status, ca.created_at,
+			u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at
+		FROM comment_answers ca
+		JOIN users u ON ca.user_id = u.id
+		WHERE ca.comment_id = ANY($1)
+		  AND ca.status != 'deleted'
+		  AND (
+		    ca.status = 'approved'
+		    OR (ca.status IN ('pending', 'rejected') AND ca.user_id = $2)
+		  )
+		ORDER BY ca.comment_id, ca.created_at ASC
+	`, commentIDs, userID)
+	if err != nil {
+		logger.Warn("Failed to batch-load answers for user threads: %v", err)
+	} else {
+		defer answerRows.Close()
+		for answerRows.Next() {
+			var a models.CommentAnswer
+			var avatarUpdatedAt time.Time
+			if err := answerRows.Scan(
+				&a.ID, &a.CommentID, &a.UserID, &a.ContentHTML, &a.Status,
+				&a.CreatedAt, &a.UserDisplayName, &a.UserAvatarSeed,
+				&a.UserHasCustomAvatar, &avatarUpdatedAt,
+			); err != nil {
+				logger.Warn("Answer row scan error: %v", err)
+				continue
+			}
+			a.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+			if c, ok := commentsByID[a.CommentID]; ok {
+				c.Answers = append(c.Answers, a)
+			}
+		}
+	}
+
+	comments := make([]models.Comment, 0, len(items))
+	for _, item := range items {
+		if c, ok := commentsByID[item.ID]; ok {
+			comments = append(comments, *c)
+		}
+	}
+
+	var totalCount int
+	err = database.DB.QueryRow(dbCtx, `
+		SELECT COUNT(*) FROM (
+			SELECT id FROM comments WHERE user_id = $1 AND status != 'deleted'
+			UNION
+			SELECT comment_id FROM comment_answers WHERE user_id = $1 AND status != 'deleted'
+		) AS combined
+	`, userID).Scan(&totalCount)
+	if err != nil {
+		logger.Error("Failed to count user threads: %v", err)
+		totalCount = len(comments)
 	}
 
 	totalPages := (totalCount + pageSize - 1) / pageSize
@@ -475,7 +625,120 @@ func GetCommentByID(ctx context.Context, commentID string) (*models.Comment, err
 	return &c, nil
 }
 
+func CreateCommentAnswer(ctx context.Context, userID string, input models.CreateCommentAnswerInput) (*models.CommentAnswer, error) {
+	if len(input.Content) == 0 || len(input.Content) > 500 {
+		return nil, ErrInvalidAnswerLength
+	}
+
+	if !checkCommentRateLimit(userID) {
+		return nil, ErrRateLimitExceeded
+	}
+
+	if !verifyCommentsTurnstile(input.TurnstileToken) {
+		return nil, ErrCaptchaFailed
+	}
+
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var commentStatus string
+	err := database.DB.QueryRow(dbCtx,
+		`SELECT status FROM comments WHERE id = $1`,
+		input.CommentID,
+	).Scan(&commentStatus)
+	if err != nil {
+		return nil, ErrCommentNotFound
+	}
+	if commentStatus != "approved" {
+		return nil, ErrCommentNotApproved
+	}
+
+	contentHTML := renderMarkdown(input.Content)
+
+	var answer models.CommentAnswer
+	err = database.DB.QueryRow(dbCtx, queryCommentAnswersCreate,
+		input.CommentID, userID, contentHTML,
+	).Scan(&answer.ID, &answer.CommentID, &answer.UserID, &answer.ContentHTML, &answer.Status, &answer.CreatedAt)
+
+	if err != nil {
+		logger.Error("Failed to create comment answer: %v", err)
+		return nil, err
+	}
+
+	var user models.ProfilePublic
+	var avatarUpdatedAt time.Time
+	if err := database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar, avatar_updated_at FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar, &avatarUpdatedAt); err != nil {
+		logger.Warn("Failed to fetch user data for answer: %v", err)
+	}
+	answer.UserDisplayName = user.DisplayName
+	answer.UserAvatarSeed = user.AvatarSeed
+	answer.UserHasCustomAvatar = user.HasCustomAvatar
+	answer.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+
+	go sendAnswerToTelegram(context.Background(), &answer)
+
+	recordCommentTime(userID)
+
+	logger.Info("Comment answer created: %s by user %s on comment %s", answer.ID, userID, input.CommentID)
+	return &answer, nil
+}
+
+func DeleteCommentAnswer(ctx context.Context, answerID, userID string) error {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var ownerID string
+	var status string
+	err := database.DB.QueryRow(dbCtx,
+		`SELECT user_id, status FROM comment_answers WHERE id = $1`,
+		answerID,
+	).Scan(&ownerID, &status)
+	if err != nil {
+		return ErrCommentAnswerNotFound
+	}
+
+	if ownerID != userID {
+		return ErrNotAnswerAuthor
+	}
+
+	if status != "approved" {
+		return ErrCannotDeleteAnswer
+	}
+
+	var id string
+	err = database.DB.QueryRow(dbCtx, queryCommentAnswersUpdateStatus, "deleted", answerID).Scan(&id)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("Comment answer %s deleted by user %s", answerID, userID)
+	return nil
+}
+
+func UpdateCommentAnswerStatus(ctx context.Context, answerID, status string) error {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var id string
+	err := database.DB.QueryRow(dbCtx, queryCommentAnswersUpdateStatus, status, answerID).Scan(&id)
+	if err != nil {
+		logger.Error("Failed to update comment answer status: %v", err)
+		return err
+	}
+
+	logger.Info("Comment answer %s status updated to %s", answerID, status)
+	return nil
+}
+
 func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
+	sendToTelegram(ctx, "comment", comment.ID, comment.UserDisplayName, comment.ChapterID, comment.ContentHTML, "approve", "reject", queryCommentsSetTelegramMessageID)
+}
+
+func sendAnswerToTelegram(ctx context.Context, answer *models.CommentAnswer) {
+	sendToTelegram(ctx, "answer", answer.ID, answer.UserDisplayName, answer.CommentID, answer.ContentHTML, "approve_answer", "reject_answer", queryCommentAnswersSetTelegramMessageID)
+}
+
+func sendToTelegram(ctx context.Context, kind, id, authorName, contextID, contentHTML, approveAction, rejectAction, setMessageIDQuery string) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -484,22 +747,27 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 		return
 	}
 
-	commentID := comment.ID
-	if len(commentID) > 50 {
-		commentID = commentID[:50]
-		logger.Warn("Comment ID truncated for Telegram callback: %s", comment.ID)
+	entityID := id
+	if len(entityID) > 50 {
+		entityID = entityID[:50]
+		logger.Warn("%s ID truncated for Telegram callback: %s", kind, id)
 	}
 
-	contentForTelegram := htmlToTelegramHTML(comment.ContentHTML)
+	contentForTelegram := htmlToTelegramHTML(contentHTML)
+
+	var label, contextLabel string
+	if kind == "comment" {
+		label, contextLabel = "💬 <b>Новый комментарий</b>", "📖 Глава"
+	} else {
+		label, contextLabel = "💬 <b>Ответ на комментарий</b>", "🔗 Комментарий"
+	}
 
 	text := fmt.Sprintf(
-		"💬 <b>Новый комментарий</b>\n\n"+
+		"%s\n\n"+
 			"👤 Автор: %s\n"+
-			"📖 Глава: <code>%s</code>\n\n"+
+			"%s: <code>%s</code>\n\n"+
 			"📝 Текст:\n%s",
-		comment.UserDisplayName,
-		comment.ChapterID,
-		contentForTelegram,
+		label, authorName, contextLabel, contextID, contentForTelegram,
 	)
 
 	if len(text) > 4000 {
@@ -509,8 +777,8 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 	keyboard := map[string]any{
 		"inline_keyboard": [][]map[string]string{
 			{
-				{"text": "✅ Подтвердить", "callback_data": fmt.Sprintf("approve:%s", commentID)},
-				{"text": "❌ Отклонить", "callback_data": fmt.Sprintf("reject:%s", commentID)},
+				{"text": "✅ Подтвердить", "callback_data": fmt.Sprintf("%s:%s", approveAction, entityID)},
+				{"text": "❌ Отклонить", "callback_data": fmt.Sprintf("%s:%s", rejectAction, entityID)},
 			},
 		},
 	}
@@ -519,7 +787,7 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 
 	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", telegramBotToken)
 
-	data := url.Values{
+	urlData := url.Values{
 		"chat_id":      {telegramChatID},
 		"text":         {text},
 		"parse_mode":   {"HTML"},
@@ -543,7 +811,7 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 			}
 		}
 
-		req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(data.Encode()))
+		req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(urlData.Encode()))
 		if err != nil {
 			logger.Error("Failed to create telegram request: %v", err)
 			return
@@ -556,19 +824,20 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 			lastErr = err
 			continue
 		}
-		defer func() { _ = resp.Body.Close() }()
 
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			_ = resp.Body.Close()
 			logger.Warn("Failed to decode telegram response (attempt %d/3): %v", attempt+1, err)
 			lastErr = err
 			continue
 		}
+		_ = resp.Body.Close()
 
 		if result.OK {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if _, err := database.DB.Exec(ctx, queryCommentsSetTelegramMessageID, result.Result.MessageID, comment.ID); err != nil {
-				logger.Warn("Failed to set telegram message ID for comment %s: %v", comment.ID, err)
+			dbCtx, dbCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer dbCancel()
+			if _, err := database.DB.Exec(dbCtx, setMessageIDQuery, result.Result.MessageID, id); err != nil {
+				logger.Warn("Failed to set telegram message ID for %s %s: %v", kind, id, err)
 			}
 			return
 		}

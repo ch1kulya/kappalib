@@ -20,29 +20,9 @@ templ MyComments(props BaseProps) {
 			<div class="mc-empty" id="mc-empty" style="display: none;">
 				<p>У вас пока нет комментариев</p>
 			</div>
+			<div class="mc-loading" id="mc-loading" style="display: none;">Загрузка комментариев...</div>
 			<div class="mc-list" id="mc-list"></div>
-			<div class="mc-skeleton" id="mc-skeleton"></div>
 			<div class="mc-pagination pagination" id="mc-pagination"></div>
 		</div>
-		<template id="tpl-mc-skeleton">
-			<div class="mc-comment-wrapper">
-				<div class="skeleton mc-skeleton-chapter-link"></div>
-				<div class="comment-item">
-					<div class="comment-aside">
-						<div class="skeleton mc-skeleton-avatar"></div>
-					</div>
-					<div class="comment-body">
-						<div class="comment-header">
-							<div class="skeleton mc-skeleton-author"></div>
-							<div class="skeleton mc-skeleton-date"></div>
-						</div>
-						<div class="mc-skeleton-content">
-							<div class="skeleton mc-skeleton-line mc-skeleton-line-long"></div>
-							<div class="skeleton mc-skeleton-line mc-skeleton-line-short"></div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</template>
 	}
 }

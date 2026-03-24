@@ -416,6 +416,24 @@ func main() {
 			Tags:        []string{"Comments"},
 		}, api.HandleDeleteComment)
 
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "create-comment-answer",
+			Method:      http.MethodPost,
+			Path:        "/comments/{commentId}/answers",
+			Summary:     "Create answer to comment",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Comments"},
+		}, api.HandleCreateCommentAnswer)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "delete-comment-answer",
+			Method:      http.MethodDelete,
+			Path:        "/comment-answers/{answerId}",
+			Summary:     "Delete own comment answer",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Comments"},
+		}, api.HandleDeleteCommentAnswer)
+
 	})
 
 	go func() {
