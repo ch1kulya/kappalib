@@ -6,6 +6,9 @@ class UIManager {
   private profileCard = document.getElementById("profile-card");
   private settingsCard = document.getElementById("settings-card");
   private searchResults = document.getElementById("search-results");
+  private searchInput = document.getElementById(
+    "search-input",
+  ) as HTMLInputElement | null;
   private profileBtn = document.getElementById("header-profile-btn");
   private settingsBtn = document.getElementById("header-settings-btn");
   private header = document.getElementById("main-header");
@@ -53,6 +56,7 @@ class UIManager {
   public closeAll(): void {
     if (this.state === "idle") return;
     this.state = "idle";
+    if (this.searchInput) this.searchInput.value = "";
     this.updateDOM();
   }
 
