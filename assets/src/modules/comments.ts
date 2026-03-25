@@ -657,19 +657,17 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
 
   const banner = document.createElement("div");
   banner.className = "comment-reply-banner";
-  banner.innerHTML = `
-    <span>Ответ пользователю <strong>${author}</strong></span>
-    <button type="button" class="reply-banner-cancel" aria-label="Отмена">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-    </button>
-  `;
-  form.insertBefore(banner, form.firstChild);
+  banner.innerHTML = `Ответ пользователю <strong>${author}</strong>. <span class="reply-banner-cancel">Отменить?</span>`;
+  banner.addEventListener("click", () => {
+    cancelReplyMode(container);
+  });
 
-  banner
-    .querySelector(".reply-banner-cancel")!
-    .addEventListener("click", () => {
-      cancelReplyMode(container);
-    });
+  const textareaEl = form.querySelector("#comment-textarea") as HTMLTextAreaElement | null;
+  if (textareaEl) {
+    textareaEl.insertAdjacentElement("afterend", banner);
+  } else {
+    form.insertBefore(banner, form.firstChild);
+  }
 
   const textarea = form.querySelector(
     "#comment-textarea",
@@ -683,7 +681,8 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
   if (counter) {
     const currentLen = textarea?.value.length || 0;
     counter.textContent = `${currentLen}/500`;
-    counter.classList.remove("count-warning", "count-error");
+    counter.classList.toggle("count-warning", currentLen > 400);
+    counter.classList.toggle("count-error", currentLen >= 500);
   }
 
   form.scrollIntoView({ behavior: "smooth", block: "center" });
