@@ -4029,39 +4029,20 @@ html {
 
 /* Comment Reply Banner (in main form) */
 .comment-reply-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 0.75rem;
-    margin-bottom: 0.5rem;
+    margin-top: -1rem;
+    padding: 1rem 0.75rem 0.4rem;
     background: color-mix(in srgb, var(--accent-primary), transparent 90%);
     border: 1px solid color-mix(in srgb, var(--accent-primary), transparent 70%);
-    border-radius: 8px;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
     font-size: 0.85rem;
     color: var(--secondary);
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
 }
 
 .comment-reply-banner strong {
-    color: var(--primary);
-}
-
-.reply-banner-cancel {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--tertiary);
-    cursor: pointer;
-    padding: 0;
-    transition: color 0.15s;
-    flex-shrink: 0;
-}
-
-.reply-banner-cancel:hover {
     color: var(--primary);
 }
 
