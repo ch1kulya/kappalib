@@ -1588,12 +1588,9 @@ a:hover {
 .content-warning-banner {
     display: flex;
     gap: 0.75rem;
-    padding: 1rem;
+    padding: 0.1rem 1rem;
     margin-bottom: 1.5rem;
-    background: var(--outline);
-    border: 1px solid var(--color-danger-glow);
-    border-left: 3px solid var(--color-danger);
-    border-radius: 0 8px 8px 0;
+    border-left: 2px solid var(--color-danger);
     text-align: left;
 }
 
@@ -1602,7 +1599,7 @@ a:hover {
 }
 
 .content-warning-title {
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--primary);
     margin-bottom: 0.25rem;
