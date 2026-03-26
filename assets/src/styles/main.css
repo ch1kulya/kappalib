@@ -3750,7 +3750,8 @@ html {
     margin-right: 0.25rem;
 }
 
-.comment-rejected-badge {
+.comment-rejected-badge,
+.comment-deleted-badge {
     font-size: 0.7rem;
     padding: 1px 5px;
     background: color-mix(in srgb, var(--color-danger), transparent 80%);
