@@ -136,6 +136,10 @@ function createCommentHTML(comment: Comment): string {
       statusBadge = '<span class="comment-rejected-badge">Отклонено</span>';
       extraClass = " comment-rejected";
       break;
+    case "deleted":
+      statusBadge = '<span class="comment-deleted-badge">Удалено</span>';
+      extraClass = " comment-rejected";
+      break;
     default:
       statusBadge = `<span class="comment-date">${formatRelativeTime(comment.created_at)}</span>`;
   }
