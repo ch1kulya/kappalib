@@ -189,7 +189,17 @@ func verifyCommentsTurnstile(token string) bool {
 	return result.Success
 }
 
+func preprocessNewlines(content string) string {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	parts := regexp.MustCompile(`\n{2,}`).Split(content, -1)
+	for i, part := range parts {
+		parts[i] = strings.ReplaceAll(part, "\n", "  \n")
+	}
+	return strings.Join(parts, "\n\n")
+}
+
 func renderMarkdown(content string) string {
+	content = preprocessNewlines(content)
 	unsafe := blackfriday.Run([]byte(content),
 		blackfriday.WithExtensions(blackfriday.CommonExtensions&^blackfriday.Tables&^blackfriday.FencedCode),
 	)
