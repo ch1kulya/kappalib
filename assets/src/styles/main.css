@@ -4062,17 +4062,17 @@ html {
 /* Markdown Help Page */
 .markdown-examples {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
     margin: 0.75rem 0;
     border-radius: 8px;
     border: 1px solid var(--border);
-    border-collapse: separate;
 }
 
 .markdown-examples td {
     padding: 0.5rem 0.75rem;
     border-left: 1px solid var(--border);
     border-top: 1px solid var(--border);
+    width: 50%;
 }
 
 tr:first-child > td {
@@ -4083,14 +4083,11 @@ td:first-child {
     border-left: none;
 }
 
-.markdown-examples td:first-child {
-    width: 50%;
-}
-
 .markdown-example-block {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
     gap: 1rem;
-    align-items: center;
+    align-items: start;
     margin: 0.75rem 0;
     padding: 0.75rem;
     border: 1px solid var(--border);
@@ -4098,19 +4095,13 @@ td:first-child {
 }
 
 .markdown-example-block pre {
-    flex: 1;
     margin: 0;
     padding: 0.5rem;
     background: var(--outline);
     border-radius: 4px;
     font-size: 0.9rem;
-}
-
-.markdown-example-block ul,
-.markdown-example-block ol,
-.markdown-example-block blockquote {
-    flex: 1;
-    margin: 0;
+    overflow-x: auto;
+    white-space: pre;
 }
 
 .markdown-help .spoiler {
