@@ -246,3 +246,60 @@ export function initHistoryPage(): void {
 
   renderHistory();
 }
+
+export function refreshHistoryProgress(): void {
+  const historyList = document.getElementById("history-list");
+  if (!historyList) return;
+
+  const progressBars = historyList.querySelectorAll(".history-item");
+  if (progressBars.length === 0) return;
+
+  progressBars.forEach((item) => {
+    const itemEl = item as HTMLElement;
+    const novelId = itemEl.dataset.novelId;
+    if (!novelId) return;
+
+    const progressTextEl = itemEl.querySelector('[data-field="progress"]');
+    const percentEl = itemEl.querySelector('[data-field="percent"]');
+    const progressBar = itemEl.querySelector('[data-field="progressBar"]');
+
+    fetch(`${process.env.API_URL}/novels/${novelId}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((novel) => {
+        if (!novel) return;
+        const data = getProgressCookie();
+        const novelProgress = data.novels?.[novelId];
+        if (!novelProgress) return;
+
+        const totalChapters = novel.chapter_count || 0;
+        const chapterNum = novelProgress.chapterNum;
+
+        if (totalChapters > 0) {
+          let percent = Math.round((chapterNum / totalChapters) * 100);
+          if (percent < 1) percent = 1;
+          if (percent > 100) percent = 100;
+
+          if (progressTextEl) {
+            progressTextEl.innerHTML = `Глава <strong>${chapterNum}</strong> из ${totalChapters}`;
+          }
+          if (percentEl) {
+            percentEl.textContent = `${percent}%`;
+          }
+          if (progressBar) {
+            (progressBar as HTMLElement).style.width = `${percent}%`;
+          }
+        } else {
+          if (progressTextEl) {
+            progressTextEl.innerHTML = `Глава <strong>${chapterNum}</strong>`;
+          }
+          if (percentEl) {
+            percentEl.textContent = "";
+          }
+          if (progressBar) {
+            (progressBar as HTMLElement).style.width = "0%";
+          }
+        }
+      })
+      .catch(() => {});
+  });
+}

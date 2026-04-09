@@ -1,4 +1,8 @@
 import { uiManager } from "./ui";
+import { settingsManager } from "./settings";
+import { initComments } from "./comments";
+import { refreshHistoryProgress } from "./history";
+import { refreshLastReadTotalChapters } from "./progress";
 
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
@@ -75,6 +79,7 @@ class ProfileManager {
         this.profileId = profile.id;
         this.cachedProfile = profile;
         localStorage.setItem(PROFILE_ID_KEY, profile.id);
+        this.notifyLogin();
         return profile;
       }
       if (res.status === 401 || res.status === 404) {
@@ -99,6 +104,7 @@ class ProfileManager {
       if (res.ok) {
         const merged: Record<string, CookieValue> = await res.json();
         this.applyCookies(merged);
+        this.notifySync();
       }
     } catch (err) {
       console.error("Sync cookies failed", err);
@@ -221,6 +227,26 @@ class ProfileManager {
     return cookies;
   }
 
+  private onLoginCallbacks: Array<() => void> = [];
+  private onSyncCallbacks: Array<() => void> = [];
+
+  onLogin(callback: () => void): void {
+    this.onLoginCallbacks.push(callback);
+  }
+
+  onSync(callback: () => void): void {
+    this.onSyncCallbacks.push(callback);
+  }
+
+  private notifyLogin(): void {
+    this.onLoginCallbacks.forEach((cb) => cb());
+    this.onLoginCallbacks = [];
+  }
+
+  private notifySync(): void {
+    this.onSyncCallbacks.forEach((cb) => cb());
+  }
+
   private applyCookies(cookies: Record<string, CookieValue>): void {
     for (const [name, cv] of Object.entries(cookies)) {
       if (name.startsWith("kappalib_") && name !== "kpl_session") {
@@ -233,7 +259,28 @@ class ProfileManager {
 
 export const profileManager = new ProfileManager();
 
+function refreshUI(): void {
+  settingsManager.applyAll();
+
+  const commentsSection = document.getElementById("comments-section");
+  if (commentsSection) {
+    initComments();
+  }
+
+  if (document.querySelector(".cr-wrapper")) {
+    refreshLastReadTotalChapters();
+  }
+
+  const historyList = document.getElementById("history-list");
+  if (historyList) {
+    refreshHistoryProgress();
+  }
+}
+
 export function initProfile(): void {
+  profileManager.onLogin(refreshUI);
+  profileManager.onSync(refreshUI);
+
   profileManager.fetchProfile().then((profile) => {
     if (profile) {
       profileManager.syncCookiesToServer();

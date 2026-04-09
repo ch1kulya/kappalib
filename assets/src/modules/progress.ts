@@ -178,17 +178,81 @@ export async function refreshLastReadTotalChapters(): Promise<void> {
 
   try {
     const res = await fetch(`${API_URL}/novels/${data.lastRead.novelId}`);
-    if (!res.ok) return;
+    if (!res.ok) {
+      updateCRCard(data.lastRead);
+      return;
+    }
 
     const novel = await res.json();
-    if (
-      novel.chapter_count &&
-      novel.chapter_count > data.lastRead.totalChapters
-    ) {
-      data.lastRead.totalChapters = novel.chapter_count;
+    const newTotalChapters = novel.chapter_count;
+
+    if (newTotalChapters && newTotalChapters > data.lastRead.totalChapters) {
+      data.lastRead.totalChapters = newTotalChapters;
       saveProgressCookieQuietly(data);
     }
+
+    updateCRCard(data.lastRead);
   } catch {
-    // ignore
+    updateCRCard(data.lastRead);
+  }
+}
+
+function updateCRCard(lastRead: LastReadData): void {
+  const wrapper = document.querySelector(".cr-wrapper");
+  if (!wrapper) return;
+
+  const posterLink = wrapper.querySelector(".cr-poster-link") as HTMLAnchorElement;
+  const posterImg = wrapper.querySelector(".cr-poster-link img") as HTMLImageElement;
+  const posterWrapper = wrapper.querySelector(".cr-poster-link .poster-wrapper") as HTMLElement;
+  const titleLink = wrapper.querySelector(".cr-title") as HTMLAnchorElement;
+  const title = wrapper.querySelector(".cr-title h3") as HTMLElement;
+  const author = wrapper.querySelector(".cr-meta span") as HTMLElement;
+  const continueBtn = wrapper.querySelector(".cr-head-row .action-btn") as HTMLAnchorElement;
+
+  if (posterLink) {
+    posterLink.href = `/${lastRead.novelId}`;
+  }
+  if (posterImg) {
+    posterImg.src = lastRead.coverUrl;
+    posterImg.alt = lastRead.title;
+  }
+  if (posterWrapper) {
+    posterWrapper.style.setProperty("--bg-url", `url(${lastRead.coverUrl})`);
+  }
+  if (titleLink) {
+    titleLink.href = `/${lastRead.novelId}`;
+  }
+  if (title) {
+    title.textContent = lastRead.title;
+  }
+  if (author) {
+    author.textContent = lastRead.author;
+  }
+  if (continueBtn) {
+    continueBtn.href = `/${lastRead.novelId}/chapter/${lastRead.chapterId}`;
+  }
+
+  const totalChapters = lastRead.totalChapters;
+  const chapterNum = lastRead.chapterNum;
+
+  const progressText = wrapper.querySelector(".progress-text");
+  const progressPercent = wrapper.querySelector(".progress-percent");
+  const progressBarFill = wrapper.querySelector(".progress-bar-fill");
+
+  if (progressText) {
+    progressText.innerHTML = `Глава <strong>${chapterNum}</strong> из ${totalChapters}`;
+  }
+
+  if (totalChapters > 0) {
+    let percent = Math.round((chapterNum / totalChapters) * 100);
+    if (percent < 1) percent = 1;
+    if (percent > 100) percent = 100;
+
+    if (progressPercent) {
+      progressPercent.textContent = `${percent}%`;
+    }
+    if (progressBarFill) {
+      (progressBarFill as HTMLElement).style.width = `${percent}%`;
+    }
   }
 }

@@ -294,6 +294,7 @@ class SettingsManager {
   }
 
   applyAll(): void {
+    this.settings = getSettings();
     applySettings(this.settings);
   }
 }
