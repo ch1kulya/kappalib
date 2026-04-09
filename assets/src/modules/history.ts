@@ -6,6 +6,8 @@ import {
 
 const API_URL = process.env.API_URL;
 
+let historySetupDone = false;
+
 interface NovelData {
   id: string;
   title: string;
@@ -24,7 +26,9 @@ interface HistoryItem {
   readAt: number;
 }
 
-async function fetchNovelsBatch(ids: string[]): Promise<Map<string, NovelData>> {
+async function fetchNovelsBatch(
+  ids: string[],
+): Promise<Map<string, NovelData>> {
   const map = new Map<string, NovelData>();
   if (ids.length === 0) return map;
 
@@ -54,28 +58,49 @@ export function initHistoryPage(): void {
 
   if (!historyList || !historyEmpty) return;
 
+  if (!historySetupDone) {
+    historySetupDone = true;
+    clearAllBtn?.addEventListener("click", () => {
+      if (confirm("Очистить всю историю чтения?")) {
+        const progress = getProgressCookie();
+        progress.novels = {};
+        progress.lastRead = null;
+        saveProgressCookie(progress);
+        historyList.innerHTML = "";
+        const hasItems = Object.keys(progress.novels || {}).length > 0;
+        historyEmpty.style.display = hasItems ? "none" : "block";
+        if (clearAllBtn)
+          clearAllBtn.style.display = hasItems ? "block" : "none";
+      }
+    });
+  }
+
+  historyList.innerHTML = "";
+
   const progress = getProgressCookie();
   const novelIds = Object.keys(progress.novels || {});
 
   if (novelIds.length === 0) {
     historyEmpty.style.display = "block";
+    if (historySkeleton) historySkeleton.innerHTML = "";
+    if (clearAllBtn) clearAllBtn.style.display = "none";
     return;
   }
 
-  const skeletonTemplate = document.getElementById(
-    "tpl-history-skeleton",
-  ) as HTMLTemplateElement;
-  if (historySkeleton && skeletonTemplate) {
-    for (let i = 0; i < novelIds.length; i++) {
-      historySkeleton.appendChild(
-        skeletonTemplate.content.cloneNode(true),
-      );
+  historyEmpty.style.display = "none";
+
+  if (historySkeleton) {
+    historySkeleton.innerHTML = "";
+    historySkeleton.style.display = "";
+    const skeletonTemplate = document.getElementById(
+      "tpl-history-skeleton",
+    ) as HTMLTemplateElement;
+    if (skeletonTemplate) {
+      for (let i = 0; i < novelIds.length; i++) {
+        historySkeleton.appendChild(skeletonTemplate.content.cloneNode(true));
+      }
     }
   }
-
-  const hideSkeleton = (): void => {
-    if (historySkeleton) historySkeleton.style.display = "none";
-  };
 
   let loadedItems: HistoryItem[] = [];
 
@@ -102,7 +127,7 @@ export function initHistoryPage(): void {
     items.sort((a, b) => b.readAt - a.readAt);
     loadedItems = items;
 
-    hideSkeleton();
+    if (historySkeleton) historySkeleton.style.display = "none";
     if (clearAllBtn) clearAllBtn.style.display = "block";
     historyList.innerHTML = "";
     const template = document.getElementById(
@@ -160,9 +185,7 @@ export function initHistoryPage(): void {
       if (authorEl) authorEl.textContent = item.author || "";
 
       if (item.totalChapters > 0) {
-        let percent = Math.round(
-          (item.chapterNum / item.totalChapters) * 100,
-        );
+        let percent = Math.round((item.chapterNum / item.totalChapters) * 100);
         if (percent < 1) percent = 1;
         if (percent > 100) percent = 100;
         if (progressTextEl) {
@@ -207,7 +230,7 @@ export function initHistoryPage(): void {
             author: next.author,
             coverUrl: next.coverUrl,
             chapterId: nextProgress.chapterId,
-            chapterNum: next.chapterNum,
+            chapterNum: nextProgress.chapterNum,
             totalChapters: next.totalChapters,
             readAt: Date.now(),
           };
@@ -229,77 +252,9 @@ export function initHistoryPage(): void {
     if (clearAllBtn) clearAllBtn.style.display = hasItems ? "block" : "none";
   };
 
-  const clearAllHistory = (): void => {
-    const progress = getProgressCookie();
-    progress.novels = {};
-    progress.lastRead = null;
-    saveProgressCookie(progress);
-    historyList.innerHTML = "";
-    checkEmpty();
-  };
-
-  clearAllBtn?.addEventListener("click", () => {
-    if (confirm("Очистить всю историю чтения?")) {
-      clearAllHistory();
-    }
-  });
-
   renderHistory();
 }
 
-export function refreshHistoryProgress(): void {
-  const historyList = document.getElementById("history-list");
-  if (!historyList) return;
-
-  const progressBars = historyList.querySelectorAll(".history-item");
-  if (progressBars.length === 0) return;
-
-  progressBars.forEach((item) => {
-    const itemEl = item as HTMLElement;
-    const novelId = itemEl.dataset.novelId;
-    if (!novelId) return;
-
-    const progressTextEl = itemEl.querySelector('[data-field="progress"]');
-    const percentEl = itemEl.querySelector('[data-field="percent"]');
-    const progressBar = itemEl.querySelector('[data-field="progressBar"]');
-
-    fetch(`${process.env.API_URL}/novels/${novelId}`)
-      .then((res) => res.ok ? res.json() : null)
-      .then((novel) => {
-        if (!novel) return;
-        const data = getProgressCookie();
-        const novelProgress = data.novels?.[novelId];
-        if (!novelProgress) return;
-
-        const totalChapters = novel.chapter_count || 0;
-        const chapterNum = novelProgress.chapterNum;
-
-        if (totalChapters > 0) {
-          let percent = Math.round((chapterNum / totalChapters) * 100);
-          if (percent < 1) percent = 1;
-          if (percent > 100) percent = 100;
-
-          if (progressTextEl) {
-            progressTextEl.innerHTML = `Глава <strong>${chapterNum}</strong> из ${totalChapters}`;
-          }
-          if (percentEl) {
-            percentEl.textContent = `${percent}%`;
-          }
-          if (progressBar) {
-            (progressBar as HTMLElement).style.width = `${percent}%`;
-          }
-        } else {
-          if (progressTextEl) {
-            progressTextEl.innerHTML = `Глава <strong>${chapterNum}</strong>`;
-          }
-          if (percentEl) {
-            percentEl.textContent = "";
-          }
-          if (progressBar) {
-            (progressBar as HTMLElement).style.width = "0%";
-          }
-        }
-      })
-      .catch(() => {});
-  });
+export function refreshHistory(): void {
+  initHistoryPage();
 }

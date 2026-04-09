@@ -1,7 +1,7 @@
 import { uiManager } from "./ui";
 import { settingsManager } from "./settings";
 import { initComments } from "./comments";
-import { refreshHistoryProgress } from "./history";
+import { refreshHistory } from "./history";
 import { refreshLastReadTotalChapters } from "./progress";
 
 const API_URL = process.env.API_URL;
@@ -103,8 +103,9 @@ class ProfileManager {
       });
       if (res.ok) {
         const merged: Record<string, CookieValue> = await res.json();
-        this.applyCookies(merged);
-        this.notifySync();
+        if (this.applyCookiesIfChanged(merged)) {
+          this.notifySync();
+        }
       }
     } catch (err) {
       console.error("Sync cookies failed", err);
@@ -247,13 +248,27 @@ class ProfileManager {
     this.onSyncCallbacks.forEach((cb) => cb());
   }
 
-  private applyCookies(cookies: Record<string, CookieValue>): void {
+  private applyCookiesIfChanged(cookies: Record<string, CookieValue>): boolean {
+    let hasChanges = false;
+    const current = document.cookie
+      .split(";")
+      .reduce<Record<string, string>>((acc, c) => {
+        const [name, rawValue] = c.trim().split("=");
+        if (name && rawValue) acc[name] = decodeURIComponent(rawValue);
+        return acc;
+      }, {});
+
     for (const [name, cv] of Object.entries(cookies)) {
       if (name.startsWith("kappalib_") && name !== "kpl_session") {
+        if (current[name] !== cv.value) {
+          hasChanges = true;
+        }
         document.cookie = `${name}=${encodeURIComponent(cv.value)}; path=/; max-age=31536000; SameSite=Lax`;
         localStorage.setItem(`${name}_updated_at`, cv.updated_at.toString());
       }
     }
+
+    return hasChanges;
   }
 }
 
@@ -273,12 +288,11 @@ function refreshUI(): void {
 
   const historyList = document.getElementById("history-list");
   if (historyList) {
-    refreshHistoryProgress();
+    refreshHistory();
   }
 }
 
 export function initProfile(): void {
-  profileManager.onLogin(refreshUI);
   profileManager.onSync(refreshUI);
 
   profileManager.fetchProfile().then((profile) => {
