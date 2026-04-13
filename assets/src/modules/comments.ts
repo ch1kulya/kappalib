@@ -1294,14 +1294,20 @@ async function loadCommentStats(): Promise<void> {
     const ratingValues = data.days.map((d) => d.rating);
     const repliesValues = data.days.map((d) => d.replies);
 
-    const ratingPrefix = data.rating >= 0 ? "+" : "";
+    const ratingPrefix = data.rating > 0 ? "+" : "";
+    const ratingColor =
+      data.rating === 0
+        ? "var(--secondary)"
+        : data.rating > 0
+          ? "var(--color-success)"
+          : "var(--color-danger)";
 
     container.innerHTML =
       renderStatCard(
         "Рейтинг",
         data.rating,
         ratingValues,
-        data.rating >= 0 ? "var(--color-success)" : "var(--color-danger)",
+        ratingColor,
         ratingPrefix,
         "rating",
       ) +
@@ -1309,7 +1315,7 @@ async function loadCommentStats(): Promise<void> {
         "Ответы",
         data.replies,
         repliesValues,
-        "var(--accent-primary)",
+        "var(--secondary)",
         "",
         "replies",
       );
