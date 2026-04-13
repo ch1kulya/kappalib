@@ -434,6 +434,14 @@ func main() {
 			Tags:        []string{"Comments"},
 		}, api.HandleDeleteCommentAnswer)
 
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-comment-stats",
+			Method:      http.MethodGet,
+			Path:        "/profile/me/comment-stats",
+			Summary:     "Get current user comment stats",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Profile"},
+		}, api.HandleGetCommentStats)
 	})
 
 	go func() {

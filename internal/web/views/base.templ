@@ -28,6 +28,9 @@ templ Base(props BaseProps) {
 			<link rel="preconnect" href="https://s3.kappalib.ru"/>
 			<link rel="preconnect" href="https://cdn.jsdelivr.net"/>
 			<link rel="preconnect" href="https://challenges.cloudflare.com"/>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link href="https://fonts.googleapis.com/css2?family=Datatype:wght@400;500;700&display=swap" rel="stylesheet"/>
 			<!-- Favicon -->
 			<link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico"/>
 			<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png"/>
@@ -175,7 +178,7 @@ script showAgeModalScript() {
 	(function() {
 		try {
 			var isConfirmed = localStorage.getItem("ageConfirmed") === "true" ||
-							sessionStorage.getItem("ageConfirmed") === "true";
+				sessionStorage.getItem("ageConfirmed") === "true";
 			if (!isConfirmed) {
 				var modal = document.getElementById("age-modal");
 				if (modal) modal.style.display = "flex";

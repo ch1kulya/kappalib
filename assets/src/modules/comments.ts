@@ -46,6 +46,18 @@ interface CommentsPage {
   total_pages: number;
 }
 
+interface CommentStatDay {
+  day: string;
+  rating: number;
+  replies: number;
+}
+
+interface CommentStats {
+  days: CommentStatDay[];
+  rating: number;
+  replies: number;
+}
+
 function getLastCommentTime(): number {
   const stored = localStorage.getItem(LAST_COMMENT_TIME_KEY);
   return stored ? parseInt(stored, 10) : 0;
@@ -666,7 +678,9 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
     cancelReplyMode(container);
   });
 
-  const textareaEl = form.querySelector("#comment-textarea") as HTMLTextAreaElement | null;
+  const textareaEl = form.querySelector(
+    "#comment-textarea",
+  ) as HTMLTextAreaElement | null;
   if (textareaEl) {
     textareaEl.insertAdjacentElement("afterend", banner);
   } else {
@@ -1190,6 +1204,122 @@ function renderMyComments(listEl: HTMLElement, comments: Comment[]): void {
   listEl.innerHTML = html;
 }
 
+function buildSparklinePath(
+  values: number[],
+  width: number,
+  height: number,
+): string {
+  if (values.length === 0) return "";
+
+  const all = [...values];
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+
+  if (min === max) {
+    const y = height / 2;
+    return `M0,${y} L${width},${y}`;
+  }
+
+  const padding = 2;
+  const range = max - min;
+  const stepX = values.length > 1 ? width / (values.length - 1) : width;
+
+  const points = values.map((v, i) => {
+    const x = values.length > 1 ? i * stepX : width / 2;
+    const y = height - padding - ((v - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  });
+
+  return `M${points.join(" L")}`;
+}
+
+function buildSparklineAreaPath(
+  values: number[],
+  width: number,
+  height: number,
+): string {
+  if (values.length === 0) return "";
+
+  const line = buildSparklinePath(values, width, height);
+  return `${line} L${width},${height} L0,${height} Z`;
+}
+
+function renderStatCard(
+  label: string,
+  value: number,
+  values: number[],
+  color: string,
+  prefix: string = "",
+  id: string = "0",
+): string {
+  const width = 240;
+  const height = 40;
+  const linePath = buildSparklinePath(values, width, height);
+  const areaPath = buildSparklineAreaPath(values, width, height);
+
+  return `<div class="mc-stat-card">
+    <div class="mc-stat-header">
+      <span class="mc-stat-label">${label}</span>
+      <span class="mc-stat-value" style="color: ${color}">${prefix}${value}</span>
+    </div>
+    <svg class="mc-stat-sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="grad-${id}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaPath}" fill="url(#grad-${id})"/>
+      <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>`;
+}
+
+async function loadCommentStats(): Promise<void> {
+  const container = document.getElementById("mc-stats");
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${API_URL}/profile/me/comment-stats`, {
+      credentials: "include",
+    });
+
+    if (!res.ok || res.status === 401) {
+      container.style.display = "none";
+      return;
+    }
+
+    const data: CommentStats = await res.json();
+
+    const ratingValues = data.days.map((d) => d.rating);
+    const repliesValues = data.days.map((d) => d.replies);
+
+    const ratingPrefix = data.rating >= 0 ? "+" : "";
+
+    container.innerHTML =
+      renderStatCard(
+        "Рейтинг",
+        data.rating,
+        ratingValues,
+        data.rating >= 0 ? "var(--color-success)" : "var(--color-danger)",
+        ratingPrefix,
+        "rating",
+      ) +
+      renderStatCard(
+        "Ответы",
+        data.replies,
+        repliesValues,
+        "var(--accent-primary)",
+        "",
+        "replies",
+      );
+
+    container.style.display = "flex";
+  } catch {
+    container.style.display = "none";
+  }
+}
+
 async function loadMyComments(page: number = 1): Promise<void> {
   if (!profileManager.getProfileCache()) {
     await profileManager.fetchProfile();
@@ -1264,6 +1394,7 @@ export function initMyCommentsPage(): void {
     return;
   }
 
+  loadCommentStats();
   loadMyComments(1);
 
   content.addEventListener("click", (e) => {

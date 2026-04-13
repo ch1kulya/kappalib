@@ -169,6 +169,21 @@ type UserCommentsPage struct {
 	TotalPages int       `json:"total_pages"`
 }
 
+type CommentStatDay struct {
+	Day      string `json:"day"`
+	Comments int    `json:"comments"`
+	Rating   int    `json:"rating"`
+	Replies  int    `json:"replies"`
+}
+
+type UserCommentStats struct {
+	Days    []CommentStatDay `json:"days"`
+	Total   int              `json:"total"`
+	Rating  int              `json:"rating"`
+	Replies int              `json:"replies"`
+	Rank    int              `json:"rank"`
+}
+
 type UserAnswer struct {
 	ID                    string    `json:"id"`
 	CommentID             string    `json:"comment_id"`
