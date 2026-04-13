@@ -1040,7 +1040,10 @@ func GetUserCommentStats(ctx context.Context, userID string) (*models.UserCommen
 	defer cancel()
 
 	var baseRating, baseReplies int
-	database.DB.QueryRow(dbCtx, queryCommentStatsBase, userID).Scan(&baseRating, &baseReplies)
+	if err := database.DB.QueryRow(dbCtx, queryCommentStatsBase, userID).Scan(&baseRating, &baseReplies); err != nil {
+		logger.Error("Failed to get comment stats base: %v", err)
+		return nil, err
+	}
 
 	rows, err := database.DB.Query(dbCtx, queryCommentStatsDaily, userID)
 	if err != nil {
