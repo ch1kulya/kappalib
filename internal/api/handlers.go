@@ -206,6 +206,10 @@ type CommentAnswerResponse struct {
 	Body models.CommentAnswer
 }
 
+type CommentStatsResponse struct {
+	Body models.UserCommentStats
+}
+
 type SitemapResponse struct {
 	Body []models.SitemapItem
 }
@@ -750,4 +754,18 @@ func HandleDeleteCommentAnswer(ctx context.Context, input *DeleteCommentAnswerIn
 	}
 
 	return &EmptyResponse{Status: 204}, nil
+}
+
+func HandleGetCommentStats(ctx context.Context, input *struct{}) (*CommentStatsResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	stats, err := data.GetUserCommentStats(ctx, userID)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to fetch comment stats")
+	}
+
+	return &CommentStatsResponse{Body: *stats}, nil
 }

@@ -59,6 +59,12 @@ var queryCommentAnswersSetTelegramMessageID string
 //go:embed sql/user_comment_threads.sql
 var queryUserCommentThreads string
 
+//go:embed sql/comment_stats_base.sql
+var queryCommentStatsBase string
+
+//go:embed sql/comment_stats_daily.sql
+var queryCommentStatsDaily string
+
 var (
 	commentsTurnstileSecret = os.Getenv("TURNSTILE_COMMENTS_SECRET")
 	telegramBotToken        = os.Getenv("TELEGRAM_BOT_TOKEN")
@@ -1027,6 +1033,46 @@ func SetTelegramWebhookSecret(secret string) {
 
 func SetTelegramChatID(chatID string) {
 	telegramChatID = chatID
+}
+
+func GetUserCommentStats(ctx context.Context, userID string) (*models.UserCommentStats, error) {
+	dbCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	var baseRating, baseReplies int
+	if err := database.DB.QueryRow(dbCtx, queryCommentStatsBase, userID).Scan(&baseRating, &baseReplies); err != nil {
+		logger.Error("Failed to get comment stats base: %v", err)
+		return nil, err
+	}
+
+	rows, err := database.DB.Query(dbCtx, queryCommentStatsDaily, userID)
+	if err != nil {
+		logger.Error("Failed to get user comment stats: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	days := make([]models.CommentStatDay, 0, 30)
+	cumRating, cumReplies := baseRating, baseReplies
+
+	for rows.Next() {
+		var d models.CommentStatDay
+		var dailyRating, dailyReplies int
+		if err := rows.Scan(&d.Day, &dailyRating, &dailyReplies); err != nil {
+			continue
+		}
+		cumRating += dailyRating
+		cumReplies += dailyReplies
+		d.Rating = cumRating
+		d.Replies = cumReplies
+		days = append(days, d)
+	}
+
+	return &models.UserCommentStats{
+		Days:    days,
+		Rating:  cumRating,
+		Replies: cumReplies,
+	}, nil
 }
 
 func chapterExists(ctx context.Context, chapterID string) bool {
