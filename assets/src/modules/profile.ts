@@ -293,11 +293,13 @@ function refreshUI(): void {
 }
 
 export function initProfile(): void {
-  profileManager.onSync(refreshUI);
-
   profileManager.fetchProfile().then((profile) => {
     if (profile) {
-      profileManager.syncCookiesToServer();
+      profileManager.syncCookiesToServer().finally(() => {
+        refreshUI();
+      });
+    } else {
+      refreshUI();
     }
   });
 }
