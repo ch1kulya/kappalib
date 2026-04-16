@@ -44,34 +44,6 @@ func parseUpdateTag(body string) string {
 	return strings.TrimSpace(body[start : start+end])
 }
 
-func parseUpdateBody(body string) []string {
-	const tag = "!update:"
-	idx := strings.Index(body, tag)
-	if idx == -1 {
-		return nil
-	}
-	start := idx + len(tag)
-	rest := body[start:]
-	lineEnd := strings.Index(rest, "\n")
-	var content string
-	if lineEnd == -1 {
-		content = rest
-	} else {
-		content = rest[:lineEnd]
-	}
-	content = strings.TrimSpace(content)
-
-	parts := strings.Split(content, ";")
-	var result []string
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			result = append(result, p)
-		}
-	}
-	return result
-}
-
 func GetAppUpdates(ctx context.Context, limit int) ([]models.AppUpdate, error) {
 	key := fmt.Sprintf("github:prs:%d", limit)
 
