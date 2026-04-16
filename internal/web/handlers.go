@@ -524,6 +524,11 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	appUpdates, _ := data.GetAppUpdates(r.Context(), 5)
 	novelAdditions, _ := data.GetRecentlyAddedNovels(r.Context(), 15)
 
+	var pinnedAppUpdate *models.AppUpdate
+	if len(appUpdates) > 0 {
+		pinnedAppUpdate = &appUpdates[0]
+	}
+
 	for _, cu := range chapterUpdates {
 		latestUpdates = append(latestUpdates, models.HomeUpdateItem{
 			Type:          "chapter",
@@ -531,12 +536,16 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 			UpdatedAt:     cu.UpdatedAt,
 		})
 	}
-	for _, au := range appUpdates {
-		latestUpdates = append(latestUpdates, models.HomeUpdateItem{
+	for i, au := range appUpdates {
+		item := models.HomeUpdateItem{
 			Type:      "app",
 			AppUpdate: &au,
 			UpdatedAt: au.MergedAt,
-		})
+		}
+		if i == 0 {
+			item.Pinned = true
+		}
+		latestUpdates = append(latestUpdates, item)
 	}
 	for _, na := range novelAdditions {
 		latestUpdates = append(latestUpdates, models.HomeUpdateItem{
@@ -547,6 +556,9 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sort.Slice(latestUpdates, func(i, j int) bool {
+		if latestUpdates[i].Pinned != latestUpdates[j].Pinned {
+			return latestUpdates[i].Pinned
+		}
 		return latestUpdates[i].UpdatedAt.After(latestUpdates[j].UpdatedAt)
 	})
 
@@ -588,12 +600,13 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 			Schema:         schema,
 			ReaderSettings: h.getReaderSettings(r),
 		},
-		Novels:        dataResp.Novels,
-		Page:          page,
-		TotalPages:    dataResp.TotalPages,
-		SortOrder:     cookieData.SortOrder,
-		LastRead:      cookieData.LastReadWidget,
-		LatestUpdates: latestUpdates,
+		Novels:          dataResp.Novels,
+		Page:            page,
+		TotalPages:      dataResp.TotalPages,
+		SortOrder:       cookieData.SortOrder,
+		LastRead:        cookieData.LastReadWidget,
+		LatestUpdates:   latestUpdates,
+		PinnedAppUpdate: pinnedAppUpdate,
 	}
 
 	h.render(w, r, views.Home(props))
@@ -720,6 +733,11 @@ func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
 	appUpdates, _ := data.GetAppUpdates(r.Context(), 25)
 	novelAdditions, _ := data.GetRecentlyAddedNovels(r.Context(), 250)
 
+	var pinnedAppUpdate *models.AppUpdate
+	if len(appUpdates) > 0 {
+		pinnedAppUpdate = &appUpdates[0]
+	}
+
 	for _, cu := range chapterUpdates {
 		allUpdates = append(allUpdates, models.HomeUpdateItem{
 			Type:          "chapter",
@@ -727,12 +745,16 @@ func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
 			UpdatedAt:     cu.UpdatedAt,
 		})
 	}
-	for _, au := range appUpdates {
-		allUpdates = append(allUpdates, models.HomeUpdateItem{
+	for i, au := range appUpdates {
+		item := models.HomeUpdateItem{
 			Type:      "app",
 			AppUpdate: &au,
 			UpdatedAt: au.MergedAt,
-		})
+		}
+		if i == 0 {
+			item.Pinned = true
+		}
+		allUpdates = append(allUpdates, item)
 	}
 	for _, na := range novelAdditions {
 		allUpdates = append(allUpdates, models.HomeUpdateItem{
@@ -743,6 +765,9 @@ func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sort.Slice(allUpdates, func(i, j int) bool {
+		if allUpdates[i].Pinned != allUpdates[j].Pinned {
+			return allUpdates[i].Pinned
+		}
 		return allUpdates[i].UpdatedAt.After(allUpdates[j].UpdatedAt)
 	})
 
@@ -762,7 +787,8 @@ func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
 			IsLoggedIn:     h.hasSession(r),
 			ReaderSettings: h.getReaderSettings(r),
 		},
-		Updates: allUpdates,
+		Updates:         allUpdates,
+		PinnedAppUpdate: pinnedAppUpdate,
 	}
 
 	h.render(w, r, views.Updates(props))

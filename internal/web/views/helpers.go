@@ -300,6 +300,34 @@ func FormatUpdateActionHTML(min, max, count int) string {
 	return fmt.Sprintf(`Добавлены <span class="update-log-num">%d-%d</span> гл. `, min, max)
 }
 
+func FormatUpdateBody(body string) []string {
+	const tag = "!update:"
+	idx := strings.Index(body, tag)
+	if idx == -1 {
+		return nil
+	}
+	start := idx + len(tag)
+	rest := body[start:]
+	lineEnd := strings.Index(rest, "\n")
+	var content string
+	if lineEnd == -1 {
+		content = rest
+	} else {
+		content = rest[:lineEnd]
+	}
+	content = strings.TrimSpace(content)
+
+	parts := strings.Split(content, ";")
+	var result []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
 func pluralizeNovels(n int) string {
 	return pluralize(n, "новелла", "новеллы", "новелл")
 }

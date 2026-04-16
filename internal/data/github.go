@@ -100,6 +100,7 @@ func GetAppUpdates(ctx context.Context, limit int) ([]models.AppUpdate, error) {
 			updates = append(updates, models.AppUpdate{
 				PRNumber: pr.Number,
 				Title:    title,
+				Body:     pr.Body,
 				Author:   pr.User.Login,
 				URL:      pr.HTMLURL,
 				MergedAt: mergedAt,

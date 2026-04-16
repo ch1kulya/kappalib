@@ -10,19 +10,51 @@ templ Updates(props UpdatesProps) {
 		<div class="updates-log">
 			for _, update := range props.Updates {
 				if update.Type == "chapter" && update.ChapterUpdate != nil {
-					<a href={ templ.SafeURL("/" + update.ChapterUpdate.NovelID) } class="update-log-item">
-						<span class="update-log-text">
-							@templ.Raw(FormatUpdateActionHTML(update.ChapterUpdate.ChapterMin, update.ChapterUpdate.ChapterMax, update.ChapterUpdate.ChapterCount))
-							для <span class="update-log-novel">{ update.ChapterUpdate.NovelTitle }</span>
-						</span>
-						<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+					<a href={ templ.SafeURL("/" + update.ChapterUpdate.NovelID) } class="update-novel-item">
+						<div class="update-log-row">
+							<span class="update-log-text">
+								@templ.Raw(FormatUpdateActionHTML(update.ChapterUpdate.ChapterMin, update.ChapterUpdate.ChapterMax, update.ChapterUpdate.ChapterCount))
+								для
+							</span>
+							<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+						</div>
+						<div class="update-novel-content">
+							<img src={ ResolveCover(update.ChapterUpdate.NovelCoverURL) } alt={ update.ChapterUpdate.NovelTitle } loading="lazy"/>
+							<div class="update-novel-info">
+								<h3>{ update.ChapterUpdate.NovelTitle }</h3>
+								<div class="update-novel-meta">
+									<span class="badge">{ update.ChapterUpdate.Author }</span>
+									<span class="badge">{ fmt.Sprintf("%d", update.ChapterUpdate.YearStart) }</span>
+									<span class="badge">{ MapStatus(update.ChapterUpdate.Status) }</span>
+								</div>
+								if update.ChapterUpdate.Description != "" {
+									<p class="update-novel-desc">{ update.ChapterUpdate.Description }</p>
+								}
+							</div>
+						</div>
 					</a>
 				} else if update.Type == "app" && update.AppUpdate != nil {
-					<a href={ templ.SafeURL(update.AppUpdate.URL) } class="update-log-item" target="_blank" rel="noopener">
-						<span class="update-log-text">
-							<span class="update-log-app">Обновление сайта</span> под номером <span class="update-log-app">#{ update.AppUpdate.PRNumber }</span> ({ update.AppUpdate.Title })
-						</span>
-						<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+					<a href={ templ.SafeURL(update.AppUpdate.URL) } class="update-novel-item" target="_blank" rel="noopener">
+						<div class="update-log-row">
+							<span class="update-log-text">
+								Обновление сайта #{ update.AppUpdate.PRNumber }
+							</span>
+							<span class="update-log-time">
+								if update.Pinned {
+									<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pin-icon" style="margin-right: 0.35rem; vertical-align: -2px;"><path d="M12 17v5"></path><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"></path></svg>
+								}
+								{ FormatRelativeTime(update.UpdatedAt) }
+							</span>
+						</div>
+						<div class="update-novel-content">
+							<div class="update-novel-info">
+								<ul class="update-body-list">
+									for _, item := range FormatUpdateBody(update.AppUpdate.Body) {
+										<li>{ item }</li>
+									}
+								</ul>
+							</div>
+						</div>
 					</a>
 				} else if update.Type == "novel" && update.NovelAddition != nil {
 					<a href={ templ.SafeURL("/" + update.NovelAddition.ID) } class="update-novel-item">

@@ -29,12 +29,13 @@ type LastReadWidgetData struct {
 
 type HomeProps struct {
 	BaseProps
-	Novels        []models.NovelSummary
-	Page          int
-	TotalPages    int
-	SortOrder     string
-	LastRead      *LastReadWidgetData
-	LatestUpdates []models.HomeUpdateItem
+	Novels          []models.NovelSummary
+	Page            int
+	TotalPages      int
+	SortOrder       string
+	LastRead        *LastReadWidgetData
+	LatestUpdates   []models.HomeUpdateItem
+	PinnedAppUpdate *models.AppUpdate
 }
 
 type NovelProps struct {
@@ -106,5 +107,6 @@ type CatalogProps struct {
 
 type UpdatesProps struct {
 	BaseProps
-	Updates []models.HomeUpdateItem
+	Updates         []models.HomeUpdateItem
+	PinnedAppUpdate *models.AppUpdate
 }
