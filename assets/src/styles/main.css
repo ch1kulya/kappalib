@@ -3218,6 +3218,10 @@ html {
     flex-shrink: 0;
 }
 
+.pin-icon {
+    color: var(--accent-primary);
+}
+
 @media (max-width: 500px) {
     .update-log-item {
         padding: 0.4rem 0;
@@ -3321,6 +3325,20 @@ html {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+.update-body-list {
+    margin: 0;
+    padding-left: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.update-body-list li {
+    font-size: 0.85rem;
+    color: var(--primary);
+    line-height: 1.4;
 }
 
 @media (max-width: 500px) {

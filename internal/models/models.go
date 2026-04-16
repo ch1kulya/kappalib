@@ -222,6 +222,10 @@ type NovelUpdate struct {
 	NovelID       string    `json:"novel_id"`
 	NovelTitle    string    `json:"novel_title"`
 	NovelCoverURL *string   `json:"novel_cover_url"`
+	Author        string    `json:"author"`
+	YearStart     int       `json:"year_start"`
+	Status        string    `json:"status"`
+	Description   string    `json:"description"`
 	ChapterMin    int       `json:"chapter_min"`
 	ChapterMax    int       `json:"chapter_max"`
 	ChapterCount  int       `json:"chapter_count"`
@@ -231,6 +235,7 @@ type NovelUpdate struct {
 type AppUpdate struct {
 	PRNumber int       `json:"pr_number"`
 	Title    string    `json:"title"`
+	Body     string    `json:"body"`
 	Author   string    `json:"author"`
 	URL      string    `json:"url"`
 	MergedAt time.Time `json:"merged_at"`
@@ -253,6 +258,7 @@ type HomeUpdateItem struct {
 	AppUpdate     *AppUpdate
 	NovelAddition *NovelAddition
 	UpdatedAt     time.Time
+	Pinned        bool
 }
 
 type Announcement struct {
