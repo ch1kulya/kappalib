@@ -222,7 +222,7 @@ function createCommentHTML(comment: Comment): string {
     <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}">
       <div class="comment-header">
         <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
-        <span class="comment-author">${comment.user_display_name} ${statusBadge}</span>
+        <span class="comment-author">${comment.user_display_name} ${statusBadge}</span>
         ${actionHTML}
       </div>
       <div class="comment-body">
@@ -272,7 +272,7 @@ function createAnswerHTML(answer: CommentAnswer): string {
     <div class="comment-answer${extraClass}" data-answer-id="${answer.id}">
       <div class="comment-header">
         <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
-        <span class="comment-author">${answer.user_display_name} ${statusBadge}</span>
+        <span class="comment-author">${answer.user_display_name} ${statusBadge}</span>
         ${actionHTML}
       </div>
       <div class="comment-body">${answer.content_html}</div>
