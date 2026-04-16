@@ -4042,18 +4042,42 @@ html {
 /* Comment Answers */
 .comment-answers {
     margin-top: 0.25rem;
-    padding-left: 1rem;
-    border-left: 2px solid var(--border);
+    margin-left: 0;
+    padding-left: 0.75rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
 
 .comment-answer {
+    position: relative;
     padding: 0.5rem 0;
     gap: 0.35rem;
     display: flex;
     flex-direction: column;
+}
+
+.comment-answer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -0.85rem;
+    width: 0.75rem;
+    height: 1.15rem;
+    border-left: 2px solid var(--border);
+    border-bottom: 2px solid var(--border);
+    border-bottom-left-radius: 0.85rem;
+}
+
+.comment-answer:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: -4px;
+    bottom: -1rem;
+    left: -0.85rem;
+    width: 2px;
+    border-radius: 999px;
+    background: var(--border);
 }
 
 .comment-answer-avatar {
@@ -4099,7 +4123,20 @@ html {
     }
 
     .comment-answers {
-        padding-left: 0.75rem;
+        margin-left: 0;
+        padding-left: 0.7rem;
+    }
+
+    .comment-answer::before {
+        left: -0.75rem;
+        width: 0.6rem;
+        height: 1rem;
+    }
+
+    .comment-answer:not(:last-child)::after {
+        top: calc(1rem - 7px);
+        bottom: -1rem;
+        left: -0.75rem;
     }
 }
 
