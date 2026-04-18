@@ -219,7 +219,7 @@ function createCommentHTML(comment: Comment): string {
   }
 
   return `
-    <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}">
+    <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}" tabindex="0">
       <div class="comment-header">
         <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
         <span class="comment-author">${comment.user_display_name} ${statusBadge}</span>
@@ -269,7 +269,7 @@ function createAnswerHTML(answer: CommentAnswer): string {
   }
 
   return `
-    <div class="comment-answer${extraClass}" data-answer-id="${answer.id}">
+    <div class="comment-answer${extraClass}" data-answer-id="${answer.id}" tabindex="0">
       <div class="comment-header">
         <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
         <span class="comment-author">${answer.user_display_name} ${statusBadge}</span>
