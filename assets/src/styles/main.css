@@ -4026,10 +4026,22 @@ html {
     cursor: pointer;
     padding: 0;
     transition:
-        color 0.15s,
-        background 0.15s;
+        color 0.1s,
+        background 0.1s,
+        opacity 0.1s,
+        visibility 0.1s;
     position: relative;
     bottom: -0.05rem;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.comment-item:hover > .comment-header .comment-delete-btn,
+.comment-item:hover > .comment-body .comment-delete-btn,
+.comment-answer:hover > .comment-header .comment-delete-btn,
+.comment-answer:hover > .comment-body .comment-delete-btn {
+    opacity: 1;
+    visibility: visible;
 }
 
 @media (hover: hover) {
@@ -4040,6 +4052,8 @@ html {
 
 .comment-delete-btn:active {
     color: var(--color-danger);
+    opacity: 1;
+    visibility: visible;
 }
 
 @media (max-width: 500px) {
