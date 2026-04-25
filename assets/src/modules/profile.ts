@@ -112,8 +112,8 @@ class ProfileManager {
     }
   }
 
-  async updateDisplayName(newName: string): Promise<ProfilePublic | null> {
-    if (!this.profileId) return null;
+  async updateDisplayName(newName: string): Promise<{ error?: string; profile?: ProfilePublic }> {
+    if (!this.profileId) return { error: "Not logged in" };
     try {
       const res = await fetch(`${API_URL}/profile/${this.profileId}/name`, {
         method: "PATCH",
@@ -121,11 +121,14 @@ class ProfileManager {
         credentials: "include",
         body: JSON.stringify({ display_name: newName }),
       });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        return { profile: await res.json() };
+      }
+      const error = await res.json().catch(() => ({ detail: "Failed to update name" }));
+      return { error: error.detail || "Failed to update name" };
     } catch (err) {
-      console.error("Update name failed", err);
+      return { error: "Network error" };
     }
-    return null;
   }
 
   async uploadAvatar(file: File): Promise<ProfilePublic | null> {
@@ -498,6 +501,7 @@ function initProfileInteractions(profile: ProfilePublic): void {
 
   nameText?.addEventListener("click", () => {
     if (!nameText || !nameInput) return;
+    restoreMetaDate();
     nameText.style.display = "none";
     nameInput.style.display = "block";
     nameInput.value = "";
@@ -539,12 +543,30 @@ function initProfileInteractions(profile: ProfilePublic): void {
     nameInput.disabled = false;
     isSavingName = false;
 
-    if (result) {
-      currentProfile.display_name = result.display_name;
-      nameText.textContent = result.display_name;
+    if (result.error) {
+      const metaDateEl = document.querySelector(".pc-meta-date") as HTMLElement;
+      if (metaDateEl) {
+        metaDateEl.textContent = mapErrorToRussian(result.error);
+        metaDateEl.style.color = "var(--color-danger)";
+      }
+      nameInput.focus();
+      return;
+    }
+
+    if (result.profile) {
+      currentProfile.display_name = result.profile.display_name;
+      nameText.textContent = result.profile.display_name;
     }
 
     cancelNameEdit();
+  }
+
+  function mapErrorToRussian(error: string): string {
+    const lower = error.toLowerCase();
+    if (lower.includes("empty")) return "Пустое имя";
+    if (lower.includes("too long") || lower.includes("15")) return "Слишком длинное";
+    if (lower.includes("invalid") || lower.includes("character")) return "Недопустимые символы";
+    return "Ошибка";
   }
 
   function cancelNameEdit() {
@@ -552,6 +574,15 @@ function initProfileInteractions(profile: ProfilePublic): void {
     nameInput.style.display = "none";
     nameInput.value = "";
     nameText.style.display = "inline";
+    restoreMetaDate();
+  }
+
+  function restoreMetaDate() {
+    const metaDateEl = document.querySelector(".pc-meta-date") as HTMLElement;
+    if (metaDateEl) {
+      metaDateEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13H3"></path><path d="M16 17H3"></path><path d="m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6"></path><circle cx="9" cy="7" r="2"></circle></svg><span data-field="createdAt">${formatDate(currentProfile.created_at)}</span>`;
+      metaDateEl.style.color = "";
+    }
   }
 
   document.getElementById("pc-logout")?.addEventListener("click", async () => {

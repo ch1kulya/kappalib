@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ch1kulya/kappalib/internal/data"
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/logger"
 	"github.com/go-pkgz/auth/v2/token"
@@ -103,14 +104,14 @@ func (us *UserStore) Update(claims token.Claims) token.Claims {
 }
 
 func (us *UserStore) createUser(ctx context.Context, oauthProvider, oauthID, name string) (string, error) {
-	displayName := name
-	if displayName == "" {
+	displayName, err := data.ValidateDisplayName(name)
+	if err != nil || displayName == "" {
 		displayName = generateRandomName()
 	}
 	avatarSeed := generateAvatarSeed()
 
 	var userID string
-	err := database.DB.QueryRow(ctx, queryUsersCreateOAuth, displayName, avatarSeed, oauthProvider, oauthID).Scan(&userID)
+	err = database.DB.QueryRow(ctx, queryUsersCreateOAuth, displayName, avatarSeed, oauthProvider, oauthID).Scan(&userID)
 	if err != nil {
 		return "", err
 	}
