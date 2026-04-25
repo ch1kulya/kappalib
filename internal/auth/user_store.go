@@ -104,12 +104,9 @@ func (us *UserStore) Update(claims token.Claims) token.Claims {
 }
 
 func (us *UserStore) createUser(ctx context.Context, oauthProvider, oauthID, name string) (string, error) {
-	displayName := name
-	validatedName, err := data.ValidateDisplayName(name)
-	if err != nil || validatedName == "" {
+	displayName, err := data.ValidateDisplayName(name)
+	if err != nil || displayName == "" {
 		displayName = generateRandomName()
-	} else {
-		displayName = validatedName
 	}
 	avatarSeed := generateAvatarSeed()
 
