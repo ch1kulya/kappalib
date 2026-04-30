@@ -92,7 +92,6 @@ function sortChapters(container: HTMLElement, direction: string): void {
       return {
         element: item,
         value: value,
-        html: item.outerHTML,
       };
     });
 
@@ -100,27 +99,16 @@ function sortChapters(container: HTMLElement, direction: string): void {
       return direction === "asc" ? a.value - b.value : b.value - a.value;
     });
 
-    try {
-      const sortedHTML = itemsData.map((item) => item.html).join("");
-      container.innerHTML = sortedHTML;
-      console.info("Sort method: innerHTML");
-    } catch (htmlError) {
-      console.warn("innerHTML failed, using appendChild fallback");
-      while (container.firstChild) {
-        container.removeChild(container.firstChild);
-      }
-
-      itemsData.forEach((item) => {
-        container.appendChild(item.element);
-      });
-
-      console.info("Sort method: appendChild");
-    }
+    const fragment = document.createDocumentFragment();
+    itemsData.forEach((item) => {
+      fragment.appendChild(item.element);
+    });
+    container.appendChild(fragment);
 
     void container.offsetHeight;
     console.info("Chapters reordered successfully");
   } catch (error) {
-    console.error("Critical error in sortChaptersSafe:", error);
+    console.error("Critical error in sortChapters:", error);
     throw error;
   }
 }
