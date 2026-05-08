@@ -401,4 +401,146 @@
             --shadow-focus: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
         }
     }
+
+    :root,
+    :root[data-scheme="default"] {
+        --oauth-github: #24292e;
+        --oauth-github-hover: #1b1f23;
+        --oauth-github-text: #ffffff;
+        --color-success: #059669;
+        --color-success-glow: rgba(5, 150, 105, 0.2);
+        --color-warning: #d97706;
+        --color-warning-glow: rgba(217, 119, 6, 0.2);
+        --color-danger: #dc2626;
+        --color-danger-glow: rgba(220, 38, 38, 0.2);
+        --color-danger-dark: #b91c1c;
+    }
+
+    :root[data-theme="dark"],
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --oauth-github: #f0f6fc;
+            --oauth-github-hover: #d0d7de;
+            --oauth-github-text: #24292e;
+            --color-success: #10b981;
+            --color-success-glow: rgba(16, 185, 129, 0.2);
+            --color-warning: #f59e0b;
+            --color-warning-glow: rgba(245, 158, 11, 0.2);
+            --color-danger: #ef4444;
+            --color-danger-glow: rgba(239, 68, 68, 0.2);
+            --color-danger-dark: #dc2626;
+        }
+    }
+
+    :root[data-scheme="catppuccin"] {
+        --oauth-github: #4c4f69;
+        --oauth-github-hover: #3c3f56;
+        --oauth-github-text: #eff1f5;
+        --color-success: #40a02b;
+        --color-success-glow: rgba(64, 160, 43, 0.2);
+        --color-warning: #df8e1d;
+        --color-warning-glow: rgba(223, 142, 29, 0.2);
+        --color-danger: #d20f39;
+        --color-danger-glow: rgba(210, 15, 57, 0.2);
+        --color-danger-dark: #a60d2d;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root[data-scheme="catppuccin"] {
+            --oauth-github: #cdd6f4;
+            --oauth-github-hover: #bac2de;
+            --oauth-github-text: #1e1e2e;
+            --color-success: #a6e3a1;
+            --color-success-glow: rgba(166, 227, 161, 0.2);
+            --color-warning: #f9e2af;
+            --color-warning-glow: rgba(249, 226, 175, 0.2);
+            --color-danger: #f38ba8;
+            --color-danger-glow: rgba(243, 139, 168, 0.2);
+            --color-danger-dark: #e06486;
+        }
+    }
+
+    :root[data-scheme="gruvbox"] {
+        --oauth-github: #3c3836;
+        --oauth-github-hover: #2c2826;
+        --oauth-github-text: #fbf1c7;
+        --color-success: #79740e;
+        --color-success-glow: rgba(121, 116, 14, 0.2);
+        --color-warning: #b57614;
+        --color-warning-glow: rgba(181, 118, 20, 0.2);
+        --color-danger: #9d0006;
+        --color-danger-glow: rgba(157, 0, 6, 0.2);
+        --color-danger-dark: #7c0005;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root[data-scheme="gruvbox"] {
+            --oauth-github: #ebdbb2;
+            --oauth-github-hover: #d5c4a1;
+            --oauth-github-text: #282828;
+            --color-success: #b8bb26;
+            --color-success-glow: rgba(184, 187, 38, 0.2);
+            --color-warning: #fabd2f;
+            --color-warning-glow: rgba(250, 189, 47, 0.2);
+            --color-danger: #fb4934;
+            --color-danger-glow: rgba(251, 73, 52, 0.2);
+            --color-danger-dark: #cc241d;
+        }
+    }
+
+    :root[data-scheme="nord"] {
+        --oauth-github: #3b4252;
+        --oauth-github-hover: #2e3440;
+        --oauth-github-text: #eceff4;
+        --color-success: #8aa873;
+        --color-success-glow: rgba(138, 168, 115, 0.2);
+        --color-warning: #d99d54;
+        --color-warning-glow: rgba(217, 157, 84, 0.2);
+        --color-danger: #a5545a;
+        --color-danger-glow: rgba(165, 84, 90, 0.2);
+        --color-danger-dark: #8a464b;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root[data-scheme="nord"] {
+            --oauth-github: #eceff4;
+            --oauth-github-hover: #d8dee9;
+            --oauth-github-text: #2e3440;
+            --color-success: #a3be8c;
+            --color-success-glow: rgba(163, 190, 140, 0.2);
+            --color-warning: #ebcb8b;
+            --color-warning-glow: rgba(235, 203, 139, 0.2);
+            --color-danger: #bf616a;
+            --color-danger-glow: rgba(191, 97, 106, 0.2);
+            --color-danger-dark: #a5545a;
+        }
+    }
+
+    :root[data-scheme="rosepine"] {
+        --oauth-github: #575279;
+        --oauth-github-hover: #464264;
+        --oauth-github-text: #faf4ed;
+        --color-success: #56949f;
+        --color-success-glow: rgba(86, 148, 159, 0.2);
+        --color-warning: #ea9d34;
+        --color-warning-glow: rgba(234, 157, 52, 0.2);
+        --color-danger: #b4637a;
+        --color-danger-glow: rgba(180, 99, 122, 0.2);
+        --color-danger-dark: #944e62;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root[data-scheme="rosepine"] {
+            --oauth-github: #e0def4;
+            --oauth-github-hover: #cccae8;
+            --oauth-github-text: #232136;
+            --color-success: #9ccfd8;
+            --color-success-glow: rgba(156, 207, 216, 0.2);
+            --color-warning: #f6c177;
+            --color-warning-glow: rgba(246, 193, 119, 0.2);
+            --color-danger: #eb6f92;
+            --color-danger-glow: rgba(235, 111, 146, 0.2);
+            --color-danger-dark: #d25879;
+        }
+    }
 }
