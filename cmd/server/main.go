@@ -78,6 +78,9 @@ func buildAssets() error {
 			"process.env.S3_PUBLIC_URL":               fmt.Sprintf("\"%s\"", os.Getenv("S3_PUBLIC_URL")),
 		},
 		External: []string{"/assets/fonts/*"},
+		Engines: []esbuild.Engine{
+			{Name: esbuild.EngineChrome, Version: "100"},
+		},
 	})
 
 	if len(result.Errors) > 0 {
