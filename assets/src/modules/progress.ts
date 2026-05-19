@@ -170,6 +170,26 @@ export function initReadingProgressSaver(): void {
   window.addEventListener("beforeunload", () => {
     clearTimeout(timerId);
   });
+
+  setupKeyboardNavigation();
+}
+
+function setupKeyboardNavigation(): void {
+  const nav = document.querySelector<HTMLElement>(".chapter-navigation");
+  if (!nav) return;
+
+  document.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+    const prevLink = nav.querySelector<HTMLAnchorElement>("a:not(.js-next-chapter)");
+    const nextLink = nav.querySelector<HTMLAnchorElement>("a.js-next-chapter");
+
+    if (e.key === "ArrowLeft" && prevLink) {
+      prevLink.click();
+    } else if (e.key === "ArrowRight" && nextLink) {
+      nextLink.click();
+    }
+  });
 }
 
 export async function refreshLastReadTotalChapters(): Promise<void> {
