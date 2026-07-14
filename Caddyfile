@@ -1,0 +1,36 @@
+{$KAPPA_DOMAIN} {
+    reverse_proxy kappalib:1666
+}
+
+www.{$KAPPA_DOMAIN} {
+    reverse_proxy kappalib:1666
+}
+
+stats.{$UTILS_DOMAIN} {
+	reverse_proxy umami:3000
+}
+
+adminer.{$UTILS_DOMAIN} {
+    basicauth {
+        {$ADMINER_USER} {$ADMINER_HASH}
+    }
+	reverse_proxy adminer:8080
+}
+
+www.{$S3_DOMAIN} {
+    redir https://{$S3_DOMAIN}{uri}
+}
+
+{$S3_DOMAIN} {
+    reverse_proxy https://{$S3_BUCKET} {
+        header_up Host {$S3_BUCKET}
+        header_down -Server
+        header_down -x-amz-id-2
+        header_down -x-amz-request-id
+	    header_down -X-Robots-Tag
+		header_down Location "{$S3_BUCKET}" "{$S3_DOMAIN}"
+	    transport http {
+            versions 1.1
+        }
+    }
+}

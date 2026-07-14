@@ -1,0 +1,109 @@
+services:
+  caddy:
+    image: public.ecr.aws/docker/library/caddy:2-alpine
+    restart: always
+    container_name: caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - public_net
+
+  kappalib:
+    image: ghcr.io/ch1kulya/kappalib:latest
+    container_name: kappalib
+    restart: always
+    init: true
+    environment:
+      - TZ
+      - API_TOKEN
+      - ALLOWED_ORIGIN
+      - DATABASE_URL=${KAPPA_DATABASE_URL}
+      - PHARE_TOKEN
+      - PHARE_ID
+      - TURNSTILE_SECRET
+      - TURNSTILE_SITE_KEY
+      - TURNSTILE_COMMENTS_SITE_KEY
+      - TURNSTILE_COMMENTS_SECRET
+      - TELEGRAM_BOT_TOKEN
+      - TELEGRAM_CHAT_ID
+      - TELEGRAM_WEBHOOK_SECRET
+      - S3_ENDPOINT=${KAPPA_S3_ENDPOINT}
+      - S3_BUCKET=${KAPPA_S3_BUCKET}
+      - S3_ACCESS_KEY=${KAPPA_S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${KAPPA_S3_SECRET_KEY}
+      - S3_PUBLIC_URL=${KAPPA_S3_PUBLIC_URL}
+      - S3_USE_SSL=${KAPPA_S3_USE_SSL}
+      - INDEX_NOW_KEY
+      - FORCE_COLOR
+      - AUTH_SECRET
+      - AUTH_URL
+      - AUTH_SECURE
+      - GOOGLE_CLIENT
+      - GOOGLE_CLIENT_SECRET
+      - GITHUB_CLIENT_ID
+      - GITHUB_CLIENT_SECRET
+      - YANDEX_CLIENT_ID
+      - YANDEX_CLIENT_SECRET
+    networks:
+      - public_net
+
+  adminer:
+    image: public.ecr.aws/docker/library/adminer:standalone
+    container_name: adminer
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - ./adminer.css:/var/www/html/adminer.css:ro
+    networks:
+      - public_net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 200M
+
+  umami:
+    image: ghcr.io/umami-software/umami:latest
+    container_name: umami
+    environment:
+      - POSTGRES_PASSWORD=${UMAMI_POSTGRES_PASSWORD}
+      - DATABASE_URL=${UMAMI_DATABASE_URL}
+      - APP_SECRET
+    init: true
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl http://localhost:3000/api/heartbeat"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    networks:
+      - public_net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 500M
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  public_net:
+    driver: bridge
+  private_net:
+    driver: bridge
+    internal: true
