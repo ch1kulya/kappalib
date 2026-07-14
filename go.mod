@@ -15,7 +15,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/minio/minio-go/v7 v7.0.100
 	github.com/russross/blackfriday/v2 v2.1.0
-	golang.org/x/image v0.39.0
+	golang.org/x/image v0.41.0
 	golang.org/x/time v0.15.0
 )
 
