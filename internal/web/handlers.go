@@ -125,7 +125,7 @@ func (h *Handler) NotFound(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RobotsTxt(w http.ResponseWriter, r *http.Request) {
 	content, err := templates.RenderRobots(templates.RobotsData{
-		Domain: "https://kappalib.ru",
+		Domain: "https://kappalib.rip",
 	})
 	if err != nil {
 		logger.Error("Failed to render robots.txt: %v", err)
@@ -177,7 +177,7 @@ func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	content, err := templates.RenderSitemap(templates.SitemapData{
-		Domain:      "https://kappalib.ru",
+		Domain:      "https://kappalib.rip",
 		StaticPages: staticPages,
 		Novels:      novels,
 	})
@@ -445,7 +445,7 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		ogImage = *novel.CoverURL
 	}
 
-	canonical := fmt.Sprintf("https://kappalib.ru/%s", id)
+	canonical := fmt.Sprintf("https://kappalib.rip/%s", id)
 	title := fmt.Sprintf("%s / %s — kappalib", novel.Title, novel.TitleEn)
 
 	schemaNovel := templates.SchemaNovel{
@@ -458,7 +458,7 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	schema, err := templates.RenderSchemaNovel(templates.SchemaNovelData{
-		Domain:      "https://kappalib.ru",
+		Domain:      "https://kappalib.rip",
 		Canonical:   canonical,
 		Title:       title,
 		Description: desc,
@@ -566,9 +566,9 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 		latestUpdates = latestUpdates[:15]
 	}
 
-	canonical := "https://kappalib.ru"
+	canonical := "https://kappalib.rip"
 	if page > 1 {
-		canonical = fmt.Sprintf("https://kappalib.ru/?page=%d", page)
+		canonical = fmt.Sprintf("https://kappalib.rip/?page=%d", page)
 	}
 
 	description := "Бесплатная библиотека веб-новелл и ранобэ. Читайте популярные веб-новеллы онлайн в хорошем переводе."
@@ -580,7 +580,7 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	schema, err := templates.RenderSchemaWebsite(templates.SchemaWebsiteData{
-		Domain:      "https://kappalib.ru",
+		Domain:      "https://kappalib.rip",
 		Canonical:   canonical,
 		Title:       title,
 		Description: description,
@@ -669,7 +669,7 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	canonical := fmt.Sprintf("https://kappalib.ru/%s/chapter/%s", novelID, chapterID)
+	canonical := fmt.Sprintf("https://kappalib.rip/%s/chapter/%s", novelID, chapterID)
 	description := fmt.Sprintf("Читайте %s главу новеллы %s / %s бесплатно", strconv.Itoa(chapter.ChapterNum), novel.Title, novel.TitleEn)
 
 	schemaNovel := templates.SchemaNovel{
@@ -681,7 +681,7 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	schema, err := templates.RenderSchemaChapter(templates.SchemaChapterData{
-		Domain:       "https://kappalib.ru",
+		Domain:       "https://kappalib.rip",
 		Canonical:    canonical,
 		Description:  description,
 		ChapterTitle: chapterTitle,
@@ -782,7 +782,7 @@ func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
 		BaseProps: views.BaseProps{
 			Title:          title,
 			Description:    description,
-			Canonical:      "https://kappalib.ru/updates",
+			Canonical:      "https://kappalib.rip/updates",
 			Version:        h.assetVersion,
 			IsLoggedIn:     h.hasSession(r),
 			ReaderSettings: h.getReaderSettings(r),
@@ -796,7 +796,7 @@ func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) StaticPage(name, title string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const DOCS_URL = "https://s3.kappalib.ru"
+		const DOCS_URL = "https://s3.kappalib.rip"
 
 		resp, err := http.Get(fmt.Sprintf("%s/%s.html", DOCS_URL, name))
 		var content string
@@ -820,7 +820,7 @@ func (h *Handler) StaticPage(name, title string) http.HandlerFunc {
 			BaseProps: views.BaseProps{
 				Title:          title,
 				Description:    title,
-				Canonical:      fmt.Sprintf("https://kappalib.ru/%s", name),
+				Canonical:      fmt.Sprintf("https://kappalib.rip/%s", name),
 				Version:        h.assetVersion,
 				IsLoggedIn:     h.hasSession(r),
 				ReaderSettings: h.getReaderSettings(r),
@@ -928,9 +928,9 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 		description = fmt.Sprintf("Результаты поиска по запросу «%s» в библиотеке веб-новелл.", searchQuery)
 	}
 
-	canonical := "https://kappalib.ru/catalog"
+	canonical := "https://kappalib.rip/catalog"
 	if page > 1 {
-		canonical = fmt.Sprintf("https://kappalib.ru/catalog?page=%d", page)
+		canonical = fmt.Sprintf("https://kappalib.rip/catalog?page=%d", page)
 	}
 
 	props := views.CatalogProps{
@@ -959,7 +959,7 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	props := views.BaseProps{
 		Title:          "История чтения — kappalib",
 		Description:    "История прочитанных веб-новелл и ранобэ.",
-		Canonical:      "https://kappalib.ru/history",
+		Canonical:      "https://kappalib.rip/history",
 		Version:        h.assetVersion,
 		IsLoggedIn:     h.hasSession(r),
 		ReaderSettings: h.getReaderSettings(r),
@@ -971,7 +971,7 @@ func (h *Handler) MyComments(w http.ResponseWriter, r *http.Request) {
 	props := views.BaseProps{
 		Title:          "Мои комментарии — kappalib",
 		Description:    "Ваши комментарии к веб-новеллам.",
-		Canonical:      "https://kappalib.ru/comments",
+		Canonical:      "https://kappalib.rip/comments",
 		Version:        h.assetVersion,
 		IsLoggedIn:     h.hasSession(r),
 		ReaderSettings: h.getReaderSettings(r),

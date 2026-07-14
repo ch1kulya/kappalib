@@ -16,5 +16,5 @@ jobs:
       - name: Run IndexNow
         uses: bojieyang/indexnow-action@v2
         with:
-          sitemap-location: "https://kappalib.ru/sitemap.xml"
+          sitemap-location: "https://kappalib.rip/sitemap.xml"
           key: ${{ secrets.INDEX_NOW_KEY }}
