@@ -17,20 +17,10 @@ adminer.{$UTILS_DOMAIN} {
 	reverse_proxy adminer:8080
 }
 
-www.{$S3_DOMAIN} {
-    redir https://{$S3_DOMAIN}{uri}
+{$OLD_DOMAIN}, www.{$OLD_DOMAIN}, s3.{$OLD_DOMAIN} {
+    redir https://kappalib.rip{uri} permanent
 }
 
-{$S3_DOMAIN} {
-    reverse_proxy https://{$S3_BUCKET} {
-        header_up Host {$S3_BUCKET}
-        header_down -Server
-        header_down -x-amz-id-2
-        header_down -x-amz-request-id
-	    header_down -X-Robots-Tag
-		header_down Location "{$S3_BUCKET}" "{$S3_DOMAIN}"
-	    transport http {
-            versions 1.1
-        }
-    }
+{$SS_DOMAIN}, www.{$SS_DOMAIN} {
+    redir https://kappalib.rip/{$SS_ID} permanent
 }
