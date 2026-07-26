@@ -95,7 +95,7 @@ type GetCommentsInput struct {
 type CreateCommentInput struct {
 	ChapterID string `path:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
 	Body      struct {
-		Content        string `json:"content" minLength:"1" maxLength:"3000"`
+		Content        string `json:"content" minLength:"1" maxLength:"12000"`
 		TurnstileToken string `json:"turnstile_token" minLength:"1"`
 	}
 }
@@ -193,7 +193,7 @@ type GetUserCommentsInput struct {
 type CreateCommentAnswerInput struct {
 	CommentID string `path:"commentId" pattern:"^cmt_[a-z0-9]{8}$"`
 	Body      struct {
-		Content        string `json:"content" minLength:"1" maxLength:"500"`
+		Content        string `json:"content" minLength:"1" maxLength:"2000"`
 		TurnstileToken string `json:"turnstile_token" minLength:"1"`
 	}
 }
