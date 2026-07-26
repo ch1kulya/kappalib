@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/models"
@@ -206,7 +207,8 @@ func renderMarkdown(content string) string {
 }
 
 func CreateComment(ctx context.Context, userID string, input models.CreateCommentInput) (*models.Comment, error) {
-	if len(input.Content) == 0 || len(input.Content) > 3000 {
+	contentLen := utf8.RuneCountInString(input.Content)
+	if contentLen == 0 || contentLen > 3000 {
 		return nil, ErrInvalidContentLength
 	}
 
@@ -632,7 +634,8 @@ func GetCommentByID(ctx context.Context, commentID string) (*models.Comment, err
 }
 
 func CreateCommentAnswer(ctx context.Context, userID string, input models.CreateCommentAnswerInput) (*models.CommentAnswer, error) {
-	if len(input.Content) == 0 || len(input.Content) > 500 {
+	contentLen := utf8.RuneCountInString(input.Content)
+	if contentLen == 0 || contentLen > 500 {
 		return nil, ErrInvalidAnswerLength
 	}
 

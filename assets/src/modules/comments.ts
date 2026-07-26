@@ -275,7 +275,7 @@ function createAnswerHTML(answer: CommentAnswer): string {
         <span class="comment-author">${answer.user_display_name} ${statusBadge}</span>
         ${actionHTML}
       </div>
-      <div class="comment-body">${answer.content_html}</div>
+      <div class="comment-body"><div class="comment-content">${answer.content_html}</div></div>
     </div>
   `;
 }
