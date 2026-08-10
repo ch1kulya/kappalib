@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
@@ -489,6 +490,16 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 	if err != nil {
 		logger.Warn("Failed to batch-load answers for user threads: %v", err)
 	} else {
+		var lastSeen sql.NullTime
+		_ = database.DB.QueryRow(dbCtx,
+			`SELECT notifications_last_seen FROM users WHERE id = $1`, userID,
+		).Scan(&lastSeen)
+
+		notifyThreshold := time.Now().AddDate(-1, 0, 0)
+		if lastSeen.Valid {
+			notifyThreshold = lastSeen.Time
+		}
+
 		defer answerRows.Close()
 		for answerRows.Next() {
 			var a models.CommentAnswer
@@ -502,6 +513,8 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 				continue
 			}
 			a.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+			a.IsNew = a.UserID != userID && a.CreatedAt.After(notifyThreshold)
+
 			if c, ok := commentsByID[a.CommentID]; ok {
 				c.Answers = append(c.Answers, a)
 			}

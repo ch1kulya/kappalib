@@ -111,12 +111,13 @@ type CookieValue struct {
 }
 
 type ProfilePublic struct {
-	ID              string    `json:"id"`
-	DisplayName     string    `json:"display_name"`
-	AvatarSeed      string    `json:"avatar_seed"`
-	HasCustomAvatar bool      `json:"has_custom_avatar"`
-	AvatarUpdatedAt int64     `json:"avatar_updated_at"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID                  string    `json:"id"`
+	DisplayName         string    `json:"display_name"`
+	AvatarSeed          string    `json:"avatar_seed"`
+	HasCustomAvatar     bool      `json:"has_custom_avatar"`
+	AvatarUpdatedAt     int64     `json:"avatar_updated_at"`
+	CreatedAt           time.Time `json:"created_at"`
+	UnreadNotifications int       `json:"unread_notifications"`
 }
 
 type Comment struct {
@@ -151,6 +152,7 @@ type CommentAnswer struct {
 	UserAvatarSeed      string    `json:"user_avatar_seed,omitempty"`
 	UserHasCustomAvatar bool      `json:"user_has_custom_avatar,omitempty"`
 	UserAvatarUpdatedAt int64     `json:"user_avatar_updated_at,omitempty"`
+	IsNew               bool      `json:"is_new"`
 }
 
 type CommentsPage struct {

@@ -3,6 +3,7 @@ package data
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -234,19 +235,56 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 	var profile models.ProfilePublic
 	var avatarUpdatedAt time.Time
 	err := database.DB.QueryRow(dbCtx, queryUsersGet, profileID).Scan(
-		&profile.ID, &profile.DisplayName, &profile.AvatarSeed, &profile.HasCustomAvatar, &avatarUpdatedAt, &profile.CreatedAt)
-
+		&profile.ID, &profile.DisplayName, &profile.AvatarSeed,
+		&profile.HasCustomAvatar, &avatarUpdatedAt, &profile.CreatedAt,
+	)
 	if err != nil {
 		return nil, ErrProfileNotFound
 	}
 
 	profile.AvatarUpdatedAt = avatarUpdatedAt.Unix()
 
-	if _, err := database.DB.Exec(dbCtx, `UPDATE users SET last_active_at = now() WHERE id = $1`, profileID); err != nil {
+	var lastSeen sql.NullTime
+	if err := database.DB.QueryRow(dbCtx,
+		`SELECT notifications_last_seen FROM users WHERE id = $1`, profileID,
+	).Scan(&lastSeen); err != nil {
+		logger.Warn("Failed to get notifications_last_seen for user %s: %v", profileID, err)
+	}
+
+	threshold := time.Now().AddDate(-1, 0, 0)
+	if lastSeen.Valid {
+		threshold = lastSeen.Time
+	}
+
+	var unreadCount int
+	if err := database.DB.QueryRow(dbCtx, `
+		SELECT COUNT(*)
+		FROM comment_answers ca
+		JOIN comments c ON ca.comment_id = c.id
+		WHERE c.user_id = $1
+		  AND ca.user_id != $1
+		  AND c.status = 'approved'
+		  AND ca.status = 'approved'
+		  AND ca.created_at > $2
+	`, profileID, threshold).Scan(&unreadCount); err != nil {
+		logger.Warn("Failed to count unread notifications for user %s: %v", profileID, err)
+	}
+	profile.UnreadNotifications = unreadCount
+
+	if _, err := database.DB.Exec(dbCtx,
+		`UPDATE users SET last_active_at = now() WHERE id = $1`, profileID,
+	); err != nil {
 		logger.Warn("Failed to update last_active_at for user %s: %v", profileID, err)
 	}
 
 	return &profile, nil
+}
+
+func UpdateNotificationsLastSeen(ctx context.Context, profileID string) error {
+	_, err := database.DB.Exec(ctx,
+		`UPDATE users SET notifications_last_seen = now() WHERE id = $1`, profileID,
+	)
+	return err
 }
 
 func SyncCookies(ctx context.Context, userID string, cookies map[string]models.CookieValue) (map[string]models.CookieValue, error) {
