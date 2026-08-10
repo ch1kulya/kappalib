@@ -308,12 +308,12 @@ func FormatUpdateBody(body string) []string {
 	}
 	start := idx + len(tag)
 	rest := body[start:]
-	lineEnd := strings.Index(rest, "\n")
+	before, _, ok := strings.Cut(rest, "\n")
 	var content string
-	if lineEnd == -1 {
+	if !ok {
 		content = rest
 	} else {
-		content = rest[:lineEnd]
+		content = before
 	}
 	content = strings.TrimSpace(content)
 
