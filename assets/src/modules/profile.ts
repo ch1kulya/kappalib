@@ -245,7 +245,11 @@ class ProfileManager {
   private onSyncCallbacks: Array<() => void> = [];
 
   onLogin(callback: () => void): void {
-    this.onLoginCallbacks.push(callback);
+    if (this.cachedProfile) {
+      callback();
+    } else {
+      this.onLoginCallbacks.push(callback);
+    }
   }
 
   onSync(callback: () => void): void {

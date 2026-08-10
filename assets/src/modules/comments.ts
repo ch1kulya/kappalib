@@ -560,14 +560,19 @@ export function initComments(): void {
   const container = document.getElementById("comments-section");
   if (!container) return;
 
-  if (initializedContainers.has(container)) return;
-  initializedContainers.add(container);
-
   const chapterId = container.dataset.chapterId;
   if (!chapterId) return;
 
   renderCommentForm(container);
+
+  if (initializedContainers.has(container)) return;
+  initializedContainers.add(container);
+
   loadComments(container, chapterId);
+
+  profileManager.onLogin(() => {
+    renderCommentForm(container);
+  });
 
   container.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
@@ -592,9 +597,7 @@ export function initComments(): void {
       return;
     }
 
-    const deleteBtn = target.closest(
-      ".comment-delete-btn",
-    ) as HTMLElement | null;
+    const deleteBtn = target.closest(".comment-delete-btn") as HTMLElement | null;
     if (deleteBtn) {
       e.preventDefault();
       const answerId = deleteBtn.dataset.answerId;
