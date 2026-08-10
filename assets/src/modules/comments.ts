@@ -6,6 +6,8 @@ const TURNSTILE_COMMENTS_SITE_KEY =
 const COMMENT_COOLDOWN = 30 * 1000;
 const LAST_COMMENT_TIME_KEY = "kappalib_last_comment_time";
 
+const initializedContainers = new WeakSet<HTMLElement>();
+
 interface CommentAnswer {
   id: string;
   comment_id: string;
@@ -550,6 +552,9 @@ function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
 export function initComments(): void {
   const container = document.getElementById("comments-section");
   if (!container) return;
+
+  if (initializedContainers.has(container)) return;
+  initializedContainers.add(container);
 
   const chapterId = container.dataset.chapterId;
   if (!chapterId) return;
