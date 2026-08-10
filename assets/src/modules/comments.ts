@@ -1,4 +1,4 @@
-import { profileManager, getAvatarUrl } from "./profile";
+import { profileManager, getAvatarUrl, updateProfileBadges } from "./profile";
 
 const API_URL = process.env.API_URL;
 const TURNSTILE_COMMENTS_SITE_KEY =
@@ -19,6 +19,7 @@ interface CommentAnswer {
   user_avatar_seed: string;
   user_has_custom_avatar: boolean;
   user_avatar_updated_at: number;
+  is_new?: boolean;
 }
 
 interface Comment {
@@ -261,6 +262,10 @@ function createAnswerHTML(answer: CommentAnswer): string {
       statusBadge = `<span class="comment-date">${formatRelativeTime(answer.created_at)}</span>`;
   }
 
+  if (answer.is_new) {
+    extraClass += " is-new";
+  }
+
   const isOwn = answer.user_id === profileManager.getProfileId();
 
   let actionHTML = "";
@@ -270,11 +275,13 @@ function createAnswerHTML(answer: CommentAnswer): string {
       </button>`;
   }
 
+  const newBadge = answer.is_new ? ' <span class="comment-new-badge">Новый ответ</span>' : '';
+
   return `
     <div class="comment-answer${extraClass}" data-answer-id="${answer.id}" tabindex="0">
       <div class="comment-header">
         <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
-        <span class="comment-author">${answer.user_display_name} ${statusBadge}</span>
+        <span class="comment-author">${answer.user_display_name} ${statusBadge}${newBadge}</span>
         ${actionHTML}
       </div>
       <div class="comment-body"><div class="comment-content">${answer.content_html}</div></div>
@@ -553,14 +560,19 @@ export function initComments(): void {
   const container = document.getElementById("comments-section");
   if (!container) return;
 
-  if (initializedContainers.has(container)) return;
-  initializedContainers.add(container);
-
   const chapterId = container.dataset.chapterId;
   if (!chapterId) return;
 
   renderCommentForm(container);
+
+  if (initializedContainers.has(container)) return;
+  initializedContainers.add(container);
+
   loadComments(container, chapterId);
+
+  profileManager.onLogin(() => {
+    renderCommentForm(container);
+  });
 
   container.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
@@ -585,9 +597,7 @@ export function initComments(): void {
       return;
     }
 
-    const deleteBtn = target.closest(
-      ".comment-delete-btn",
-    ) as HTMLElement | null;
+    const deleteBtn = target.closest(".comment-delete-btn") as HTMLElement | null;
     if (deleteBtn) {
       e.preventDefault();
       const answerId = deleteBtn.dataset.answerId;
@@ -1362,6 +1372,9 @@ async function loadMyComments(page: number = 1): Promise<void> {
     if (!res.ok) throw new Error("Failed to load comments");
 
     const data: UserCommentsPage = await res.json();
+
+    profileManager.markNotificationsAsRead();
+    updateProfileBadges();
 
     if (loadingEl) loadingEl.style.display = "none";
 

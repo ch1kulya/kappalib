@@ -698,6 +698,10 @@ func HandleGetUserComments(ctx context.Context, input *GetUserCommentsInput) (*U
 		return nil, huma.Error500InternalServerError("Failed to fetch comments")
 	}
 
+	if err := data.UpdateNotificationsLastSeen(ctx, userID); err != nil {
+		logger.Warn("Failed to update notifications_last_seen for user %s: %v", userID, err)
+	}
+
 	return &UserCommentsPageResponse{Body: *comments}, nil
 }
 
