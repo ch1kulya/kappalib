@@ -7,6 +7,7 @@ import { refreshLastReadTotalChapters } from "./progress";
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
 const PROFILE_PROVIDER_KEY = "kappalib_oauth_provider";
+const NOTIFICATIONS_KEY = "kappalib_unread_notifications";
 const S3_URL = process.env.S3_PUBLIC_URL;
 
 interface CookieValue {
@@ -80,6 +81,7 @@ class ProfileManager {
         this.profileId = profile.id;
         this.cachedProfile = profile;
         localStorage.setItem(PROFILE_ID_KEY, profile.id);
+        localStorage.setItem(NOTIFICATIONS_KEY, String(profile.unread_notifications || 0));
         this.notifyLogin();
         return profile;
       }
@@ -90,6 +92,12 @@ class ProfileManager {
       console.error("Fetch profile failed", err);
     }
     return null;
+  }
+
+  getInitialUnreadCount(): number {
+    if (!this.isLoggedIn()) return 0;
+    const stored = localStorage.getItem(NOTIFICATIONS_KEY);
+    return stored ? parseInt(stored, 10) : 0;
   }
 
   async syncCookiesToServer(): Promise<void> {
@@ -208,6 +216,7 @@ class ProfileManager {
     localStorage.removeItem(PROFILE_ID_KEY);
     localStorage.removeItem(PROFILE_PROVIDER_KEY);
     localStorage.removeItem("kappalib_pending_comments");
+    localStorage.removeItem(NOTIFICATIONS_KEY);
   }
 
   private getKappalibCookies(): Record<string, CookieValue> {
@@ -274,6 +283,13 @@ class ProfileManager {
 
     return hasChanges;
   }
+
+  markNotificationsAsRead(): void {
+    if (this.cachedProfile) {
+      this.cachedProfile.unread_notifications = 0;
+    }
+    localStorage.setItem(NOTIFICATIONS_KEY, "0");
+  }
 }
 
 export const profileManager = new ProfileManager();
@@ -299,6 +315,18 @@ function refreshUI(): void {
 }
 
 export function initProfile(): void {
+  const initialCount = profileManager.getInitialUnreadCount();
+  if (initialCount > 0) {
+    const headerBtn = document.getElementById("header-profile-btn");
+    if (headerBtn) {
+      const badge = document.createElement("span");
+      badge.className = "pc-notifications-badge";
+      badge.textContent = initialCount > 99 ? "99+" : String(initialCount);
+      badge.style.display = "flex";
+      headerBtn.appendChild(badge);
+    }
+  }
+
   profileManager.fetchProfile().then((profile) => {
     if (profile) {
       profileManager.syncCookiesToServer().finally(() => {
@@ -608,7 +636,7 @@ function initProfileInteractions(profile: ProfilePublic): void {
   });
 }
 
-function updateProfileBadges(): void {
+export function updateProfileBadges(): void {
   const profile = profileManager.getProfileCache();
   const count = profile?.unread_notifications || 0;
 
