@@ -4120,8 +4120,8 @@ html {
     left: -0.85rem;
     width: 0.75rem;
     height: 1.15rem;
-    border-left: 2px solid var(--border);
-    border-bottom: 2px solid var(--border);
+    border-left: 1.5px solid var(--border);
+    border-bottom: 1.5px solid var(--border);
     border-bottom-left-radius: 0.85rem;
 }
 
@@ -4131,9 +4131,9 @@ html {
     top: -4px;
     bottom: -1rem;
     left: -0.85rem;
-    width: 2px;
-    border-radius: 999px;
-    background: var(--border);
+    width: 0;
+    border-left: 1.5px solid var(--border);
+    background: transparent;
 }
 
 .comment-answer-avatar {
