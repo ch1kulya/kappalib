@@ -7,6 +7,7 @@ import { refreshLastReadTotalChapters } from "./progress";
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
 const PROFILE_PROVIDER_KEY = "kappalib_oauth_provider";
+const NOTIFICATIONS_KEY = "kappalib_unread_notifications";
 const S3_URL = process.env.S3_PUBLIC_URL;
 
 interface CookieValue {
@@ -21,6 +22,7 @@ interface ProfilePublic {
   has_custom_avatar: boolean;
   avatar_updated_at: number;
   created_at: string;
+  unread_notifications?: number;
 }
 
 export function getAvatarUrl(
@@ -79,6 +81,7 @@ class ProfileManager {
         this.profileId = profile.id;
         this.cachedProfile = profile;
         localStorage.setItem(PROFILE_ID_KEY, profile.id);
+        localStorage.setItem(NOTIFICATIONS_KEY, String(profile.unread_notifications || 0));
         this.notifyLogin();
         return profile;
       }
@@ -89,6 +92,12 @@ class ProfileManager {
       console.error("Fetch profile failed", err);
     }
     return null;
+  }
+
+  getInitialUnreadCount(): number {
+    if (!this.isLoggedIn()) return 0;
+    const stored = localStorage.getItem(NOTIFICATIONS_KEY);
+    return stored ? parseInt(stored, 10) : 0;
   }
 
   async syncCookiesToServer(): Promise<void> {
@@ -207,6 +216,7 @@ class ProfileManager {
     localStorage.removeItem(PROFILE_ID_KEY);
     localStorage.removeItem(PROFILE_PROVIDER_KEY);
     localStorage.removeItem("kappalib_pending_comments");
+    localStorage.removeItem(NOTIFICATIONS_KEY);
   }
 
   private getKappalibCookies(): Record<string, CookieValue> {
@@ -273,6 +283,13 @@ class ProfileManager {
 
     return hasChanges;
   }
+
+  markNotificationsAsRead(): void {
+    if (this.cachedProfile) {
+      this.cachedProfile.unread_notifications = 0;
+    }
+    localStorage.setItem(NOTIFICATIONS_KEY, "0");
+  }
 }
 
 export const profileManager = new ProfileManager();
@@ -293,9 +310,23 @@ function refreshUI(): void {
   if (historyList) {
     refreshHistory();
   }
+
+  updateProfileBadges();
 }
 
 export function initProfile(): void {
+  const initialCount = profileManager.getInitialUnreadCount();
+  if (initialCount > 0) {
+    const headerBtn = document.getElementById("header-profile-btn");
+    if (headerBtn) {
+      const badge = document.createElement("span");
+      badge.className = "pc-notifications-badge";
+      badge.textContent = initialCount > 99 ? "99+" : String(initialCount);
+      badge.style.display = "flex";
+      headerBtn.appendChild(badge);
+    }
+  }
+
   profileManager.fetchProfile().then((profile) => {
     if (profile) {
       profileManager.syncCookiesToServer().finally(() => {
@@ -403,10 +434,10 @@ function renderProfileCard(): void {
   profileManager.fetchProfile().then((profile) => {
     if (!profile) {
       renderGuestView();
-      return;
+    } else {
+      renderLoggedInView(profile);
     }
-
-    renderLoggedInView(profile);
+    updateProfileBadges();
   });
 }
 
@@ -450,6 +481,15 @@ function renderLoggedInView(profile: ProfilePublic): void {
       createdAt: formatDate(profile.created_at),
     }),
   );
+
+  const commentsBtn = content.querySelector('a[href="/comments"]');
+  const count = profile.unread_notifications || 0;
+  if (commentsBtn && count > 0) {
+    const badge = document.createElement("span");
+    badge.className = "pc-notifications-badge";
+    badge.textContent = count > 99 ? "99+" : String(count);
+    commentsBtn.appendChild(badge);
+  }
 
   initProfileInteractions(profile);
 }
@@ -580,7 +620,7 @@ function initProfileInteractions(profile: ProfilePublic): void {
   function restoreMetaDate() {
     const metaDateEl = document.querySelector(".pc-meta-date") as HTMLElement;
     if (metaDateEl) {
-      metaDateEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13H3"></path><path d="M16 17H3"></path><path d="m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6"></path><circle cx="9" cy="7" r="2"></circle></svg><span data-field="createdAt">${formatDate(currentProfile.created_at)}</span>`;
+      metaDateEl.innerHTML = `<svg xmlns="http://w.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13H3"></path><path d="M16 17H3"></path><path d="m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6"></path><circle cx="9" cy="7" r="2"></circle></svg><span data-field="createdAt">${formatDate(currentProfile.created_at)}</span>`;
       metaDateEl.style.color = "";
     }
   }
@@ -592,7 +632,30 @@ function initProfileInteractions(profile: ProfilePublic): void {
       profileCard.dataset.hasSession = "false";
     }
     renderGuestView();
+    updateProfileBadges();
   });
+}
+
+export function updateProfileBadges(): void {
+  const profile = profileManager.getProfileCache();
+  const count = profile?.unread_notifications || 0;
+
+  const headerBtn = document.getElementById("header-profile-btn");
+  if (!headerBtn) return;
+
+  let badge = headerBtn.querySelector(".pc-notifications-badge") as HTMLElement | null;
+
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "pc-notifications-badge";
+      headerBtn.appendChild(badge);
+    }
+    badge.textContent = count > 99 ? "99+" : String(count);
+    badge.style.display = "flex";
+  } else if (badge) {
+    badge.style.display = "none";
+  }
 }
 
 function formatDate(dateStr: string): string {

@@ -3835,6 +3835,20 @@ html {
     margin-right: 0.25rem;
 }
 
+.comment-new-badge {
+    background: var(--accent-primary);
+    color: var(--accent-text);
+    font-size: 0.7rem;
+    border: 1px solid var(--accent-border);
+    box-shadow: var(--accent-shadow-primary);
+    border-radius: 6px;
+    position: relative;
+    top: -0.05rem;
+    right: -0.1rem;
+    margin-right: 0.25rem;
+    padding: 1px 5px;
+}
+
 .comment-content {
     font-size: 0.95rem;
     line-height: 1.6;
@@ -4343,4 +4357,38 @@ td:first-child {
     color: var(--secondary);
     font-size: 0.85rem;
     font-weight: 500;
+}
+
+/* New answers */
+.header-right:has(.pc-notifications-badge),
+.profile-card .pc-btn.pc-btn-action:has(.pc-notifications-badge) {
+    overflow: visible;
+}
+
+.header-right,
+.profile-card .pc-btn.pc-btn-action {
+    overflow: visible;
+}
+
+.header-right .pc-notifications-badge,
+.profile-card .pc-btn.pc-btn-action .pc-notifications-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--accent-primary);
+    color: var(--accent-text);
+    font-size: 0.6rem;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 3px;
+    border-radius: 6px;
+    border: 1px solid var(--accent-border);
+    box-shadow: var(--accent-shadow-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    z-index: 10;
+    pointer-events: none;
 }
