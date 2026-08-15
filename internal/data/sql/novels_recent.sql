@@ -15,6 +15,5 @@ WHERE
         OR has_sexual_violence
         OR has_graphic_sex
     )
-    AND created_at > NOW() - INTERVAL '30 days'
 ORDER BY created_at DESC
-LIMIT $1;
+LIMIT NULLIF($1, 0);

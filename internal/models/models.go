@@ -254,13 +254,35 @@ type NovelAddition struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type NovelAdditionChapters struct {
+	ID           string    `json:"id"`
+	Title        string    `json:"title"`
+	Author       string    `json:"author"`
+	YearStart    int       `json:"year_start"`
+	Status       string    `json:"status"`
+	Description  string    `json:"description"`
+	CoverURL     *string   `json:"cover_url"`
+	ChapterMin   int       `json:"chapter_min"`
+	ChapterMax   int       `json:"chapter_max"`
+	ChapterCount int       `json:"chapter_count"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type GroupedUpdates struct {
+	NovelCount   int       `json:"novel_count"`
+	ChapterCount int       `json:"chapter_count"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 type HomeUpdateItem struct {
-	Type          string
-	ChapterUpdate *NovelUpdate
-	AppUpdate     *AppUpdate
-	NovelAddition *NovelAddition
-	UpdatedAt     time.Time
-	Pinned        bool
+	Type                  string
+	ChapterUpdate         *NovelUpdate
+	AppUpdate             *AppUpdate
+	NovelAddition         *NovelAddition
+	NovelAdditionChapters *NovelAdditionChapters
+	GroupedUpdates        *GroupedUpdates
+	UpdatedAt             time.Time
+	Pinned                bool
 }
 
 type Announcement struct {

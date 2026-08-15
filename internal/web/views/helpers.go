@@ -300,6 +300,24 @@ func FormatUpdateActionHTML(min, max, count int) string {
 	return fmt.Sprintf(`Добавлены <span class="update-log-num">%d-%d</span> гл. `, min, max)
 }
 
+func FormatNovelAdditionChaptersHTML(min, max, count int) string {
+	if count == 1 || min == max {
+		return fmt.Sprintf(`Новая новелла, добавлена <span class="update-log-num">%d</span> гл.`, min)
+	}
+	return fmt.Sprintf(`Новая новелла, добавлены <span class="update-log-num">%d-%d</span> гл.`, min, max)
+}
+
+func FormatGroupedUpdatesHTML(chapterCount, novelCount int) string {
+	action := "Добавлено"
+	if chapterCount%10 == 1 && chapterCount%100 != 11 {
+		action = "Добавлена"
+	}
+	chWord := pluralize(chapterCount, "глава", "главы", "глав")
+	novWord := pluralize(novelCount, "новеллы", "новелл", "новелл")
+	return fmt.Sprintf(`%s <span class="update-log-num">%d</span> %s для <span class="update-log-num">%d</span> %s`,
+		action, chapterCount, chWord, novelCount, novWord)
+}
+
 func FormatUpdateBody(body string) []string {
 	const tag = "!update:"
 	idx := strings.Index(body, tag)

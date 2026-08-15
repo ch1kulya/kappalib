@@ -519,52 +519,7 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var latestUpdates []models.HomeUpdateItem
-	chapterUpdates, _ := data.GetLatestUpdates(r.Context(), 15)
-	appUpdates, _ := data.GetAppUpdates(r.Context(), 5)
-	novelAdditions, _ := data.GetRecentlyAddedNovels(r.Context(), 15)
-
-	var pinnedAppUpdate *models.AppUpdate
-	if len(appUpdates) > 0 {
-		pinnedAppUpdate = &appUpdates[0]
-	}
-
-	for _, cu := range chapterUpdates {
-		latestUpdates = append(latestUpdates, models.HomeUpdateItem{
-			Type:          "chapter",
-			ChapterUpdate: &cu,
-			UpdatedAt:     cu.UpdatedAt,
-		})
-	}
-	for i, au := range appUpdates {
-		item := models.HomeUpdateItem{
-			Type:      "app",
-			AppUpdate: &au,
-			UpdatedAt: au.MergedAt,
-		}
-		if i == 0 {
-			item.Pinned = true
-		}
-		latestUpdates = append(latestUpdates, item)
-	}
-	for _, na := range novelAdditions {
-		latestUpdates = append(latestUpdates, models.HomeUpdateItem{
-			Type:          "novel",
-			NovelAddition: &na,
-			UpdatedAt:     na.CreatedAt,
-		})
-	}
-
-	sort.Slice(latestUpdates, func(i, j int) bool {
-		if latestUpdates[i].Pinned != latestUpdates[j].Pinned {
-			return latestUpdates[i].Pinned
-		}
-		return latestUpdates[i].UpdatedAt.After(latestUpdates[j].UpdatedAt)
-	})
-
-	if len(latestUpdates) > 15 {
-		latestUpdates = latestUpdates[:15]
-	}
+	latestUpdates, pinnedAppUpdate, _ := buildFeed(r.Context(), true)
 
 	canonical := "https://kappalib.rip"
 	if page > 1 {
@@ -727,53 +682,7 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
-	var allUpdates []models.HomeUpdateItem
-
-	chapterUpdates, _ := data.GetLatestUpdates(r.Context(), 250)
-	appUpdates, _ := data.GetAppUpdates(r.Context(), 25)
-	novelAdditions, _ := data.GetRecentlyAddedNovels(r.Context(), 250)
-
-	var pinnedAppUpdate *models.AppUpdate
-	if len(appUpdates) > 0 {
-		pinnedAppUpdate = &appUpdates[0]
-	}
-
-	for _, cu := range chapterUpdates {
-		allUpdates = append(allUpdates, models.HomeUpdateItem{
-			Type:          "chapter",
-			ChapterUpdate: &cu,
-			UpdatedAt:     cu.UpdatedAt,
-		})
-	}
-	for i, au := range appUpdates {
-		item := models.HomeUpdateItem{
-			Type:      "app",
-			AppUpdate: &au,
-			UpdatedAt: au.MergedAt,
-		}
-		if i == 0 {
-			item.Pinned = true
-		}
-		allUpdates = append(allUpdates, item)
-	}
-	for _, na := range novelAdditions {
-		allUpdates = append(allUpdates, models.HomeUpdateItem{
-			Type:          "novel",
-			NovelAddition: &na,
-			UpdatedAt:     na.CreatedAt,
-		})
-	}
-
-	sort.Slice(allUpdates, func(i, j int) bool {
-		if allUpdates[i].Pinned != allUpdates[j].Pinned {
-			return allUpdates[i].Pinned
-		}
-		return allUpdates[i].UpdatedAt.After(allUpdates[j].UpdatedAt)
-	})
-
-	if len(allUpdates) > 250 {
-		allUpdates = allUpdates[:250]
-	}
+	allUpdates, pinnedAppUpdate, _ := buildFeed(r.Context(), false)
 
 	title := "Обновления — kappalib"
 	description := "История обновлений новелл и сайта."

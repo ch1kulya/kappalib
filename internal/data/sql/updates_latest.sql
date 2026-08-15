@@ -20,4 +20,4 @@ WHERE
         OR n.has_graphic_sex
     )
 ORDER BY cg.updated_at DESC
-LIMIT $1;
+LIMIT NULLIF($1, 0);

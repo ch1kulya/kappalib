@@ -54,6 +54,7 @@ services:
       - GITHUB_CLIENT_SECRET
       - YANDEX_CLIENT_ID
       - YANDEX_CLIENT_SECRET
+      - GITHUB_TOKEN
     networks:
       - public_net
     deploy:
