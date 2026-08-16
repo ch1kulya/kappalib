@@ -44,6 +44,35 @@ func TestFormatGroupedUpdatesHTML(t *testing.T) {
 	}
 }
 
+func TestFormatUpdateActionHTML(t *testing.T) {
+	tests := []struct {
+		min      int
+		max      int
+		count    int
+		expected string
+	}{
+		{
+			min:      1,
+			max:      1,
+			count:    1,
+			expected: `Добавлена <span class="update-log-num">1</span> глава `,
+		},
+		{
+			min:      1,
+			max:      50,
+			count:    50,
+			expected: `Добавлены главы <span class="update-log-num">1-50</span> `,
+		},
+	}
+
+	for _, tt := range tests {
+		actual := views.FormatUpdateActionHTML(tt.min, tt.max, tt.count)
+		if actual != tt.expected {
+			t.Errorf("FormatUpdateActionHTML(%d, %d, %d) = %q; want %q", tt.min, tt.max, tt.count, actual, tt.expected)
+		}
+	}
+}
+
 func TestFormatNovelAdditionChaptersHTML(t *testing.T) {
 	tests := []struct {
 		min      int
@@ -55,13 +84,13 @@ func TestFormatNovelAdditionChaptersHTML(t *testing.T) {
 			min:      1,
 			max:      1,
 			count:    1,
-			expected: `Новая новелла, добавлена <span class="update-log-num">1</span> гл.`,
+			expected: `Новая новелла, добавлена <span class="update-log-num">1</span> глава`,
 		},
 		{
 			min:      1,
 			max:      50,
 			count:    50,
-			expected: `Новая новелла, добавлены <span class="update-log-num">1-50</span> гл.`,
+			expected: `Новая новелла, добавлены главы <span class="update-log-num">1-50</span>`,
 		},
 	}
 

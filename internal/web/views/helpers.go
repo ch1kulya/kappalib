@@ -295,16 +295,16 @@ func FormatChapterHeading(num int, title string) string {
 
 func FormatUpdateActionHTML(min, max, count int) string {
 	if count == 1 {
-		return fmt.Sprintf(`Добавлена <span class="update-log-num">%d</span> гл. `, min)
+		return fmt.Sprintf(`Добавлена <span class="update-log-num">%d</span> глава `, min)
 	}
-	return fmt.Sprintf(`Добавлены <span class="update-log-num">%d-%d</span> гл. `, min, max)
+	return fmt.Sprintf(`Добавлены главы <span class="update-log-num">%d-%d</span> `, min, max)
 }
 
 func FormatNovelAdditionChaptersHTML(min, max, count int) string {
 	if count == 1 || min == max {
-		return fmt.Sprintf(`Новая новелла, добавлена <span class="update-log-num">%d</span> гл.`, min)
+		return fmt.Sprintf(`Новая новелла, добавлена <span class="update-log-num">%d</span> глава`, min)
 	}
-	return fmt.Sprintf(`Новая новелла, добавлены <span class="update-log-num">%d-%d</span> гл.`, min, max)
+	return fmt.Sprintf(`Новая новелла, добавлены главы <span class="update-log-num">%d-%d</span>`, min, max)
 }
 
 func FormatGroupedUpdatesHTML(chapterCount, novelCount int) string {
