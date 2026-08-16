@@ -47,6 +47,16 @@ func requireAuth(ctx context.Context) (string, error) {
 	return userID, nil
 }
 
+func extractIP(forwardedFor, realIP string) string {
+	if forwardedFor != "" {
+		if idx := strings.Index(forwardedFor, ","); idx != -1 {
+			return strings.TrimSpace(forwardedFor[:idx])
+		}
+		return strings.TrimSpace(forwardedFor)
+	}
+	return strings.TrimSpace(realIP)
+}
+
 func requireOwner(userID, resourceID string) error {
 	if userID != resourceID {
 		return huma.Error403Forbidden("Access denied")
@@ -93,10 +103,13 @@ type GetCommentsInput struct {
 }
 
 type CreateCommentInput struct {
-	ChapterID string `path:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
-	Body      struct {
-		Content        string `json:"content" minLength:"1" maxLength:"12000"`
-		TurnstileToken string `json:"turnstile_token" minLength:"1"`
+	ChapterID    string `path:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
+	ForwardedFor string `header:"X-Forwarded-For"`
+	RealIP       string `header:"X-Real-IP"`
+	Body         struct {
+		Content           string `json:"content" minLength:"1" maxLength:"12000"`
+		TurnstileToken    string `json:"turnstile_token,omitempty"`
+		SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
 	}
 }
 
@@ -191,10 +204,13 @@ type GetUserCommentsInput struct {
 }
 
 type CreateCommentAnswerInput struct {
-	CommentID string `path:"commentId" pattern:"^cmt_[a-z0-9]{8}$"`
-	Body      struct {
-		Content        string `json:"content" minLength:"1" maxLength:"2000"`
-		TurnstileToken string `json:"turnstile_token" minLength:"1"`
+	CommentID    string `path:"commentId" pattern:"^cmt_[a-z0-9]{8}$"`
+	ForwardedFor string `header:"X-Forwarded-For"`
+	RealIP       string `header:"X-Real-IP"`
+	Body         struct {
+		Content           string `json:"content" minLength:"1" maxLength:"2000"`
+		TurnstileToken    string `json:"turnstile_token,omitempty"`
+		SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
 	}
 }
 
@@ -398,9 +414,11 @@ func HandleCreateComment(ctx context.Context, input *CreateCommentInput) (*Comme
 	}
 
 	commentInput := models.CreateCommentInput{
-		ChapterID:      input.ChapterID,
-		Content:        input.Body.Content,
-		TurnstileToken: input.Body.TurnstileToken,
+		ChapterID:         input.ChapterID,
+		Content:           input.Body.Content,
+		TurnstileToken:    input.Body.TurnstileToken,
+		SmartCaptchaToken: input.Body.SmartCaptchaToken,
+		IP:                extractIP(input.ForwardedFor, input.RealIP),
 	}
 
 	comment, err := data.CreateComment(ctx, userID, commentInput)
@@ -712,9 +730,11 @@ func HandleCreateCommentAnswer(ctx context.Context, input *CreateCommentAnswerIn
 	}
 
 	answerInput := models.CreateCommentAnswerInput{
-		CommentID:      input.CommentID,
-		Content:        input.Body.Content,
-		TurnstileToken: input.Body.TurnstileToken,
+		CommentID:         input.CommentID,
+		Content:           input.Body.Content,
+		TurnstileToken:    input.Body.TurnstileToken,
+		SmartCaptchaToken: input.Body.SmartCaptchaToken,
+		IP:                extractIP(input.ForwardedFor, input.RealIP),
 	}
 
 	answer, err := data.CreateCommentAnswer(ctx, userID, answerInput)

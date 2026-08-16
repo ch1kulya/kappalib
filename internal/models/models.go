@@ -205,15 +205,19 @@ type UserAnswer struct {
 }
 
 type CreateCommentInput struct {
-	ChapterID      string `json:"chapter_id"`
-	Content        string `json:"content"`
-	TurnstileToken string `json:"turnstile_token"`
+	ChapterID         string `json:"chapter_id"`
+	Content           string `json:"content"`
+	TurnstileToken    string `json:"turnstile_token,omitempty"`
+	SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
+	IP                string `json:"-"`
 }
 
 type CreateCommentAnswerInput struct {
-	CommentID      string `json:"comment_id"`
-	Content        string `json:"content"`
-	TurnstileToken string `json:"turnstile_token"`
+	CommentID         string `json:"comment_id"`
+	Content           string `json:"content"`
+	TurnstileToken    string `json:"turnstile_token,omitempty"`
+	SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
+	IP                string `json:"-"`
 }
 
 type UpdateProfileInput struct {

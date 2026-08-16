@@ -3692,6 +3692,13 @@ a.update-log-item:active {
     flex: 1;
 }
 
+#comments-smartcaptcha-container {
+    min-height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 /* Comments List */
 .comments-list {
     display: flex;

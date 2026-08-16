@@ -68,13 +68,14 @@ var queryCommentStatsBase string
 var queryCommentStatsDaily string
 
 var (
-	commentsTurnstileSecret = os.Getenv("TURNSTILE_COMMENTS_SECRET")
-	telegramBotToken        = os.Getenv("TELEGRAM_BOT_TOKEN")
-	telegramChatID          = os.Getenv("TELEGRAM_CHAT_ID")
-	telegramWebhookSecret   = os.Getenv("TELEGRAM_WEBHOOK_SECRET")
-	markdownPolicy          *bluemonday.Policy
-	spoilerRegex            = regexp.MustCompile(`(?s)\|\|(.+?)\|\|`)
-	telegramClient          = &http.Client{
+	commentsTurnstileSecret    = os.Getenv("TURNSTILE_COMMENTS_SECRET")
+	commentsSmartCaptchaSecret = os.Getenv("SMARTCAPTCHA_SECRET")
+	telegramBotToken           = os.Getenv("TELEGRAM_BOT_TOKEN")
+	telegramChatID             = os.Getenv("TELEGRAM_CHAT_ID")
+	telegramWebhookSecret      = os.Getenv("TELEGRAM_WEBHOOK_SECRET")
+	markdownPolicy             *bluemonday.Policy
+	spoilerRegex               = regexp.MustCompile(`(?s)\|\|(.+?)\|\|`)
+	telegramClient             = &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
 			TLSHandshakeTimeout:   5 * time.Second,
@@ -197,6 +198,54 @@ func verifyCommentsTurnstile(token string) bool {
 	return result.Success
 }
 
+func verifyCommentsSmartCaptcha(token, ip string) bool {
+	if commentsSmartCaptchaSecret == "" {
+		logger.Warn("SMARTCAPTCHA_SECRET not set")
+		return false
+	}
+
+	client := &http.Client{Timeout: 3 * time.Second}
+	params := url.Values{
+		"secret": {commentsSmartCaptchaSecret},
+		"token":  {token},
+	}
+	if ip != "" {
+		params.Set("ip", ip)
+	}
+
+	resp, err := client.PostForm("https://smartcaptcha.yandexcloud.net/validate", params)
+	if err != nil {
+		logger.Error("Comments smartcaptcha verification request failed: %v", err)
+		return false
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Error("Smartcaptcha server returned status %d", resp.StatusCode)
+		return false
+	}
+
+	var result struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		logger.Error("Failed to decode smartcaptcha response: %v", err)
+		return false
+	}
+	return result.Status == "ok"
+}
+
+func verifyCommentsCaptcha(turnstileToken, smartCaptchaToken, ip string) bool {
+	if smartCaptchaToken != "" {
+		return verifyCommentsSmartCaptcha(smartCaptchaToken, ip)
+	}
+	if turnstileToken != "" {
+		return verifyCommentsTurnstile(turnstileToken)
+	}
+	return false
+}
+
 func renderMarkdown(content string) string {
 	unsafe := blackfriday.Run([]byte(content),
 		blackfriday.WithExtensions(blackfriday.CommonExtensions&^blackfriday.Tables&^blackfriday.FencedCode),
@@ -217,7 +266,7 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 		return nil, ErrRateLimitExceeded
 	}
 
-	if !verifyCommentsTurnstile(input.TurnstileToken) {
+	if !verifyCommentsCaptcha(input.TurnstileToken, input.SmartCaptchaToken, input.IP) {
 		return nil, ErrCaptchaFailed
 	}
 
@@ -656,7 +705,7 @@ func CreateCommentAnswer(ctx context.Context, userID string, input models.Create
 		return nil, ErrRateLimitExceeded
 	}
 
-	if !verifyCommentsTurnstile(input.TurnstileToken) {
+	if !verifyCommentsCaptcha(input.TurnstileToken, input.SmartCaptchaToken, input.IP) {
 		return nil, ErrCaptchaFailed
 	}
 

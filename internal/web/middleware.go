@@ -128,17 +128,17 @@ func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 
 		var cspBuilder strings.Builder
 		cspBuilder.WriteString("default-src 'self'; ")
-		cspBuilder.WriteString("connect-src 'self' https://stats.kappalib.rip https://cdn.jsdelivr.net/ https://proxy.scalar.com; ")
+		cspBuilder.WriteString("connect-src 'self' https://stats.kappalib.rip https://cdn.jsdelivr.net/ https://proxy.scalar.com https://smartcaptcha.yandexcloud.net https://smartcaptcha.cloud.yandex.ru; ")
 		cspBuilder.WriteString("img-src 'self' https: data:; ")
 
-		fmt.Fprintf(&cspBuilder, "script-src 'self' 'nonce-%s' https://stats.kappalib.rip https://challenges.cloudflare.com https://cdn.jsdelivr.net", nonce)
+		fmt.Fprintf(&cspBuilder, "script-src 'self' 'nonce-%s' https://stats.kappalib.rip https://challenges.cloudflare.com https://cdn.jsdelivr.net https://smartcaptcha.yandexcloud.net https://smartcaptcha.cloud.yandex.ru", nonce)
 
 		if airHash != "" {
 			fmt.Fprintf(&cspBuilder, " '%s'", airHash)
 		}
 
 		cspBuilder.WriteString("; ")
-		cspBuilder.WriteString("frame-src 'self' https://challenges.cloudflare.com; ")
+		cspBuilder.WriteString("frame-src 'self' https://challenges.cloudflare.com https://smartcaptcha.yandexcloud.net https://smartcaptcha.cloud.yandex.ru; ")
 		cspBuilder.WriteString("style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; ")
 		cspBuilder.WriteString("font-src 'self' data: https://fonts.scalar.com https://cdn.jsdelivr.net https://fonts.gstatic.com; ")
 
