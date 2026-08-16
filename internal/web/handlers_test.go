@@ -55,13 +55,13 @@ func TestFormatUpdateActionHTML(t *testing.T) {
 			min:      1,
 			max:      1,
 			count:    1,
-			expected: `Добавлена <span class="update-log-num">1</span> глава `,
+			expected: `Добавлена <span class="update-log-num">1</span> глава`,
 		},
 		{
 			min:      1,
 			max:      50,
 			count:    50,
-			expected: `Добавлены главы <span class="update-log-num">1-50</span> `,
+			expected: `Добавлены главы <span class="update-log-num">1-50</span>`,
 		},
 	}
 
