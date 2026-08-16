@@ -79,6 +79,36 @@ templ Updates(props UpdatesProps) {
 							</div>
 						</div>
 					</a>
+				} else if update.Type == "novel_with_chapters" && update.NovelAdditionChapters != nil {
+					<a href={ templ.SafeURL("/" + update.NovelAdditionChapters.ID) } class="update-novel-item">
+						<div class="update-log-row">
+							<span class="update-log-text">
+								@templ.Raw(FormatNovelAdditionChaptersHTML(update.NovelAdditionChapters.ChapterMin, update.NovelAdditionChapters.ChapterMax, update.NovelAdditionChapters.ChapterCount))
+							</span>
+							<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+						</div>
+						<div class="update-novel-content">
+							<img src={ ResolveCover(update.NovelAdditionChapters.CoverURL) } alt={ update.NovelAdditionChapters.Title } loading="lazy"/>
+							<div class="update-novel-info">
+								<h3>{ update.NovelAdditionChapters.Title }</h3>
+								<div class="update-novel-meta">
+									<span class="badge">{ update.NovelAdditionChapters.Author }</span>
+									<span class="badge">{ fmt.Sprintf("%d", update.NovelAdditionChapters.YearStart) }</span>
+									<span class="badge">{ MapStatus(update.NovelAdditionChapters.Status) }</span>
+								</div>
+								if update.NovelAdditionChapters.Description != "" {
+									<p class="update-novel-desc">{ update.NovelAdditionChapters.Description }</p>
+								}
+							</div>
+						</div>
+					</a>
+				} else if update.Type == "grouped" && update.GroupedUpdates != nil {
+					<div class="update-log-item">
+						<span class="update-log-text">
+							@templ.Raw(FormatGroupedUpdatesHTML(update.GroupedUpdates.ChapterCount, update.GroupedUpdates.NovelCount))
+						</span>
+						<span class="update-log-time">{ FormatRelativeTime(update.UpdatedAt) }</span>
+					</div>
 				}
 			}
 		</div>

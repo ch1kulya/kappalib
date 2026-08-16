@@ -3,6 +3,7 @@ import { profileManager, getAvatarUrl, updateProfileBadges } from "./profile";
 const API_URL = process.env.API_URL;
 const TURNSTILE_COMMENTS_SITE_KEY =
   process.env.TURNSTILE_COMMENTS_SITE_KEY || "";
+const SMARTCAPTCHA_SITE_KEY = process.env.SMARTCAPTCHA_SITE_KEY || "";
 const COMMENT_COOLDOWN = 30 * 1000;
 const LAST_COMMENT_TIME_KEY = "kappalib_last_comment_time";
 
@@ -432,6 +433,10 @@ function loadTurnstileScript(): Promise<void> {
       return;
     }
 
+    const timeout = setTimeout(() => {
+      resolve();
+    }, 4000);
+
     const existing = document.querySelector(
       'script[src*="challenges.cloudflare.com/turnstile"]',
     );
@@ -439,6 +444,7 @@ function loadTurnstileScript(): Promise<void> {
       const checkLoaded = setInterval(() => {
         if ((window as any).turnstile) {
           clearInterval(checkLoaded);
+          clearTimeout(timeout);
           resolve();
         }
       }, 100);
@@ -449,10 +455,15 @@ function loadTurnstileScript(): Promise<void> {
     script.src =
       "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
     script.async = true;
+    script.onerror = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
     script.onload = () => {
       const checkLoaded = setInterval(() => {
         if ((window as any).turnstile) {
           clearInterval(checkLoaded);
+          clearTimeout(timeout);
           resolve();
         }
       }, 100);
@@ -472,29 +483,33 @@ async function initTurnstileForComments(container: HTMLElement): Promise<void> {
   const turnstileContainer = container.querySelector(
     "#comments-turnstile-container",
   );
-  if (!turnstileContainer || turnstileLoaded) return;
+  if (!turnstileContainer || turnstileLoaded || !(window as any).turnstile) return;
 
   turnstileLoaded = true;
 
-  turnstileWidgetId = (window as any).turnstile.render(turnstileContainer, {
-    sitekey: TURNSTILE_COMMENTS_SITE_KEY,
-    size: "invisible",
-    callback: (token: string) => {
-      turnstileToken = token;
-    },
-    "expired-callback": () => {
-      turnstileToken = null;
-    },
-    "error-callback": () => {
-      turnstileToken = null;
-    },
-  });
+  try {
+    turnstileWidgetId = (window as any).turnstile.render(turnstileContainer, {
+      sitekey: TURNSTILE_COMMENTS_SITE_KEY,
+      size: "invisible",
+      callback: (token: string) => {
+        turnstileToken = token;
+      },
+      "expired-callback": () => {
+        turnstileToken = null;
+      },
+      "error-callback": () => {
+        turnstileToken = null;
+      },
+    });
+  } catch (err) {
+    console.warn("Turnstile render failed:", err);
+  }
 }
 
 let tokenPromise: Promise<string | null> | null = null;
 
 async function getTurnstileToken(): Promise<string | null> {
-  if (!turnstileWidgetId) return null;
+  if (!turnstileWidgetId || !(window as any).turnstile) return null;
 
   if (tokenPromise) {
     return tokenPromise;
@@ -504,27 +519,41 @@ async function getTurnstileToken(): Promise<string | null> {
     if (turnstileToken) {
       const token = turnstileToken;
       turnstileToken = null;
-      (window as any).turnstile.reset(turnstileWidgetId);
+      try {
+        (window as any).turnstile.reset(turnstileWidgetId);
+      } catch {}
       resolve(token);
       return;
     }
 
-    (window as any).turnstile.reset(turnstileWidgetId);
-    (window as any).turnstile.execute(turnstileWidgetId);
+    let resolved = false;
+    let checkToken: any = null;
+    let failTimeout: any = null;
 
-    let attempts = 0;
-    const maxAttempts = 300;
+    const finish = (tok: string | null) => {
+      if (resolved) return;
+      resolved = true;
+      if (checkToken) clearInterval(checkToken);
+      if (failTimeout) clearTimeout(failTimeout);
+      turnstileToken = null;
+      resolve(tok);
+    };
 
-    const checkToken = setInterval(() => {
-      attempts++;
+    failTimeout = setTimeout(() => {
+      finish(null);
+    }, 4000);
+
+    try {
+      (window as any).turnstile.reset(turnstileWidgetId);
+      (window as any).turnstile.execute(turnstileWidgetId);
+    } catch {
+      finish(null);
+      return;
+    }
+
+    checkToken = setInterval(() => {
       if (turnstileToken) {
-        clearInterval(checkToken);
-        const token = turnstileToken;
-        turnstileToken = null;
-        resolve(token);
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkToken);
-        resolve(null);
+        finish(turnstileToken);
       }
     }, 100);
   });
@@ -532,6 +561,131 @@ async function getTurnstileToken(): Promise<string | null> {
   const result = await tokenPromise;
   tokenPromise = null;
   return result;
+}
+
+let smartCaptchaWidgetId: string | null = null;
+let smartCaptchaModalResolve: ((token: string | null) => void) | null = null;
+
+function loadSmartCaptchaScript(): Promise<void> {
+  return new Promise((resolve) => {
+    if ((window as any).smartCaptcha) {
+      resolve();
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      resolve();
+    }, 4000);
+
+    const existing = document.querySelector(
+      'script[src*="smartcaptcha.yandexcloud.net/captcha.js"]',
+    );
+    if (existing) {
+      const checkLoaded = setInterval(() => {
+        if ((window as any).smartCaptcha) {
+          clearInterval(checkLoaded);
+          clearTimeout(timeout);
+          resolve();
+        }
+      }, 100);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src =
+      "https://smartcaptcha.yandexcloud.net/captcha.js?render=onload&onload=kappalibSmartCaptchaOnload";
+    script.async = true;
+    script.defer = true;
+    (window as any).kappalibSmartCaptchaOnload = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+    script.onerror = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+    document.head.appendChild(script);
+  });
+}
+
+function closeSmartCaptchaModal(): void {
+  const overlay = document.getElementById("comments-captcha-modal");
+  if (overlay) {
+    overlay.remove();
+  }
+  document.body.style.overflow = "";
+  if (smartCaptchaModalResolve) {
+    const resolve = smartCaptchaModalResolve;
+    smartCaptchaModalResolve = null;
+    resolve(null);
+  }
+}
+
+async function getSmartCaptchaToken(): Promise<string | null> {
+  if (!SMARTCAPTCHA_SITE_KEY) {
+    console.warn("SMARTCAPTCHA_SITE_KEY not set");
+    return null;
+  }
+
+  await loadSmartCaptchaScript();
+  if (!(window as any).smartCaptcha) {
+    return null;
+  }
+
+  const existingOverlay = document.getElementById("comments-captcha-modal");
+  if (existingOverlay) {
+    existingOverlay.remove();
+  }
+
+  return new Promise((resolve) => {
+    smartCaptchaModalResolve = resolve;
+
+    const overlay = document.createElement("div");
+    overlay.id = "comments-captcha-modal";
+    overlay.className = "modal-overlay";
+
+    const container = document.createElement("div");
+    container.id = "comments-smartcaptcha-container";
+    container.className = "smart-captcha";
+    container.addEventListener("click", (e) => e.stopPropagation());
+
+    overlay.appendChild(container);
+    document.body.style.overflow = "hidden";
+
+    overlay.addEventListener("click", () => {
+      closeSmartCaptchaModal();
+    });
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        document.removeEventListener("keydown", handleKeyDown);
+        closeSmartCaptchaModal();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+
+    document.body.appendChild(overlay);
+
+    try {
+      smartCaptchaWidgetId = (window as any).smartCaptcha.render(container, {
+        sitekey: SMARTCAPTCHA_SITE_KEY,
+        hl: "ru",
+        callback: (token: string) => {
+          document.removeEventListener("keydown", handleKeyDown);
+          const currentResolve = smartCaptchaModalResolve;
+          smartCaptchaModalResolve = null;
+          document.body.style.overflow = "";
+          overlay.remove();
+          if (currentResolve) {
+            currentResolve(token);
+          }
+        },
+      });
+    } catch (err) {
+      console.error("Failed to render smartcaptcha", err);
+      closeSmartCaptchaModal();
+    }
+  });
 }
 
 function updateCharCounter(textarea: HTMLTextAreaElement): void {
@@ -1564,9 +1718,15 @@ function initFormHandlers(container: HTMLElement): void {
       submitBtn.disabled = true;
       submitBtn.textContent = "Проверка...";
 
-      const token = await getTurnstileToken();
-      if (!token) {
-        alert("Не удалось пройти проверку. Попробуйте ещё раз.");
+      let turnstileTok: string | null = await getTurnstileToken();
+      let smartCaptchaTok: string | null = null;
+
+      if (!turnstileTok) {
+        submitBtn.textContent = "Проверка...";
+        smartCaptchaTok = await getSmartCaptchaToken();
+      }
+
+      if (!turnstileTok && !smartCaptchaTok) {
         submitBtn.disabled = false;
         submitBtn.textContent = "Отправить";
         return;
@@ -1580,19 +1740,59 @@ function initFormHandlers(container: HTMLElement): void {
           ? `${API_URL}/comments/${targetCommentId}/answers`
           : `${API_URL}/chapters/${chapterId}/comments`;
 
-        const res = await fetch(url, {
+        const payload: {
+          content: string;
+          turnstile_token?: string;
+          smart_captcha_token?: string;
+        } = {
+          content: content,
+        };
+
+        if (smartCaptchaTok) {
+          payload.smart_captcha_token = smartCaptchaTok;
+        } else if (turnstileTok) {
+          payload.turnstile_token = turnstileTok;
+        }
+
+        let res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({
-            content: content,
-            turnstile_token: token,
-          }),
+          body: JSON.stringify(payload),
         });
 
         if (!res.ok) {
           const err = await res.json();
-          throw new Error(err.detail || "Failed to submit");
+          if (
+            res.status === 400 &&
+            err.detail === "Captcha verification failed" &&
+            turnstileTok &&
+            !smartCaptchaTok
+          ) {
+            submitBtn.textContent = "Проверка...";
+            smartCaptchaTok = await getSmartCaptchaToken();
+            if (smartCaptchaTok) {
+              submitBtn.textContent = "Отправка...";
+              payload.turnstile_token = undefined;
+              payload.smart_captcha_token = smartCaptchaTok;
+              res = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(payload),
+              });
+              if (!res.ok) {
+                const retryErr = await res.json();
+                throw new Error(retryErr.detail || "Failed to submit");
+              }
+            } else {
+              submitBtn.disabled = false;
+              submitBtn.textContent = "Отправить";
+              return;
+            }
+          } else {
+            throw new Error(err.detail || "Failed to submit");
+          }
         }
 
         textarea.value = "";
@@ -1603,21 +1803,24 @@ function initFormHandlers(container: HTMLElement): void {
           cancelReplyMode(container);
         }
 
-        if (turnstileWidgetId) {
+        if (turnstileWidgetId && (window as any).turnstile) {
           (window as any).turnstile.reset(turnstileWidgetId);
         }
 
         await loadComments(container, chapterId, 1, true, false);
         setLastCommentTime();
         startCooldownTimer(submitBtn);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to submit", err);
-        alert("Не удалось отправить. Попробуйте ещё раз.");
-      } finally {
-        if (!submitBtn.disabled) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Отправить";
-        }
+        const msg =
+          err && typeof err === "object" && "message" in err && err.message
+            ? err.message === "Failed to submit"
+              ? "Не удалось отправить. Попробуйте ещё раз."
+              : err.message
+            : "Не удалось отправить. Попробуйте ещё раз.";
+        alert(msg);
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Отправить";
       }
     });
   }

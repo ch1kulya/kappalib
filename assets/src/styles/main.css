@@ -3185,13 +3185,19 @@ html {
     text-decoration: none;
     color: inherit;
     border-bottom: 1px solid var(--border);
+    cursor: default;
+    user-select: none;
 }
 
 .update-log-item:last-child {
     border-bottom: none;
 }
 
-.update-log-item:active {
+a.update-log-item {
+    cursor: pointer;
+}
+
+a.update-log-item:active {
     opacity: 0.6;
 }
 
@@ -3684,6 +3690,13 @@ html {
 
 #comments-turnstile-container {
     flex: 1;
+}
+
+#comments-smartcaptcha-container {
+    min-height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 /* Comments List */

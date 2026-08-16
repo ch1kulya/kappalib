@@ -98,6 +98,9 @@ func GetChapter(ctx context.Context, id string) (*models.Chapter, error) {
 }
 
 func GetLatestUpdates(ctx context.Context, limit int) ([]models.NovelUpdate, error) {
+	if limit < 0 {
+		limit = 0
+	}
 	key := fmt.Sprintf("updates:latest:%d", limit)
 
 	value, err := cache.C.GetOrFetch(key, 3*time.Minute, func() (any, error) {
@@ -143,6 +146,9 @@ func GetLatestUpdates(ctx context.Context, limit int) ([]models.NovelUpdate, err
 }
 
 func GetRecentlyAddedNovels(ctx context.Context, limit int) ([]models.NovelAddition, error) {
+	if limit < 0 {
+		limit = 0
+	}
 	key := fmt.Sprintf("novels:recent:%d", limit)
 
 	value, err := cache.C.GetOrFetch(key, 3*time.Minute, func() (any, error) {
