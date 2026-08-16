@@ -9,10 +9,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	stdhtml "html"
 	"net/http"
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -22,6 +24,7 @@ import (
 	"github.com/ch1kulya/kappalib/internal/models"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	nethtml "golang.org/x/net/html"
 
 	"github.com/ch1kulya/logger"
 	"github.com/microcosm-cc/bluemonday"
@@ -57,6 +60,12 @@ var queryCommentAnswersUpdateStatus string
 
 //go:embed sql/comment_answers_set_telegram_message_id.sql
 var queryCommentAnswersSetTelegramMessageID string
+
+//go:embed sql/comments_telegram_info.sql
+var queryCommentsTelegramInfo string
+
+//go:embed sql/comment_answers_telegram_info.sql
+var queryCommentAnswersTelegramInfo string
 
 //go:embed sql/user_comment_threads.sql
 var queryUserCommentThreads string
@@ -802,14 +811,157 @@ func UpdateCommentAnswerStatus(ctx context.Context, answerID, status string) err
 }
 
 func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
-	sendToTelegram(ctx, "comment", comment.ID, comment.UserDisplayName, comment.ChapterID, comment.ContentHTML, "approve", "reject", queryCommentsSetTelegramMessageID)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var novelID, novelTitle, chapterID, chapterTitle string
+	var chapterNum int
+	err := database.DB.QueryRow(dbCtx, queryCommentsTelegramInfo, comment.ChapterID).Scan(
+		&novelID, &novelTitle, &chapterID, &chapterNum, &chapterTitle,
+	)
+	if err != nil {
+		logger.Warn("Failed to fetch novel/chapter info for comment %s: %v", comment.ID, err)
+		chapterID = comment.ChapterID
+	}
+
+	text := buildCommentTelegramText(
+		novelID, novelTitle, chapterID, chapterNum, chapterTitle,
+		comment.UserDisplayName, comment.ContentHTML,
+	)
+
+	sendTelegramMessage(ctx, "comment", comment.ID, text, "approve", "reject", queryCommentsSetTelegramMessageID)
 }
 
 func sendAnswerToTelegram(ctx context.Context, answer *models.CommentAnswer) {
-	sendToTelegram(ctx, "answer", answer.ID, answer.UserDisplayName, answer.CommentID, answer.ContentHTML, "approve_answer", "reject_answer", queryCommentAnswersSetTelegramMessageID)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var novelID, novelTitle, chapterID, chapterTitle, parentAuthorName, parentContentHTML string
+	var chapterNum int
+	err := database.DB.QueryRow(dbCtx, queryCommentAnswersTelegramInfo, answer.CommentID).Scan(
+		&novelID, &novelTitle, &chapterID, &chapterNum, &chapterTitle,
+		&parentAuthorName, &parentContentHTML,
+	)
+	if err != nil {
+		logger.Warn("Failed to fetch parent comment info for answer %s: %v", answer.ID, err)
+	}
+
+	text := buildAnswerTelegramText(
+		novelID, novelTitle, chapterID, chapterNum, chapterTitle,
+		parentAuthorName, parentContentHTML,
+		answer.UserDisplayName, answer.ContentHTML,
+	)
+
+	sendTelegramMessage(ctx, "answer", answer.ID, text, "approve_answer", "reject_answer", queryCommentAnswersSetTelegramMessageID)
 }
 
-func sendToTelegram(ctx context.Context, kind, id, authorName, contextID, contentHTML, approveAction, rejectAction, setMessageIDQuery string) {
+const telegramBaseURL = "https://kappalib.rip"
+
+func formatTelegramChapterTitleInTable(chapterNum int, chapterTitle string) string {
+	title := chapterTitle
+	if title == "" || title == "Без названия" {
+		title = "Без названия"
+	}
+	return fmt.Sprintf("%d. %s", chapterNum, title)
+}
+
+func buildTelegramMetadataTable(novelURL, displayNovelTitle, chapterURL string, chapterNum int, chapterTitle, authorName, replyToUser string) string {
+	chapterText := formatTelegramChapterTitleInTable(chapterNum, chapterTitle)
+	var sb strings.Builder
+	sb.WriteString("<details><summary>Информация</summary><table>\n")
+	fmt.Fprintf(&sb, "<tr><td>Новелла</td><td><a href=\"%s\">%s</a></td></tr>\n", stdhtml.EscapeString(novelURL), stdhtml.EscapeString(displayNovelTitle))
+	fmt.Fprintf(&sb, "<tr><td>Глава</td><td><a href=\"%s\">%s</a></td></tr>\n", stdhtml.EscapeString(chapterURL), stdhtml.EscapeString(chapterText))
+	fmt.Fprintf(&sb, "<tr><td>Автор</td><td>%s</td></tr>\n", stdhtml.EscapeString(authorName))
+	if replyToUser != "" {
+		fmt.Fprintf(&sb, "<tr><td>Кому</td><td>%s</td></tr>\n", stdhtml.EscapeString(replyToUser))
+	}
+	sb.WriteString("</table></details>")
+	return sb.String()
+}
+
+func buildCommentTelegramText(novelID, novelTitle, chapterID string, chapterNum int, chapterTitle, authorName, contentHTML string) string {
+	displayNovelTitle := novelTitle
+	if displayNovelTitle == "" {
+		displayNovelTitle = "Страница новеллы"
+	}
+
+	var novelURL string
+	if novelID != "" {
+		novelURL = fmt.Sprintf("%s/%s", telegramBaseURL, novelID)
+	} else {
+		novelURL = telegramBaseURL
+	}
+
+	var chapterURL string
+	if novelID != "" && chapterID != "" {
+		chapterURL = fmt.Sprintf("%s/%s/chapter/%s", telegramBaseURL, novelID, chapterID)
+	} else if chapterID != "" {
+		chapterURL = fmt.Sprintf("%s/chapter/%s", telegramBaseURL, chapterID)
+	} else {
+		chapterURL = telegramBaseURL
+	}
+
+	metadataTable := buildTelegramMetadataTable(novelURL, displayNovelTitle, chapterURL, chapterNum, chapterTitle, authorName, "")
+	formattedContent := htmlToTelegramHTML(contentHTML)
+
+	var sb strings.Builder
+	sb.WriteString("<p>💬 Новый комментарий</p>\n")
+	sb.WriteString(metadataTable)
+	sb.WriteString("\n")
+	fmt.Fprintf(&sb, "<details open><summary>Текст</summary>%s</details>", formattedContent)
+
+	text := sb.String()
+	if len(text) > 30000 {
+		text = text[:29990] + "..."
+	}
+	return text
+}
+
+func buildAnswerTelegramText(
+	novelID, novelTitle, chapterID string, chapterNum int, chapterTitle string,
+	parentAuthorName, parentContentHTML string,
+	answerAuthorName, answerContentHTML string,
+) string {
+	displayNovelTitle := novelTitle
+	if displayNovelTitle == "" {
+		displayNovelTitle = "Страница новеллы"
+	}
+
+	var novelURL string
+	if novelID != "" {
+		novelURL = fmt.Sprintf("%s/%s", telegramBaseURL, novelID)
+	} else {
+		novelURL = telegramBaseURL
+	}
+
+	var chapterURL string
+	if novelID != "" && chapterID != "" {
+		chapterURL = fmt.Sprintf("%s/%s/chapter/%s", telegramBaseURL, novelID, chapterID)
+	} else if chapterID != "" {
+		chapterURL = fmt.Sprintf("%s/chapter/%s", telegramBaseURL, chapterID)
+	} else {
+		chapterURL = telegramBaseURL
+	}
+
+	metadataTable := buildTelegramMetadataTable(novelURL, displayNovelTitle, chapterURL, chapterNum, chapterTitle, answerAuthorName, parentAuthorName)
+	formattedParentContent := htmlToTelegramHTML(parentContentHTML)
+	formattedAnswerContent := htmlToTelegramHTML(answerContentHTML)
+
+	var sb strings.Builder
+	sb.WriteString("<p>💬 Ответ на комментарий</p>\n")
+	sb.WriteString(metadataTable)
+	sb.WriteString("\n")
+	fmt.Fprintf(&sb, "<details><summary>Комментарий</summary>%s</details>\n", formattedParentContent)
+	fmt.Fprintf(&sb, "<details open><summary>Ответ</summary>%s</details>", formattedAnswerContent)
+
+	text := sb.String()
+	if len(text) > 30000 {
+		text = text[:29990] + "..."
+	}
+	return text
+}
+
+func sendTelegramMessage(ctx context.Context, kind, id, text, approveAction, rejectAction, setMessageIDQuery string) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -824,27 +976,6 @@ func sendToTelegram(ctx context.Context, kind, id, authorName, contextID, conten
 		logger.Warn("%s ID truncated for Telegram callback: %s", kind, id)
 	}
 
-	contentForTelegram := htmlToTelegramHTML(contentHTML)
-
-	var label, contextLabel string
-	if kind == "comment" {
-		label, contextLabel = "💬 <b>Новый комментарий</b>", "📖 Глава"
-	} else {
-		label, contextLabel = "💬 <b>Ответ на комментарий</b>", "🔗 Комментарий"
-	}
-
-	text := fmt.Sprintf(
-		"%s\n\n"+
-			"👤 Автор: %s\n"+
-			"%s: <code>%s</code>\n\n"+
-			"📝 Текст:\n%s",
-		label, authorName, contextLabel, contextID, contentForTelegram,
-	)
-
-	if len(text) > 4000 {
-		text = text[:4000] + "..."
-	}
-
 	keyboard := map[string]any{
 		"inline_keyboard": [][]map[string]string{
 			{
@@ -854,16 +985,15 @@ func sendToTelegram(ctx context.Context, kind, id, authorName, contextID, conten
 		},
 	}
 
-	keyboardJSON, _ := json.Marshal(keyboard)
-
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", telegramBotToken)
-
-	urlData := url.Values{
-		"chat_id":      {telegramChatID},
-		"text":         {text},
-		"parse_mode":   {"HTML"},
-		"reply_markup": {string(keyboardJSON)},
+	richPayload := map[string]any{
+		"chat_id": telegramChatID,
+		"rich_message": map[string]string{
+			"html": text,
+		},
+		"reply_markup": keyboard,
 	}
+	richJSON, _ := json.Marshal(richPayload)
+	richURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendRichMessage", telegramBotToken)
 
 	var result struct {
 		OK     bool `json:"ok"`
@@ -882,16 +1012,16 @@ func sendToTelegram(ctx context.Context, kind, id, authorName, contextID, conten
 			}
 		}
 
-		req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(urlData.Encode()))
+		req, err := http.NewRequestWithContext(ctx, "POST", richURL, bytes.NewReader(richJSON))
 		if err != nil {
 			logger.Error("Failed to create telegram request: %v", err)
 			return
 		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := telegramClient.Do(req)
 		if err != nil {
-			logger.Warn("Failed to send telegram message (attempt %d/3): %v", attempt+1, err)
+			logger.Warn("Failed to send telegram rich message (attempt %d/3): %v", attempt+1, err)
 			lastErr = err
 			continue
 		}
@@ -905,10 +1035,10 @@ func sendToTelegram(ctx context.Context, kind, id, authorName, contextID, conten
 		_ = resp.Body.Close()
 
 		if result.OK {
-			dbCtx, dbCancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer dbCancel()
-			if _, err := database.DB.Exec(dbCtx, setMessageIDQuery, result.Result.MessageID, id); err != nil {
-				logger.Warn("Failed to set telegram message ID for %s %s: %v", kind, id, err)
+			if setMessageIDQuery != "" && result.Result.MessageID > 0 {
+				if _, dbErr := database.DB.Exec(ctx, setMessageIDQuery, result.Result.MessageID, id); dbErr != nil {
+					logger.Warn("Failed to update telegram_message_id: %v", dbErr)
+				}
 			}
 			return
 		}
@@ -920,79 +1050,246 @@ func sendToTelegram(ctx context.Context, kind, id, authorName, contextID, conten
 	logger.Error("Failed to send telegram message after 3 attempts: %v", lastErr)
 }
 
-func htmlToTelegramHTML(html string) string {
-	if html == "" {
-		return "[без текста]"
-	}
-	result := html
-	for _, h := range []string{"h1", "h2", "h3", "h4", "h5", "h6"} {
-		result = strings.ReplaceAll(result, "<"+h+">", "<b>")
-		result = strings.ReplaceAll(result, "</"+h+">", "</b>\n")
-	}
-	result = strings.ReplaceAll(result, "<p>", "")
-	result = strings.ReplaceAll(result, "</p>", "\n\n")
-	result = strings.ReplaceAll(result, "<br>", "\n")
-	result = strings.ReplaceAll(result, "<br/>", "\n")
-	result = strings.ReplaceAll(result, "<br />", "\n")
-	result = strings.ReplaceAll(result, "<ul>", "")
-	result = strings.ReplaceAll(result, "</ul>", "\n")
-	result = strings.ReplaceAll(result, "<ol>", "")
-	result = strings.ReplaceAll(result, "</ol>", "\n")
-	result = strings.ReplaceAll(result, "<li>", "• ")
-	result = strings.ReplaceAll(result, "</li>", "\n")
-	result = strings.ReplaceAll(result, "<strong>", "<b>")
-	result = strings.ReplaceAll(result, "</strong>", "</b>")
-	result = strings.ReplaceAll(result, "<em>", "<i>")
-	result = strings.ReplaceAll(result, "</em>", "</i>")
-	result = strings.ReplaceAll(result, `<span class="spoiler">`, "<tg-spoiler>")
-	result = strings.ReplaceAll(result, "</span>", "</tg-spoiler>")
-	result = replaceImgTags(result)
-
-	result = strings.TrimSpace(result)
-
-	if result == "" {
+func htmlToTelegramHTML(rawHTML string) string {
+	rawHTML = strings.TrimSpace(rawHTML)
+	if rawHTML == "" {
 		return "[без текста]"
 	}
 
-	return result
-}
+	tokenizer := nethtml.NewTokenizer(strings.NewReader(rawHTML))
+	var buf strings.Builder
+	var openTags []string
+	var inPre bool
 
-func replaceImgTags(html string) string {
-	result := html
 	for {
-		start := strings.Index(result, "<img")
-		if start == -1 {
+		tt := tokenizer.Next()
+		if tt == nethtml.ErrorToken {
 			break
 		}
-		end := strings.Index(result[start:], ">")
-		if end == -1 {
-			break
-		}
-		end += start
-		imgTag := result[start : end+1]
-		src := ""
-		if srcStart := strings.Index(imgTag, `src="`); srcStart != -1 {
-			srcStart += 5
-			if srcEnd := strings.Index(imgTag[srcStart:], `"`); srcEnd != -1 {
-				src = imgTag[srcStart : srcStart+srcEnd]
+
+		token := tokenizer.Token()
+		switch tt {
+		case nethtml.TextToken:
+			buf.WriteString(stdhtml.EscapeString(token.Data))
+
+		case nethtml.StartTagToken:
+			switch token.Data {
+			case "p":
+				buf.WriteString("<p>")
+				openTags = append(openTags, "p")
+			case "br":
+				buf.WriteString("<br/>")
+			case "ul", "ol":
+				buf.WriteString("<")
+				buf.WriteString(token.Data)
+				buf.WriteString(">")
+				openTags = append(openTags, token.Data)
+			case "li":
+				buf.WriteString("<li>")
+				openTags = append(openTags, "li")
+			case "h1", "h2", "h3", "h4", "h5", "h6":
+				if buf.Len() > 0 && !strings.HasSuffix(buf.String(), "\n") {
+					buf.WriteString("\n")
+				}
+				buf.WriteString("<")
+				buf.WriteString(token.Data)
+				buf.WriteString(">")
+				openTags = append(openTags, token.Data)
+			case "strong", "b":
+				buf.WriteString("<b>")
+				openTags = append(openTags, "b")
+			case "em", "i":
+				buf.WriteString("<i>")
+				openTags = append(openTags, "i")
+			case "del", "s", "strike":
+				buf.WriteString("<s>")
+				openTags = append(openTags, "s")
+			case "u", "ins":
+				buf.WriteString("<u>")
+				openTags = append(openTags, "u")
+			case "code":
+				if !inPre {
+					buf.WriteString("<code>")
+					openTags = append(openTags, "code")
+				}
+			case "pre":
+				inPre = true
+				buf.WriteString("<pre>")
+				openTags = append(openTags, "pre")
+			case "blockquote":
+				if buf.Len() > 0 && !strings.HasSuffix(buf.String(), "\n") {
+					buf.WriteString("\n")
+				}
+				buf.WriteString("<blockquote>")
+				openTags = append(openTags, "blockquote")
+			case "span":
+				for _, attr := range token.Attr {
+					if attr.Key == "class" && attr.Val == "spoiler" {
+						buf.WriteString("<tg-spoiler>")
+						openTags = append(openTags, "tg-spoiler")
+						break
+					}
+				}
+			case "a":
+				var href string
+				for _, attr := range token.Attr {
+					if attr.Key == "href" {
+						href = attr.Val
+						break
+					}
+				}
+				if href != "" {
+					fmt.Fprintf(&buf, `<a href="%s">`, stdhtml.EscapeString(href))
+					openTags = append(openTags, "a")
+				}
+			case "img":
+				var src string
+				for _, attr := range token.Attr {
+					if attr.Key == "src" {
+						src = attr.Val
+						break
+					}
+				}
+				if src != "" {
+					fmt.Fprintf(&buf, `<img src="%s"/>`, stdhtml.EscapeString(src))
+				}
+			case "hr":
+				buf.WriteString("\n<hr/>\n")
 			}
-		}
-		alt := "изображение"
-		if altStart := strings.Index(imgTag, `alt="`); altStart != -1 {
-			altStart += 5
-			if altEnd := strings.Index(imgTag[altStart:], `"`); altEnd != -1 {
-				if a := imgTag[altStart : altStart+altEnd]; a != "" {
-					alt = a
+
+		case nethtml.EndTagToken:
+			switch token.Data {
+			case "p":
+				if popTelegramTag(&openTags, "p") {
+					buf.WriteString("</p>")
+				}
+			case "ul", "ol":
+				if popTelegramTag(&openTags, token.Data) {
+					buf.WriteString("</")
+					buf.WriteString(token.Data)
+					buf.WriteString(">")
+				}
+			case "li":
+				if popTelegramTag(&openTags, "li") {
+					buf.WriteString("</li>")
+				}
+			case "h1", "h2", "h3", "h4", "h5", "h6":
+				if popTelegramTag(&openTags, token.Data) {
+					buf.WriteString("</")
+					buf.WriteString(token.Data)
+					buf.WriteString(">")
+				}
+				if !strings.HasSuffix(buf.String(), "\n") {
+					buf.WriteString("\n")
+				}
+			case "strong", "b":
+				if popTelegramTag(&openTags, "b") {
+					buf.WriteString("</b>")
+				}
+			case "em", "i":
+				if popTelegramTag(&openTags, "i") {
+					buf.WriteString("</i>")
+				}
+			case "del", "s", "strike":
+				if popTelegramTag(&openTags, "s") {
+					buf.WriteString("</s>")
+				}
+			case "u", "ins":
+				if popTelegramTag(&openTags, "u") {
+					buf.WriteString("</u>")
+				}
+			case "code":
+				if !inPre && popTelegramTag(&openTags, "code") {
+					buf.WriteString("</code>")
+				}
+			case "pre":
+				inPre = false
+				if popTelegramTag(&openTags, "pre") {
+					buf.WriteString("</pre>")
+				}
+			case "blockquote":
+				if popTelegramTag(&openTags, "blockquote") {
+					buf.WriteString("</blockquote>")
+				}
+			case "span":
+				if popTelegramTag(&openTags, "tg-spoiler") {
+					buf.WriteString("</tg-spoiler>")
+				}
+			case "a":
+				if popTelegramTag(&openTags, "a") {
+					buf.WriteString("</a>")
 				}
 			}
+
+		case nethtml.SelfClosingTagToken:
+			switch token.Data {
+			case "br":
+				buf.WriteString("<br/>")
+			case "img":
+				var src string
+				for _, attr := range token.Attr {
+					if attr.Key == "src" {
+						src = attr.Val
+						break
+					}
+				}
+				if src != "" {
+					fmt.Fprintf(&buf, `<img src="%s"/>`, stdhtml.EscapeString(src))
+				}
+			case "hr":
+				buf.WriteString("\n<hr/>\n")
+			}
 		}
-		replacement := "[🖼 " + alt + "]"
-		if src != "" {
-			replacement = `<a href="` + src + `">[🖼 ` + alt + `]</a>`
-		}
-		result = result[:start] + replacement + result[end+1:]
 	}
-	return result
+
+	for _, openTag := range slices.Backward(openTags) {
+		switch openTag {
+		case "p":
+			buf.WriteString("</p>")
+		case "ul", "ol", "li":
+			buf.WriteString("</")
+			buf.WriteString(openTag)
+			buf.WriteString(">")
+		case "h1", "h2", "h3", "h4", "h5", "h6":
+			buf.WriteString("</")
+			buf.WriteString(openTag)
+			buf.WriteString(">")
+		case "b":
+			buf.WriteString("</b>")
+		case "i":
+			buf.WriteString("</i>")
+		case "blockquote":
+			buf.WriteString("</blockquote>")
+		case "s":
+			buf.WriteString("</s>")
+		case "u":
+			buf.WriteString("</u>")
+		case "code":
+			buf.WriteString("</code>")
+		case "pre":
+			buf.WriteString("</pre>")
+		case "tg-spoiler":
+			buf.WriteString("</tg-spoiler>")
+		case "a":
+			buf.WriteString("</a>")
+		}
+	}
+
+	res := strings.TrimSpace(buf.String())
+	if res == "" {
+		return "[без текста]"
+	}
+	return res
+}
+
+func popTelegramTag(tags *[]string, target string) bool {
+	for i := range slices.Backward(*tags) {
+		if (*tags)[i] == target {
+			*tags = append((*tags)[:i], (*tags)[i+1:]...)
+			return true
+		}
+	}
+	return false
 }
 
 var imageUploadLimiter = struct {

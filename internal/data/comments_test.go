@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 )
@@ -125,3 +126,183 @@ func TestVerifyCommentsSmartCaptcha_MockServer(t *testing.T) {
 		})
 	}
 }
+
+func TestHtmlToTelegramHTML(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "empty input",
+			input: "",
+			want:  "[без текста]",
+		},
+		{
+			name:  "whitespace only",
+			input: "   \n\t  ",
+			want:  "[без текста]",
+		},
+		{
+			name:  "bold, italic, strikethrough, underline",
+			input: "<p><strong>bold</strong> <em>italic</em> <del>strike</del> <u>underline</u></p>",
+			want:  "<p><b>bold</b> <i>italic</i> <s>strike</s> <u>underline</u></p>",
+		},
+		{
+			name:  "code and pre",
+			input: "<p><code>inline code</code></p><pre><code>func main() {}</code></pre>",
+			want:  "<p><code>inline code</code></p><pre>func main() {}</pre>",
+		},
+		{
+			name:  "spoiler tag",
+			input: `<p><span class="spoiler">secret text</span></p>`,
+			want:  "<p><tg-spoiler>secret text</tg-spoiler></p>",
+		},
+		{
+			name:  "link with extra attributes cleaned",
+			input: `<p><a href="https://example.com" rel="nofollow" target="_blank">link</a></p>`,
+			want:  `<p><a href="https://example.com">link</a></p>`,
+		},
+		{
+			name:  "image tag",
+			input: `<p><img src="https://example.com/pic.png" alt="preview" /></p>`,
+			want:  `<p><img src="https://example.com/pic.png"/></p>`,
+		},
+		{
+			name:  "image without src",
+			input: `<p><img alt="broken" /></p>`,
+			want:  `<p></p>`,
+		},
+		{
+			name:  "top-level blockquote",
+			input: "<blockquote>quote text</blockquote>",
+			want:  "<blockquote>quote text</blockquote>",
+		},
+		{
+			name:  "html special characters escaped in text",
+			input: "<p>1 &lt; 2 &amp; 3 &gt; 2</p>",
+			want:  "<p>1 &lt; 2 &amp; 3 &gt; 2</p>",
+		},
+		{
+			name:  "lists and headings",
+			input: "<h2>Header</h2><ul><li>item 1</li><li>item 2</li></ul>",
+			want:  "<h2>Header</h2>\n<ul><li>item 1</li><li>item 2</li></ul>",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := htmlToTelegramHTML(tt.input)
+			if got != tt.want {
+				t.Errorf("htmlToTelegramHTML() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatTelegramChapterTitleInTable(t *testing.T) {
+	tests := []struct {
+		num   int
+		title string
+		want  string
+	}{
+		{num: 1, title: "", want: "1. Без названия"},
+		{num: 5, title: "Без названия", want: "5. Без названия"},
+		{num: 10, title: "Пролог", want: "10. Пролог"},
+	}
+
+	for _, tt := range tests {
+		got := formatTelegramChapterTitleInTable(tt.num, tt.title)
+		if got != tt.want {
+			t.Errorf("formatTelegramChapterTitleInTable(%d, %q) = %q, want %q", tt.num, tt.title, got, tt.want)
+		}
+	}
+}
+
+func TestBuildTelegramMetadataTable(t *testing.T) {
+	got := buildTelegramMetadataTable("https://kappalib.rip/nvl_1", "Novel", "https://kappalib.rip/nvl_1/chapter/chp_1", 1, "Prologue", "User1", "User2")
+	if !strings.Contains(got, "<details><summary>Информация</summary><table>") {
+		t.Errorf("expected details with table, got %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Новелла</td><td><a href="https://kappalib.rip/nvl_1">Novel</a></td></tr>`) {
+		t.Errorf("expected novel row, got %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Глава</td><td><a href="https://kappalib.rip/nvl_1/chapter/chp_1">1. Prologue</a></td></tr>`) {
+		t.Errorf("expected chapter row, got %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Автор</td><td>User1</td></tr>`) {
+		t.Errorf("expected author row, got %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Кому</td><td>User2</td></tr>`) {
+		t.Errorf("expected recipient row, got %q", got)
+	}
+}
+
+func TestBuildCommentTelegramText(t *testing.T) {
+	got := buildCommentTelegramText(
+		"nvl_123", "Novel Title", "chp_456", 1, "Prologue",
+		"User1", "<p>Great chapter! <strong>bold</strong></p>",
+	)
+
+	if !strings.Contains(got, "<p>💬 Новый комментарий</p>") {
+		t.Errorf("expected header in %q", got)
+	}
+	if !strings.Contains(got, "<details><summary>Информация</summary><table>") {
+		t.Errorf("expected details with table in %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Новелла</td><td><a href="https://kappalib.rip/nvl_123">Novel Title</a></td></tr>`) {
+		t.Errorf("expected novel row in %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Глава</td><td><a href="https://kappalib.rip/nvl_123/chapter/chp_456">1. Prologue</a></td></tr>`) {
+		t.Errorf("expected chapter row in %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Автор</td><td>User1</td></tr>`) {
+		t.Errorf("expected author row in %q", got)
+	}
+	if strings.Contains(got, "<hr/>") || strings.Contains(got, "<hr>") {
+		t.Errorf("unexpected hr in %q", got)
+	}
+	if !strings.Contains(got, "<details open><summary>Текст</summary><p>Great chapter! <b>bold</b></p></details>") {
+		t.Errorf("expected details open with formatted text in %q", got)
+	}
+}
+
+func TestBuildAnswerTelegramText(t *testing.T) {
+	got := buildAnswerTelegramText(
+		"nvl_123", "Novel Title", "chp_456", 2, "Second Chapter",
+		"ParentUser", "<p>Original comment with <blockquote>quote</blockquote></p>",
+		"ReplyUser", "<p>Reply comment</p>",
+	)
+
+	if !strings.Contains(got, "<p>💬 Ответ на комментарий</p>") {
+		t.Errorf("expected header in %q", got)
+	}
+	if !strings.Contains(got, "<details><summary>Информация</summary><table>") {
+		t.Errorf("expected details with table in %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Новелла</td><td><a href="https://kappalib.rip/nvl_123">Novel Title</a></td></tr>`) {
+		t.Errorf("expected novel link in %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Глава</td><td><a href="https://kappalib.rip/nvl_123/chapter/chp_456">2. Second Chapter</a></td></tr>`) {
+		t.Errorf("expected chapter link in %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Автор</td><td>ReplyUser</td></tr>`) {
+		t.Errorf("expected reply author in %q", got)
+	}
+	if !strings.Contains(got, `<tr><td>Кому</td><td>ParentUser</td></tr>`) {
+		t.Errorf("expected recipient in metadata table in %q", got)
+	}
+	if !strings.Contains(got, "<details><summary>Комментарий</summary>") {
+		t.Errorf("expected details with parent comment in %q", got)
+	}
+	if !strings.Contains(got, "<blockquote>quote</blockquote>") {
+		t.Errorf("expected blockquote in parent comment in %q", got)
+	}
+	if strings.Contains(got, "<hr/>") || strings.Contains(got, "<hr>") {
+		t.Errorf("unexpected hr in %q", got)
+	}
+	if !strings.Contains(got, "<details open><summary>Ответ</summary><p>Reply comment</p></details>") {
+		t.Errorf("expected details open with reply content in %q", got)
+	}
+}
+
