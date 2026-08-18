@@ -161,7 +161,10 @@ function formatRelativeTime(dateStr: string): string {
   return `${years} ${pluralize(years, "год", "года", "лет")} назад`;
 }
 
-function createCommentHTML(comment: Comment): string {
+function createCommentHTML(
+  comment: Comment,
+  options?: { chapterUrl?: string },
+): string {
   const avatarUrl = getAvatarUrl(
     comment.user_id,
     comment.user_has_custom_avatar,
@@ -251,6 +254,28 @@ function createCommentHTML(comment: Comment): string {
       ? `<div class="comment-footer">${voteHTML}${replyHTML}</div>`
       : "";
 
+  const chapterUrl =
+    options?.chapterUrl ||
+    (comment.novel_id && comment.chapter_id
+      ? `/${comment.novel_id}/chapter/${comment.chapter_id}`
+      : "");
+
+  let jumpHTML = "";
+  if (chapterUrl) {
+    jumpHTML = `<a href="${chapterUrl}#comment-${comment.id}" class="comment-jump-link" title="Перейти к комментарию в главе" aria-label="Перейти к комментарию">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+        <polyline points="15 3 21 3 21 9"/>
+        <line x1="10" x2="21" y1="14" y2="3"/>
+      </svg>
+    </a>`;
+  }
+
+  const actionsHTML =
+    jumpHTML || actionHTML
+      ? `<div class="comment-header-actions">${jumpHTML}${actionHTML}</div>`
+      : "";
+
   let answersHTML = "";
   if (comment.answers && comment.answers.length > 0) {
     answersHTML = `<div class="comment-answers">`;
@@ -261,13 +286,13 @@ function createCommentHTML(comment: Comment): string {
   }
 
   return `
-    <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}" tabindex="0">
+    <div class="comment-item${extraClass}" id="comment-${comment.id}" data-comment-id="${comment.id}" data-comment-status="${comment.status}" tabindex="0">
       <div class="comment-main-row">
         <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
         <div class="comment-main">
           <div class="comment-header">
             <span class="comment-author">${comment.user_display_name} ${statusBadge}</span>
-            ${actionHTML}
+            ${actionsHTML}
           </div>
           <div class="comment-body">
             <div class="comment-content">${comment.content_html}</div>
@@ -329,7 +354,7 @@ function createAnswerHTML(answer: CommentAnswer): string {
   const newBadge = answer.is_new ? ' <span class="comment-new-badge">Новый ответ</span>' : '';
 
   return `
-    <div class="comment-answer${extraClass}" data-answer-id="${answer.id}" tabindex="0">
+    <div class="comment-answer${extraClass}" id="answer-${answer.id}" data-answer-id="${answer.id}" tabindex="0">
       <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
       <div class="comment-main">
         <div class="comment-header">
@@ -440,6 +465,7 @@ async function loadComments(
   page: number = 1,
   noCache: boolean = false,
   showLoader: boolean = true,
+  commentId?: string,
 ): Promise<void> {
   const listEl = container.querySelector(".comments-list");
   if (listEl && showLoader) {
@@ -448,8 +474,12 @@ async function loadComments(
   }
 
   try {
+    const url = commentId
+      ? `${API_URL}/chapters/${chapterId}/comments?comment_id=${commentId}`
+      : `${API_URL}/chapters/${chapterId}/comments?page=${page}`;
+
     const res = await fetch(
-      `${API_URL}/chapters/${chapterId}/comments?page=${page}`,
+      url,
       noCache
         ? { credentials: "include", cache: "no-cache" }
         : { credentials: "include" },
@@ -465,6 +495,17 @@ async function loadComments(
     if (countEl) {
       countEl.textContent = `${data.total_count}`;
     }
+
+    if (activeScrollAnimationId === null) {
+      try {
+        const targetEl = window.location.hash
+          ? (document.querySelector(window.location.hash) as HTMLElement | null)
+          : null;
+        if (targetEl) {
+          highlightTargetElement(targetEl);
+        }
+      } catch {}
+    }
   } catch (err) {
     console.error("Failed to load comments", err);
     if (listEl && showLoader) {
@@ -472,6 +513,129 @@ async function loadComments(
         '<div class="comments-error">Не удалось загрузить комментарии</div>';
     }
   }
+}
+
+let activeScrollAnimationId: number | null = null;
+
+function cancelActiveScrollAnimation(): void {
+  if (activeScrollAnimationId !== null) {
+    cancelAnimationFrame(activeScrollAnimationId);
+    activeScrollAnimationId = null;
+  }
+}
+
+function highlightTargetElement(el: HTMLElement): void {
+  el.classList.add("comment-highlight");
+  setTimeout(() => {
+    el.classList.remove("comment-highlight");
+  }, 2500);
+}
+
+function smoothScrollToTarget(
+  getTargetElement: () => HTMLElement | null,
+  fallbackTarget: () => HTMLElement | null,
+  onComplete?: (targetEl: HTMLElement) => void,
+): void {
+  cancelActiveScrollAnimation();
+
+  const startY = window.scrollY;
+  const initialEl = getTargetElement() || fallbackTarget();
+  if (!initialEl) return;
+
+  const getTargetY = (): number => {
+    const el = getTargetElement();
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const offset = (window.innerHeight - rect.height) / 2;
+      return Math.max(0, window.scrollY + rect.top - Math.max(20, offset));
+    }
+    const fallback = fallbackTarget();
+    if (fallback) {
+      return Math.max(
+        0,
+        window.scrollY + fallback.getBoundingClientRect().top - 20,
+      );
+    }
+    return window.scrollY;
+  };
+
+  const initialTargetY = getTargetY();
+  const distance = Math.abs(initialTargetY - startY);
+  const duration = Math.min(1000, Math.max(400, distance * 0.25));
+  let startTime: number | null = null;
+
+  const onUserInterrupt = () => {
+    cancelActiveScrollAnimation();
+    window.removeEventListener("wheel", onUserInterrupt);
+    window.removeEventListener("touchstart", onUserInterrupt);
+  };
+  window.addEventListener("wheel", onUserInterrupt, {
+    passive: true,
+    once: true,
+  });
+  window.addEventListener("touchstart", onUserInterrupt, {
+    passive: true,
+    once: true,
+  });
+
+  function step(timestamp: number): void {
+    if (!startTime) startTime = timestamp;
+    const elapsed = timestamp - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    const ease =
+      progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+    const currentTargetY = getTargetY();
+    window.scrollTo(0, startY + (currentTargetY - startY) * ease);
+
+    if (progress < 1) {
+      activeScrollAnimationId = requestAnimationFrame(step);
+    } else {
+      activeScrollAnimationId = null;
+      window.removeEventListener("wheel", onUserInterrupt);
+      window.removeEventListener("touchstart", onUserInterrupt);
+      const finalEl = getTargetElement();
+      if (finalEl && onComplete) {
+        onComplete(finalEl);
+      }
+    }
+  }
+
+  activeScrollAnimationId = requestAnimationFrame(step);
+}
+
+function startSmoothScrollToHash(): void {
+  const hash = window.location.hash;
+  if (!hash) return;
+
+  if (hash === "#comments-section") {
+    const section = document.getElementById("comments-section");
+    if (section) {
+      smoothScrollToTarget(
+        () => section,
+        () => section,
+      );
+    }
+    return;
+  }
+
+  const container = document.getElementById("comments-section");
+  smoothScrollToTarget(
+    () => {
+      try {
+        return document.querySelector(hash) as HTMLElement | null;
+      } catch {
+        return null;
+      }
+    },
+    () => container,
+    (targetEl) => {
+      highlightTargetElement(targetEl);
+    },
+  );
 }
 
 let turnstileWidgetId: string | null = null;
@@ -770,6 +934,13 @@ function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
     textarea.scrollHeight > maxHeight ? "auto" : "hidden";
 }
 
+function getTargetCommentIdFromHash(): string | undefined {
+  const hash = window.location.hash;
+  if (!hash) return undefined;
+  const match = hash.match(/^#(?:comment|answer)-((?:cmt|ans)_[a-z0-9]{8})$/);
+  return match ? match[1] : undefined;
+}
+
 export function initComments(): void {
   const container = document.getElementById("comments-section");
   if (!container) return;
@@ -782,7 +953,25 @@ export function initComments(): void {
   if (initializedContainers.has(container)) return;
   initializedContainers.add(container);
 
-  loadComments(container, chapterId);
+  window.addEventListener("hashchange", () => {
+    const targetId = getTargetCommentIdFromHash();
+    if (
+      targetId &&
+      !document.getElementById(`comment-${targetId}`) &&
+      !document.getElementById(`answer-${targetId}`)
+    ) {
+      startSmoothScrollToHash();
+      loadComments(container, chapterId, 1, false, true, targetId);
+    } else {
+      startSmoothScrollToHash();
+    }
+  });
+
+  const initialCommentId = getTargetCommentIdFromHash();
+  if (initialCommentId || window.location.hash === "#comments-section") {
+    startSmoothScrollToHash();
+  }
+  loadComments(container, chapterId, 1, false, true, initialCommentId);
 
   profileManager.onLogin(() => {
     renderCommentForm(container);
@@ -1599,11 +1788,11 @@ function renderMyComments(listEl: HTMLElement, comments: Comment[]): void {
             <span class="mc-chapter-num">Глава ${c.chapter_num || ""}</span>
           </a>
         </div>
-        ${createCommentHTML(c)}
+        ${createCommentHTML(c, { chapterUrl })}
       </div>`;
     } else {
       html += `<div class="mc-comment-wrapper">
-        ${createCommentHTML(c)}
+        ${createCommentHTML(c, { chapterUrl })}
       </div>`;
     }
   });

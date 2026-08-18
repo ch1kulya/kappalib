@@ -3530,7 +3530,6 @@ a.update-log-item:active {
     font-size: 0.95rem;
 }
 
-
 @media (max-width: 500px) {
     .mc-chapter-link {
         font-size: 0.8rem;
@@ -3817,6 +3816,71 @@ a.update-log-item:active {
 .comment-header .comment-menu {
     margin-left: auto;
     position: relative;
+    flex-shrink: 0;
+}
+
+.comment-header-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.comment-jump-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--tertiary);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+    transition:
+        color 0.15s,
+        background 0.15s;
+}
+
+@media (hover: hover) {
+    .comment-jump-link:hover {
+        color: var(--primary);
+    }
+}
+
+.comment-jump-link:active {
+    color: var(--primary);
+}
+
+.comment-highlight {
+    border-radius: 8px;
+    animation: commentGlow 2.5s ease-out;
+}
+
+@keyframes commentGlow {
+    0% {
+        box-shadow:
+            0 0 0 0 transparent,
+            0 0 0 transparent;
+    }
+    15% {
+        box-shadow:
+            0 0 0 2px var(--accent-primary),
+            0 0 14px var(--accent-border);
+    }
+    65% {
+        box-shadow:
+            0 0 0 2px var(--accent-primary),
+            0 0 14px var(--accent-border);
+    }
+    100% {
+        box-shadow:
+            0 0 0 0 transparent,
+            0 0 0 transparent;
+    }
 }
 
 .comment-author {

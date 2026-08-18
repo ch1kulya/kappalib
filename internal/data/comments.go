@@ -316,12 +316,49 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 	return &comment, nil
 }
 
-func GetVisibleComments(ctx context.Context, chapterID, userID string, page int) (*models.CommentsPage, error) {
+func GetVisibleComments(ctx context.Context, chapterID, userID string, page int, targetID ...string) (*models.CommentsPage, error) {
 	pageSize := 12
-	offset := (page - 1) * pageSize
 
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
+	var target string
+	if len(targetID) > 0 {
+		target = targetID[0]
+	}
+
+	if target != "" {
+		targetCommentID := target
+		if strings.HasPrefix(target, "ans_") {
+			var parentCommentID string
+			err := database.DB.QueryRow(dbCtx, `SELECT comment_id FROM comment_answers WHERE id = $1`, target).Scan(&parentCommentID)
+			if err == nil && parentCommentID != "" {
+				targetCommentID = parentCommentID
+			}
+		}
+
+		var targetCreatedAt time.Time
+		err := database.DB.QueryRow(dbCtx, `SELECT created_at FROM comments WHERE id = $1 AND chapter_id = $2`, targetCommentID, chapterID).Scan(&targetCreatedAt)
+		if err == nil {
+			var pos int
+			err = database.DB.QueryRow(dbCtx, `
+				SELECT COUNT(*)
+				FROM comments c
+				WHERE c.chapter_id = $1
+				  AND c.status != 'deleted'
+				  AND (
+				    c.status = 'approved'
+				    OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
+				  )
+				  AND (c.created_at > $3 OR (c.created_at = $3 AND c.id < $4))
+			`, chapterID, userID, targetCreatedAt, targetCommentID).Scan(&pos)
+			if err == nil {
+				page = (pos / pageSize) + 1
+			}
+		}
+	}
+
+	offset := (page - 1) * pageSize
 
 	var totalCount int
 	err := database.DB.QueryRow(dbCtx, `
