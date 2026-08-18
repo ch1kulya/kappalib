@@ -97,6 +97,7 @@ function getRemainingCooldown(): number {
 
 function startCooldownTimer(button: HTMLButtonElement): void {
   const updateButton = () => {
+    if (!button.isConnected) return;
     const remaining = getRemainingCooldown();
     if (remaining <= 0) {
       button.disabled = false;
@@ -105,9 +106,19 @@ function startCooldownTimer(button: HTMLButtonElement): void {
     }
     button.disabled = true;
     button.textContent = `Кулдаун ${Math.ceil(remaining / 1000)} сек.`;
-    requestAnimationFrame(() => setTimeout(updateButton, 100));
+    setTimeout(updateButton, 100);
   };
   updateButton();
+}
+
+function startAllCooldownTimers(): void {
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      "#comment-submit, .comment-reply-submit-btn",
+    )
+    .forEach((btn) => {
+      startCooldownTimer(btn);
+    });
 }
 
 function pluralize(
@@ -521,10 +532,16 @@ async function initTurnstileForComments(container: HTMLElement): Promise<void> {
 
   await loadTurnstileScript();
 
-  const turnstileContainer = container.querySelector(
-    "#comments-turnstile-container",
-  );
-  if (!turnstileContainer || turnstileLoaded || !(window as any).turnstile) return;
+  let turnstileContainer =
+    container.querySelector<HTMLElement>("#comments-turnstile-container") ||
+    document.getElementById("comments-turnstile-container");
+  if (!turnstileContainer) {
+    turnstileContainer = document.createElement("div");
+    turnstileContainer.id = "comments-turnstile-container";
+    turnstileContainer.style.display = "none";
+    document.body.appendChild(turnstileContainer);
+  }
+  if (turnstileLoaded || !(window as any).turnstile) return;
 
   turnstileLoaded = true;
 
@@ -730,11 +747,13 @@ async function getSmartCaptchaToken(): Promise<string | null> {
 }
 
 function updateCharCounter(textarea: HTMLTextAreaElement): void {
-  const counter = document.getElementById("comment-char-counter");
+  const form = textarea.closest(".comment-form");
+  const counter = form?.querySelector(".comment-char-counter");
   if (counter) {
+    const isReply = textarea.classList.contains("comment-reply-textarea");
+    const maxLen = isReply ? 500 : 3000;
+    const warnThreshold = isReply ? 400 : 2500;
     const len = textarea.value.length;
-    const maxLen = replyTargetCommentId ? 500 : 3000;
-    const warnThreshold = replyTargetCommentId ? 400 : 2500;
     counter.textContent = `${len}/${maxLen}`;
     counter.classList.toggle("count-warning", len > warnThreshold);
     counter.classList.toggle("count-error", len >= maxLen);
@@ -880,85 +899,295 @@ async function handleVote(
   }
 }
 
-let replyTargetCommentId: string | null = null;
+function renderToolbarHTML(imageInputAttr: string): string {
+  return `
+    <div class="comment-toolbar">
+      <button type="button" class="toolbar-btn" data-action="bold" title="Жирный">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
+      </button>
+      <button type="button" class="toolbar-btn" data-action="italic" title="Курсив">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg>
+      </button>
+      <button type="button" class="toolbar-btn" data-action="spoiler" title="Спойлер">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+      <button type="button" class="toolbar-btn" data-action="quote" title="Цитата">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>
+      </button>
+      <span class="toolbar-separator"></span>
+      <button type="button" class="toolbar-btn" data-action="image" title="Изображение (до 5 МБ)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+      </button>
+      <input type="file" ${imageInputAttr} accept="image/jpeg,image/png,image/gif" style="display:none"/>
+    </div>
+  `;
+}
 
-function handleReply(btn: HTMLElement, container: HTMLElement): void {
-  if (!profileManager.isLoggedIn()) return;
-
-  const commentId = btn.dataset.commentId;
-  const author = btn.dataset.author;
-  if (!commentId || !author) return;
-
-  replyTargetCommentId = commentId;
-
-  const formWrapper = container.querySelector(".comment-form-wrapper");
-  const form = formWrapper?.querySelector(".comment-form");
-  if (!form) return;
-
-  const existingBanner = form.querySelector(".comment-reply-banner");
-  if (existingBanner) existingBanner.remove();
-
-  const banner = document.createElement("div");
-  banner.className = "comment-reply-banner";
-  banner.innerHTML = `Ответ пользователю <strong>${author}</strong>. <span class="reply-banner-cancel">Отменить?</span>`;
-  banner.addEventListener("click", () => {
-    cancelReplyMode(container);
+function initToolbarHandlers(
+  toolbar: HTMLElement,
+  textarea: HTMLTextAreaElement,
+  imageInput: HTMLInputElement | null,
+  container: HTMLElement,
+): void {
+  imageInput?.addEventListener("change", async () => {
+    const file = imageInput.files?.[0];
+    if (!file || !textarea) return;
+    imageInput.value = "";
+    initTurnstileForComments(container);
+    await uploadCommentImage(file, textarea);
   });
 
-  const textareaEl = form.querySelector(
-    "#comment-textarea",
-  ) as HTMLTextAreaElement | null;
-  if (textareaEl) {
-    textareaEl.insertAdjacentElement("afterend", banner);
+  toolbar.querySelectorAll(".toolbar-btn").forEach((btn) => {
+    btn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const action = (btn as HTMLElement).dataset.action;
+      switch (action) {
+        case "bold":
+          wrapSelection(textarea, "**", "**");
+          break;
+        case "italic":
+          wrapSelection(textarea, "*", "*");
+          break;
+        case "spoiler":
+          wrapSelection(textarea, "||", "||");
+          break;
+        case "quote":
+          insertLinePrefix(textarea, "> ");
+          break;
+        case "image":
+          if (!isUploadingImage) imageInput?.click();
+          break;
+      }
+    });
+  });
+}
+
+async function postCommentPayload(
+  url: string,
+  content: string,
+  submitBtn: HTMLButtonElement,
+): Promise<boolean> {
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Проверка...";
+
+  let turnstileTok: string | null = await getTurnstileToken();
+  let smartCaptchaTok: string | null = null;
+
+  if (!turnstileTok) {
+    submitBtn.textContent = "Проверка...";
+    smartCaptchaTok = await getSmartCaptchaToken();
+  }
+
+  if (!turnstileTok && !smartCaptchaTok) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Отправить";
+    return false;
+  }
+
+  submitBtn.textContent = "Отправка...";
+
+  const payload: {
+    content: string;
+    turnstile_token?: string;
+    smart_captcha_token?: string;
+  } = {
+    content: content,
+  };
+
+  if (smartCaptchaTok) {
+    payload.smart_captcha_token = smartCaptchaTok;
+  } else if (turnstileTok) {
+    payload.turnstile_token = turnstileTok;
+  }
+
+  let res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    if (
+      res.status === 400 &&
+      err.detail === "Captcha verification failed" &&
+      turnstileTok &&
+      !smartCaptchaTok
+    ) {
+      submitBtn.textContent = "Проверка...";
+      smartCaptchaTok = await getSmartCaptchaToken();
+      if (smartCaptchaTok) {
+        submitBtn.textContent = "Отправка...";
+        payload.turnstile_token = undefined;
+        payload.smart_captcha_token = smartCaptchaTok;
+        res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const retryErr = await res.json();
+          throw new Error(retryErr.detail || "Failed to submit");
+        }
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Отправить";
+        return false;
+      }
+    } else {
+      throw new Error(err.detail || "Failed to submit");
+    }
+  }
+
+  return true;
+}
+
+function handleReply(btn: HTMLElement, container: HTMLElement): void {
+  if (!profileManager.isLoggedIn()) {
+    alert("Войдите в аккаунт, чтобы ответить");
+    return;
+  }
+
+  const commentId = btn.dataset.commentId;
+  const author = btn.dataset.author || "";
+  if (!commentId) return;
+
+  const commentItem = btn.closest(".comment-item") as HTMLElement | null;
+  if (!commentItem) return;
+
+  const existingForm = commentItem.querySelector(".comment-reply-form-wrapper");
+  if (existingForm) {
+    existingForm.remove();
+    return;
+  }
+
+  document.querySelectorAll(".comment-reply-form-wrapper").forEach((el) => el.remove());
+
+  const formWrapper = document.createElement("div");
+  formWrapper.className = "comment-reply-form-wrapper";
+  formWrapper.innerHTML = `
+    <div class="comment-form comment-reply-form">
+      ${renderToolbarHTML('class="comment-reply-image-input"')}
+      <textarea
+        class="comment-textarea comment-reply-textarea"
+        placeholder="Ответ пользователю ${author}..."
+        maxlength="500"
+        rows="2"
+      ></textarea>
+      <div class="comment-form-footer">
+        <span class="comment-char-counter">0/500</span>
+        <div class="comment-reply-actions">
+          <button type="button" class="comment-reply-cancel-btn">Отмена</button>
+          <button type="button" class="action-btn btn-primary comment-submit-btn comment-reply-submit-btn">Отправить</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const answersEl = commentItem.querySelector(".comment-answers");
+  if (answersEl) {
+    commentItem.insertBefore(formWrapper, answersEl);
   } else {
-    form.insertBefore(banner, form.firstChild);
+    commentItem.appendChild(formWrapper);
   }
 
-  const textarea = form.querySelector(
-    "#comment-textarea",
-  ) as HTMLTextAreaElement;
-  if (textarea) {
-    textarea.maxLength = 500;
-    textarea.placeholder = `Ваш ответ...`;
-  }
+  initReplyFormHandlers(formWrapper, commentId, container);
 
-  const counter = form.querySelector("#comment-char-counter") as HTMLElement;
-  if (counter) {
-    const currentLen = textarea?.value.length || 0;
-    counter.textContent = `${currentLen}/500`;
-    counter.classList.toggle("count-warning", currentLen > 400);
-    counter.classList.toggle("count-error", currentLen >= 500);
-  }
-
-  form.scrollIntoView({ behavior: "smooth", block: "center" });
+  const textarea = formWrapper.querySelector(".comment-reply-textarea") as HTMLTextAreaElement | null;
   textarea?.focus();
 }
 
-function cancelReplyMode(container: HTMLElement): void {
-  replyTargetCommentId = null;
+function initReplyFormHandlers(
+  formWrapper: HTMLElement,
+  commentId: string,
+  container: HTMLElement,
+): void {
+  const textarea = formWrapper.querySelector(".comment-reply-textarea") as HTMLTextAreaElement | null;
+  const submitBtn = formWrapper.querySelector(".comment-reply-submit-btn") as HTMLButtonElement | null;
+  const cancelBtn = formWrapper.querySelector(".comment-reply-cancel-btn") as HTMLButtonElement | null;
+  const toolbar = formWrapper.querySelector(".comment-toolbar") as HTMLElement | null;
+  const imageInput = formWrapper.querySelector(".comment-reply-image-input") as HTMLInputElement | null;
 
-  const formWrapper = container.querySelector(".comment-form-wrapper");
-  const form = formWrapper?.querySelector(".comment-form");
-  if (!form) return;
+  if (!textarea || !submitBtn) return;
 
-  const banner = form.querySelector(".comment-reply-banner");
-  if (banner) banner.remove();
-
-  const textarea = form.querySelector(
-    "#comment-textarea",
-  ) as HTMLTextAreaElement;
-  if (textarea) {
-    textarea.maxLength = 3000;
-    textarea.placeholder = "Ваш комментарий...";
+  if (getRemainingCooldown() > 0) {
+    startCooldownTimer(submitBtn);
   }
 
-  const counter = form.querySelector("#comment-char-counter") as HTMLElement;
-  if (counter && textarea) {
-    const currentLen = textarea.value.length;
-    counter.textContent = `${currentLen}/3000`;
-    counter.classList.toggle("count-warning", currentLen > 2500);
-    counter.classList.toggle("count-error", currentLen >= 3000);
+  if (toolbar) {
+    initToolbarHandlers(toolbar, textarea, imageInput, container);
   }
+
+  cancelBtn?.addEventListener("click", () => {
+    formWrapper.remove();
+  });
+
+  textarea.addEventListener("input", () => {
+    updateCharCounter(textarea);
+    autoResizeTextarea(textarea);
+  });
+
+  textarea.addEventListener("focus", () => {
+    initTurnstileForComments(container);
+  });
+
+  submitBtn.addEventListener("click", async () => {
+    if (getRemainingCooldown() > 0) {
+      startCooldownTimer(submitBtn);
+      return;
+    }
+
+    const content = textarea.value.trim();
+    if (!content) return;
+
+    if (content.length > 500) {
+      alert("Ответ слишком длинный (максимум 500 символов)");
+      return;
+    }
+
+    if (!profileManager.isLoggedIn()) {
+      alert("Войдите в аккаунт, чтобы оставить ответ");
+      return;
+    }
+
+    try {
+      const ok = await postCommentPayload(
+        `${API_URL}/comments/${commentId}/answers`,
+        content,
+        submitBtn,
+      );
+      if (!ok) return;
+
+      setLastCommentTime();
+      startAllCooldownTimers();
+      formWrapper.remove();
+
+      if (turnstileWidgetId && (window as any).turnstile) {
+        (window as any).turnstile.reset(turnstileWidgetId);
+      }
+
+      const chapterId = container.dataset.chapterId;
+      if (chapterId) {
+        await loadComments(container, chapterId, getCurrentPage(container), true, false);
+      } else {
+        const activePage = container.querySelector(".page-link.active")?.textContent || "1";
+        loadMyComments(parseInt(activePage, 10));
+      }
+    } catch (err: any) {
+      console.error("Failed to submit answer", err);
+      const msg =
+        err && typeof err === "object" && "message" in err && err.message
+          ? err.message === "Failed to submit"
+            ? "Не удалось отправить. Попробуйте ещё раз."
+            : err.message
+          : "Не удалось отправить. Попробуйте ещё раз.";
+      alert(msg);
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Отправить";
+    }
+  });
 }
 
 function getCurrentPage(container: HTMLElement): number {
@@ -1063,35 +1292,7 @@ function renderCommentForm(container: HTMLElement): void {
   if (profileManager.isLoggedIn()) {
     formWrapper.innerHTML = `
       <div class="comment-form">
-        <div class="comment-toolbar">
-          <button type="button" class="toolbar-btn" data-action="h1" title="Заголовок 1">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="m17 12 3-2v8"/></svg>
-          </button>
-          <button type="button" class="toolbar-btn" data-action="h2" title="Заголовок 2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M21 18h-4c0-4 4-3 4-6 0-1.5-2-2.5-4-1"/></svg>
-          </button>
-          <button type="button" class="toolbar-btn" data-action="h3" title="Заголовок 3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M17.5 10.5c1.7-1 3.5 0 3.5 1.5a2 2 0 0 1-2 2"/><path d="M17 17.5c2 1.5 4 .3 4-1.5a2 2 0 0 0-2-2"/></svg>
-          </button>
-          <span class="toolbar-separator"></span>
-          <button type="button" class="toolbar-btn" data-action="bold" title="Жирный">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
-          </button>
-          <button type="button" class="toolbar-btn" data-action="italic" title="Курсив">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg>
-          </button>
-          <button type="button" class="toolbar-btn" data-action="spoiler" title="Спойлер">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
-          <button type="button" class="toolbar-btn" data-action="quote" title="Цитата">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>
-          </button>
-          <span class="toolbar-separator"></span>
-          <button type="button" class="toolbar-btn" data-action="image" title="Изображение (до 5 МБ)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-          </button>
-          <input type="file" id="comment-image-input" accept="image/jpeg,image/png,image/gif" style="display:none"/>
-        </div>
+        ${renderToolbarHTML('id="comment-image-input"')}
         <textarea
           id="comment-textarea"
           class="comment-textarea"
@@ -1197,12 +1398,9 @@ function wrapSelection(
   autoResizeTextarea(textarea);
 }
 
-const headingPrefixes = ["# ", "## ", "### "];
-
 function insertLinePrefix(
   textarea: HTMLTextAreaElement,
   prefix: string,
-  alternates?: string[],
 ): void {
   const start = textarea.selectionStart;
   const lineStart = textarea.value.lastIndexOf("\n", start - 1) + 1;
@@ -1220,32 +1418,13 @@ function insertLinePrefix(
       lineStart,
       start - prefix.length,
     );
-    textarea.focus();
-    updateCharCounter(textarea);
-    autoResizeTextarea(textarea);
-    return;
+  } else {
+    const before = textarea.value.substring(0, lineStart);
+    const after = textarea.value.substring(lineStart);
+    textarea.value = `${before}${prefix}${after}`;
+    textarea.selectionStart = textarea.selectionEnd = start + prefix.length;
   }
 
-  if (alternates) {
-    for (const alt of alternates) {
-      if (alt !== prefix && lineContent.startsWith(alt)) {
-        const before = textarea.value.substring(0, lineStart);
-        const after = textarea.value.substring(lineStart + alt.length);
-        textarea.value = `${before}${prefix}${after}`;
-        textarea.selectionStart = textarea.selectionEnd =
-          start - alt.length + prefix.length;
-        textarea.focus();
-        updateCharCounter(textarea);
-        autoResizeTextarea(textarea);
-        return;
-      }
-    }
-  }
-
-  const before = textarea.value.substring(0, lineStart);
-  const after = textarea.value.substring(lineStart);
-  textarea.value = `${before}${prefix}${after}`;
-  textarea.selectionStart = textarea.selectionEnd = start + prefix.length;
   textarea.focus();
   updateCharCounter(textarea);
   autoResizeTextarea(textarea);
@@ -1649,6 +1828,13 @@ export function initMyCommentsPage(): void {
       return;
     }
 
+    const replyBtn = target.closest(".comment-reply-btn") as HTMLElement | null;
+    if (replyBtn) {
+      e.preventDefault();
+      handleReply(replyBtn, content);
+      return;
+    }
+
     const menuBtn = target.closest(".comment-menu-btn") as HTMLElement | null;
     if (menuBtn) {
       e.preventDefault();
@@ -1705,6 +1891,7 @@ function initFormHandlers(container: HTMLElement): void {
     "#comment-submit",
   ) as HTMLButtonElement;
   const chapterId = container.dataset.chapterId;
+  const toolbar = container.querySelector(".comment-toolbar") as HTMLElement | null;
   const imageInput = container.querySelector(
     "#comment-image-input",
   ) as HTMLInputElement;
@@ -1715,47 +1902,9 @@ function initFormHandlers(container: HTMLElement): void {
     startCooldownTimer(submitBtn);
   }
 
-  container.querySelectorAll(".toolbar-btn").forEach((btn) => {
-    btn.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      if (!textarea) return;
-      const action = (btn as HTMLElement).dataset.action;
-      switch (action) {
-        case "h1":
-          insertLinePrefix(textarea, "# ", headingPrefixes);
-          break;
-        case "h2":
-          insertLinePrefix(textarea, "## ", headingPrefixes);
-          break;
-        case "h3":
-          insertLinePrefix(textarea, "### ", headingPrefixes);
-          break;
-        case "bold":
-          wrapSelection(textarea, "**", "**");
-          break;
-        case "italic":
-          wrapSelection(textarea, "*", "*");
-          break;
-        case "spoiler":
-          wrapSelection(textarea, "||", "||");
-          break;
-        case "quote":
-          insertLinePrefix(textarea, "> ");
-          break;
-        case "image":
-          if (!isUploadingImage) imageInput?.click();
-          break;
-      }
-    });
-  });
-
-  imageInput?.addEventListener("change", async () => {
-    const file = imageInput.files?.[0];
-    if (!file || !textarea) return;
-    imageInput.value = "";
-    initTurnstileForComments(container);
-    await uploadCommentImage(file, textarea);
-  });
+  if (toolbar && textarea) {
+    initToolbarHandlers(toolbar, textarea, imageInput, container);
+  }
 
   if (textarea) {
     textarea.addEventListener("input", () => {
@@ -1770,18 +1919,16 @@ function initFormHandlers(container: HTMLElement): void {
 
   if (submitBtn && textarea) {
     submitBtn.addEventListener("click", async () => {
+      if (getRemainingCooldown() > 0) {
+        startCooldownTimer(submitBtn);
+        return;
+      }
+
       const content = textarea.value.trim();
       if (!content) return;
 
-      const isReplyMode = !!replyTargetCommentId;
-      const maxLen = isReplyMode ? 500 : 3000;
-
-      if (content.length > maxLen) {
-        alert(
-          isReplyMode
-            ? "Ответ слишком длинный (максимум 500 символов)"
-            : "Комментарий слишком длинный (максимум 3000 символов)",
-        );
+      if (content.length > 3000) {
+        alert("Комментарий слишком длинный (максимум 3000 символов)");
         return;
       }
 
@@ -1790,101 +1937,26 @@ function initFormHandlers(container: HTMLElement): void {
         return;
       }
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Проверка...";
-
-      let turnstileTok: string | null = await getTurnstileToken();
-      let smartCaptchaTok: string | null = null;
-
-      if (!turnstileTok) {
-        submitBtn.textContent = "Проверка...";
-        smartCaptchaTok = await getSmartCaptchaToken();
-      }
-
-      if (!turnstileTok && !smartCaptchaTok) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Отправить";
-        return;
-      }
-
-      submitBtn.textContent = "Отправка...";
-
       try {
-        const targetCommentId = replyTargetCommentId;
-        const url = isReplyMode
-          ? `${API_URL}/comments/${targetCommentId}/answers`
-          : `${API_URL}/chapters/${chapterId}/comments`;
+        const ok = await postCommentPayload(
+          `${API_URL}/chapters/${chapterId}/comments`,
+          content,
+          submitBtn,
+        );
+        if (!ok) return;
 
-        const payload: {
-          content: string;
-          turnstile_token?: string;
-          smart_captcha_token?: string;
-        } = {
-          content: content,
-        };
-
-        if (smartCaptchaTok) {
-          payload.smart_captcha_token = smartCaptchaTok;
-        } else if (turnstileTok) {
-          payload.turnstile_token = turnstileTok;
-        }
-
-        let res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          if (
-            res.status === 400 &&
-            err.detail === "Captcha verification failed" &&
-            turnstileTok &&
-            !smartCaptchaTok
-          ) {
-            submitBtn.textContent = "Проверка...";
-            smartCaptchaTok = await getSmartCaptchaToken();
-            if (smartCaptchaTok) {
-              submitBtn.textContent = "Отправка...";
-              payload.turnstile_token = undefined;
-              payload.smart_captcha_token = smartCaptchaTok;
-              res = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify(payload),
-              });
-              if (!res.ok) {
-                const retryErr = await res.json();
-                throw new Error(retryErr.detail || "Failed to submit");
-              }
-            } else {
-              submitBtn.disabled = false;
-              submitBtn.textContent = "Отправить";
-              return;
-            }
-          } else {
-            throw new Error(err.detail || "Failed to submit");
-          }
-        }
+        setLastCommentTime();
+        startAllCooldownTimers();
 
         textarea.value = "";
         updateCharCounter(textarea);
         autoResizeTextarea(textarea);
-
-        if (isReplyMode) {
-          cancelReplyMode(container);
-        }
 
         if (turnstileWidgetId && (window as any).turnstile) {
           (window as any).turnstile.reset(turnstileWidgetId);
         }
 
         await loadComments(container, chapterId, 1, true, false);
-        setLastCommentTime();
-        startCooldownTimer(submitBtn);
       } catch (err: any) {
         console.error("Failed to submit", err);
         const msg =

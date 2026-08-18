@@ -3530,9 +3530,6 @@ a.update-log-item:active {
     font-size: 0.95rem;
 }
 
-#mc-content .comment-reply-btn {
-    display: none;
-}
 
 @media (max-width: 500px) {
     .mc-chapter-link {
@@ -4205,22 +4202,48 @@ a.update-log-item:active {
     flex-shrink: 0;
 }
 
-/* Comment Reply Banner (in main form) */
-.comment-reply-banner {
-    margin-top: -1rem;
-    padding: 1rem 0.75rem 0.4rem;
-    background: color-mix(in srgb, var(--accent-primary), transparent 90%);
-    border: 1px solid color-mix(in srgb, var(--accent-primary), transparent 70%);
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    font-size: 0.85rem;
-    color: var(--secondary);
-    cursor: pointer;
-    position: relative;
-    z-index: 1;
+.comment-reply-form-wrapper {
+    margin-top: 0.5rem;
+    margin-left: calc(36px + 0.75rem);
 }
 
-.comment-reply-banner strong {
+.comment-reply-form {
+    background: transparent;
+}
+
+.comment-reply-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.comment-reply-cancel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0 0.5rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--tertiary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: inherit;
+    transition:
+        color 0.15s,
+        background 0.15s;
+}
+
+@media (hover: hover) {
+    .comment-reply-cancel-btn:hover {
+        color: var(--primary);
+    }
+}
+
+.comment-reply-cancel-btn:active {
     color: var(--primary);
 }
 
@@ -4228,6 +4251,10 @@ a.update-log-item:active {
     .comment-answers {
         margin-left: calc(32px + 0.75rem);
         gap: 0.6rem;
+    }
+
+    .comment-reply-form-wrapper {
+        margin-left: calc(32px + 0.75rem);
     }
 
     .comment-answer {
