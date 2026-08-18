@@ -9,6 +9,25 @@ const LAST_COMMENT_TIME_KEY = "kappalib_last_comment_time";
 
 const initializedContainers = new WeakSet<HTMLElement>();
 
+document.addEventListener("click", (e) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest(".comment-menu")) {
+    document.querySelectorAll(".comment-menu.active").forEach((m) => {
+      m.classList.remove("active");
+      m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+    });
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    document.querySelectorAll(".comment-menu.active").forEach((m) => {
+      m.classList.remove("active");
+      m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+    });
+  }
+});
+
 interface CommentAnswer {
   id: string;
   comment_id: string;
@@ -196,9 +215,17 @@ function createCommentHTML(comment: Comment): string {
 
   let actionHTML = "";
   if (isOwn && isApproved) {
-    actionHTML = `<button class="comment-delete-btn" data-comment-id="${comment.id}" aria-label="Удалить">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-      </button>`;
+    actionHTML = `<div class="comment-menu">
+        <button class="comment-menu-btn" aria-label="Действия" aria-haspopup="true" aria-expanded="false">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
+        <div class="comment-dropdown-menu">
+          <button class="comment-dropdown-item comment-delete-btn danger" data-comment-id="${comment.id}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            <span>Удалить</span>
+          </button>
+        </div>
+      </div>`;
   }
 
   const replyHTML = isApproved
@@ -224,14 +251,18 @@ function createCommentHTML(comment: Comment): string {
 
   return `
     <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}" tabindex="0">
-      <div class="comment-header">
+      <div class="comment-main-row">
         <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
-        <span class="comment-author">${comment.user_display_name} ${statusBadge}</span>
-        ${actionHTML}
-      </div>
-      <div class="comment-body">
-        <div class="comment-content">${comment.content_html}</div>
-        ${footerHTML}
+        <div class="comment-main">
+          <div class="comment-header">
+            <span class="comment-author">${comment.user_display_name} ${statusBadge}</span>
+            ${actionHTML}
+          </div>
+          <div class="comment-body">
+            <div class="comment-content">${comment.content_html}</div>
+            ${footerHTML}
+          </div>
+        </div>
       </div>
       ${answersHTML}
     </div>
@@ -271,21 +302,31 @@ function createAnswerHTML(answer: CommentAnswer): string {
 
   let actionHTML = "";
   if (isOwn && answer.status === "approved") {
-    actionHTML = `<button class="comment-delete-btn" data-answer-id="${answer.id}" aria-label="Удалить">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-      </button>`;
+    actionHTML = `<div class="comment-menu">
+        <button class="comment-menu-btn" aria-label="Действия" aria-haspopup="true" aria-expanded="false">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
+        <div class="comment-dropdown-menu">
+          <button class="comment-dropdown-item comment-delete-btn danger" data-answer-id="${answer.id}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            <span>Удалить</span>
+          </button>
+        </div>
+      </div>`;
   }
 
   const newBadge = answer.is_new ? ' <span class="comment-new-badge">Новый ответ</span>' : '';
 
   return `
     <div class="comment-answer${extraClass}" data-answer-id="${answer.id}" tabindex="0">
-      <div class="comment-header">
-        <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
-        <span class="comment-author">${answer.user_display_name} ${statusBadge}${newBadge}</span>
-        ${actionHTML}
+      <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
+      <div class="comment-main">
+        <div class="comment-header">
+          <span class="comment-author">${answer.user_display_name} ${statusBadge}${newBadge}</span>
+          ${actionHTML}
+        </div>
+        <div class="comment-body"><div class="comment-content">${answer.content_html}</div></div>
       </div>
-      <div class="comment-body"><div class="comment-content">${answer.content_html}</div></div>
     </div>
   `;
 }
@@ -751,9 +792,26 @@ export function initComments(): void {
       return;
     }
 
+    const menuBtn = target.closest(".comment-menu-btn") as HTMLElement | null;
+    if (menuBtn) {
+      e.preventDefault();
+      const menu = menuBtn.closest(".comment-menu");
+      const wasActive = menu?.classList.contains("active");
+      document.querySelectorAll(".comment-menu.active").forEach((m) => {
+        m.classList.remove("active");
+        m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+      });
+      if (!wasActive && menu) {
+        menu.classList.add("active");
+        menuBtn.setAttribute("aria-expanded", "true");
+      }
+      return;
+    }
+
     const deleteBtn = target.closest(".comment-delete-btn") as HTMLElement | null;
     if (deleteBtn) {
       e.preventDefault();
+      deleteBtn.closest(".comment-menu")?.classList.remove("active");
       const answerId = deleteBtn.dataset.answerId;
       if (answerId) {
         handleDeleteAnswer(answerId, container, chapterId);
@@ -1591,11 +1649,28 @@ export function initMyCommentsPage(): void {
       return;
     }
 
+    const menuBtn = target.closest(".comment-menu-btn") as HTMLElement | null;
+    if (menuBtn) {
+      e.preventDefault();
+      const menu = menuBtn.closest(".comment-menu");
+      const wasActive = menu?.classList.contains("active");
+      document.querySelectorAll(".comment-menu.active").forEach((m) => {
+        m.classList.remove("active");
+        m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+      });
+      if (!wasActive && menu) {
+        menu.classList.add("active");
+        menuBtn.setAttribute("aria-expanded", "true");
+      }
+      return;
+    }
+
     const deleteBtn = target.closest(
       ".comment-delete-btn",
     ) as HTMLElement | null;
     if (deleteBtn) {
       e.preventDefault();
+      deleteBtn.closest(".comment-menu")?.classList.remove("active");
       const activePage =
         content.querySelector(".page-link.active")?.textContent || "1";
 
