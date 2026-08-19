@@ -1894,7 +1894,7 @@ async function loadCommentStats(): Promise<void> {
       data.rating === 0
         ? "var(--secondary)"
         : data.rating > 0
-          ? "var(--color-success)"
+          ? "var(--accent-primary)"
           : "var(--color-danger)";
 
     container.innerHTML =
