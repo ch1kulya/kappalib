@@ -3519,10 +3519,6 @@ a.update-log-item:active {
     transition: color 0.2s;
 }
 
-.mc-pagination {
-    margin-top: 1.5rem;
-}
-
 .mc-loading {
     text-align: center;
     padding: 2rem;
@@ -4009,10 +4005,6 @@ a.update-log-item:active {
     text-align: center;
 }
 
-/* Comments Pagination */
-.comments-pagination {
-    margin-top: 1.5rem;
-}
 
 @media (max-width: 500px) {
     .comment-avatar {
@@ -4451,8 +4443,9 @@ td:first-child {
     font-weight: 500;
 }
 
-/* Catalog Loader */
-.catalog-loader {
+/* Catalog & Comments Loader */
+.catalog-loader,
+.comments-loader {
     display: flex;
     align-items: center;
     justify-content: center;

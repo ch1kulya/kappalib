@@ -327,6 +327,9 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int,
 		target = targetID[0]
 	}
 
+	targetPage := page
+	isDeepLink := false
+
 	if target != "" {
 		targetCommentID := target
 		if strings.HasPrefix(target, "ans_") {
@@ -353,12 +356,11 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int,
 				  AND (c.created_at > $3 OR (c.created_at = $3 AND c.id < $4))
 			`, chapterID, userID, targetCreatedAt, targetCommentID).Scan(&pos)
 			if err == nil {
-				page = (pos / pageSize) + 1
+				targetPage = (pos / pageSize) + 1
+				isDeepLink = true
 			}
 		}
 	}
-
-	offset := (page - 1) * pageSize
 
 	var totalCount int
 	err := database.DB.QueryRow(dbCtx, `
@@ -379,11 +381,21 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int,
 	if totalCount == 0 {
 		return &models.CommentsPage{
 			Comments:   []models.Comment{},
-			Page:       page,
+			Page:       1,
 			PageSize:   pageSize,
 			TotalCount: 0,
 			TotalPages: 0,
 		}, nil
+	}
+
+	limit := pageSize
+	offset := (page - 1) * pageSize
+	resultPage := page
+
+	if isDeepLink {
+		limit = targetPage * pageSize
+		offset = 0
+		resultPage = targetPage
 	}
 
 	rows, err := database.DB.Query(dbCtx, `
@@ -400,9 +412,9 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int,
             c.status = 'approved'
             OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
           )
-        ORDER BY c.created_at DESC
+        ORDER BY c.created_at DESC, c.id ASC
         LIMIT $3 OFFSET $4
-    `, chapterID, userID, pageSize, offset)
+    `, chapterID, userID, limit, offset)
 	if err != nil {
 		logger.Error("Failed to get visible comments: %v", err)
 		return nil, err
@@ -478,7 +490,7 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int,
 	totalPages := (totalCount + pageSize - 1) / pageSize
 	return &models.CommentsPage{
 		Comments:   comments,
-		Page:       page,
+		Page:       resultPage,
 		PageSize:   pageSize,
 		TotalCount: totalCount,
 		TotalPages: totalPages,

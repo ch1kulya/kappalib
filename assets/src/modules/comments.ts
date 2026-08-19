@@ -262,7 +262,7 @@ function createCommentHTML(
 
   let jumpHTML = "";
   if (chapterUrl) {
-    jumpHTML = `<a href="${chapterUrl}#comment-${comment.id}" class="comment-jump-link" title="Перейти к комментарию в главе" aria-label="Перейти к комментарию">
+    jumpHTML = `<a href="${chapterUrl}#${comment.id}" class="comment-jump-link" title="Перейти к комментарию в главе" aria-label="Перейти к комментарию">
       <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
         <polyline points="15 3 21 3 21 9"/>
@@ -286,7 +286,7 @@ function createCommentHTML(
   }
 
   return `
-    <div class="comment-item${extraClass}" id="comment-${comment.id}" data-comment-id="${comment.id}" data-comment-status="${comment.status}" tabindex="0">
+    <div class="comment-item${extraClass}" id="${comment.id}" data-comment-id="${comment.id}" data-chapter-id="${comment.chapter_id}" data-comment-status="${comment.status}" tabindex="0">
       <div class="comment-main-row">
         <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
         <div class="comment-main">
@@ -354,7 +354,7 @@ function createAnswerHTML(answer: CommentAnswer): string {
   const newBadge = answer.is_new ? ' <span class="comment-new-badge">Новый ответ</span>' : '';
 
   return `
-    <div class="comment-answer${extraClass}" id="answer-${answer.id}" data-answer-id="${answer.id}" tabindex="0">
+    <div class="comment-answer${extraClass}" id="${answer.id}" data-answer-id="${answer.id}" tabindex="0">
       <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
       <div class="comment-main">
         <div class="comment-header">
@@ -367,97 +367,43 @@ function createAnswerHTML(answer: CommentAnswer): string {
   `;
 }
 
-function renderComments(container: HTMLElement, comments: Comment[]): void {
-  let html = "";
+function renderComments(
+  container: HTMLElement,
+  comments: Comment[],
+  append: boolean = false,
+): void {
+  const listEl = container.querySelector(".comments-list");
+  if (!listEl) return;
 
+  if (!append) {
+    if (comments.length === 0) {
+      listEl.innerHTML =
+        '<div class="comments-empty">Комментариев пока нет. Будьте первым!</div>';
+      return;
+    }
+    listEl.innerHTML = "";
+  }
+
+  let html = "";
   comments.forEach((c) => {
     html += createCommentHTML(c);
   });
 
-  const listEl = container.querySelector(".comments-list");
-  if (listEl) {
-    if (html) {
-      listEl.innerHTML = html;
-    } else {
-      listEl.innerHTML =
-        '<div class="comments-empty">Комментариев пока нет. Будьте первым!</div>';
+  if (append) {
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    while (temp.firstChild) {
+      listEl.appendChild(temp.firstChild);
     }
-  }
-}
-
-function buildPaginationHTML(page: number, totalPages: number): string {
-  let html = "";
-
-  if (page > 1) {
-    html += `<button class="page-link prev-next" data-page="${page - 1}">←</button>`;
   } else {
-    html += `<span class="page-link prev-next disabled">←</span>`;
+    listEl.innerHTML = html;
   }
-
-  const pages = calculatePagination(page, totalPages);
-  pages.forEach((p) => {
-    if (p === -1) {
-      html += `<span class="page-ellipsis">...</span>`;
-    } else if (p === page) {
-      html += `<span class="page-link active">${p}</span>`;
-    } else {
-      html += `<button class="page-link" data-page="${p}">${p}</button>`;
-    }
-  });
-
-  if (page < totalPages) {
-    html += `<button class="page-link prev-next" data-page="${page + 1}">→</button>`;
-  } else {
-    html += `<span class="page-link prev-next disabled">→</span>`;
-  }
-
-  return html;
 }
 
-function renderPagination(
-  container: HTMLElement,
-  page: number,
-  totalPages: number,
-): void {
-  const paginationEl = container.querySelector(".comments-pagination");
-  if (!paginationEl || totalPages <= 1) {
-    if (paginationEl) paginationEl.innerHTML = "";
-    return;
-  }
-
-  paginationEl.innerHTML = buildPaginationHTML(page, totalPages);
-}
-
-function calculatePagination(current: number, total: number): number[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-
-  const pages: number[] = [1];
-  let start = current - 2;
-  let end = current + 2;
-
-  if (start <= 2) {
-    start = 2;
-    end = 5;
-  }
-
-  if (end >= total - 1) {
-    end = total - 1;
-    start = total - 4;
-  }
-
-  if (start > 2) pages.push(-1);
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i);
-  }
-
-  if (end < total - 1) pages.push(-1);
-
-  pages.push(total);
-  return pages;
-}
+let isCommentsLoading = false;
+let commentsCurrentPage = 1;
+let commentsTotalPages = 1;
+let commentsObserver: IntersectionObserver | null = null;
 
 async function loadComments(
   container: HTMLElement,
@@ -467,10 +413,19 @@ async function loadComments(
   showLoader: boolean = true,
   commentId?: string,
 ): Promise<void> {
+  if (isCommentsLoading) return;
+  isCommentsLoading = true;
+
   const listEl = container.querySelector(".comments-list");
-  if (listEl && showLoader) {
+  const loader = container.querySelector<HTMLElement>("#comments-loader");
+
+  if (page === 1 && showLoader && listEl) {
     listEl.innerHTML =
       '<div class="comments-loading">Загрузка комментариев...</div>';
+  }
+
+  if (page > 1 && loader) {
+    loader.style.display = "flex";
   }
 
   try {
@@ -488,15 +443,22 @@ async function loadComments(
 
     const data: CommentsPage = await res.json();
 
-    renderComments(container, data.comments);
-    renderPagination(container, data.page, data.total_pages);
+    commentsTotalPages = data.total_pages;
+    commentsCurrentPage = data.page;
+
+    renderComments(container, data.comments, page > 1);
 
     const countEl = container.querySelector(".comments-count");
     if (countEl) {
       countEl.textContent = `${data.total_count}`;
     }
 
-    if (activeScrollAnimationId === null) {
+    if (loader) {
+      loader.style.display =
+        commentsCurrentPage < commentsTotalPages ? "flex" : "none";
+    }
+
+    if (page === 1 && activeScrollAnimationId === null) {
       try {
         const targetEl = window.location.hash
           ? (document.querySelector(window.location.hash) as HTMLElement | null)
@@ -508,11 +470,30 @@ async function loadComments(
     }
   } catch (err) {
     console.error("Failed to load comments", err);
-    if (listEl && showLoader) {
+    if (listEl && page === 1 && showLoader) {
       listEl.innerHTML =
         '<div class="comments-error">Не удалось загрузить комментарии</div>';
     }
+  } finally {
+    isCommentsLoading = false;
+    if (loader && commentsCurrentPage < commentsTotalPages) {
+      loader.style.display = "flex";
+    }
   }
+}
+
+async function loadMoreComments(
+  container: HTMLElement,
+  chapterId: string,
+): Promise<void> {
+  if (isCommentsLoading || commentsCurrentPage >= commentsTotalPages) return;
+  await loadComments(
+    container,
+    chapterId,
+    commentsCurrentPage + 1,
+    false,
+    false,
+  );
 }
 
 let activeScrollAnimationId: number | null = null;
@@ -937,7 +918,7 @@ function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
 function getTargetCommentIdFromHash(): string | undefined {
   const hash = window.location.hash;
   if (!hash) return undefined;
-  const match = hash.match(/^#(?:comment|answer)-((?:cmt|ans)_[a-z0-9]{8})$/);
+  const match = hash.match(/^#((?:cmt|ans)_[a-z0-9]{8})$/);
   return match ? match[1] : undefined;
 }
 
@@ -953,13 +934,29 @@ export function initComments(): void {
   if (initializedContainers.has(container)) return;
   initializedContainers.add(container);
 
+  const loader = container.querySelector<HTMLElement>("#comments-loader");
+  if (loader) {
+    commentsObserver?.disconnect();
+    commentsObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (
+            entry.isIntersecting &&
+            !isCommentsLoading &&
+            commentsCurrentPage < commentsTotalPages
+          ) {
+            loadMoreComments(container, chapterId);
+          }
+        });
+      },
+      { rootMargin: "200px" },
+    );
+    commentsObserver.observe(loader);
+  }
+
   window.addEventListener("hashchange", () => {
     const targetId = getTargetCommentIdFromHash();
-    if (
-      targetId &&
-      !document.getElementById(`comment-${targetId}`) &&
-      !document.getElementById(`answer-${targetId}`)
-    ) {
+    if (targetId && !document.getElementById(targetId)) {
       startSmoothScrollToHash();
       loadComments(container, chapterId, 1, false, true, targetId);
     } else {
@@ -989,7 +986,7 @@ export function initComments(): void {
     const voteBtn = target.closest(".vote-btn") as HTMLElement | null;
     if (voteBtn) {
       e.preventDefault();
-      handleVote(voteBtn, container, chapterId);
+      handleVote(voteBtn);
       return;
     }
 
@@ -1028,21 +1025,11 @@ export function initComments(): void {
       }
       return;
     }
-
-    const pageBtn = target.closest(".page-link[data-page]") as HTMLElement;
-    if (pageBtn && !pageBtn.classList.contains("disabled")) {
-      const page = parseInt(pageBtn.dataset.page || "1", 10);
-      loadComments(container, chapterId, page);
-
-      container.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   });
 }
 
 async function handleVote(
   btn: HTMLElement,
-  container?: HTMLElement,
-  chapterId?: string,
 ): Promise<void> {
   if (!profileManager.isLoggedIn()) return;
 
@@ -1074,15 +1061,6 @@ async function handleVote(
     scoreEl.textContent = String(data.score);
     upBtn.classList.toggle("vote-active", data.user_vote === 1);
     downBtn.classList.toggle("vote-active", data.user_vote === -1);
-
-    if (container && chapterId) {
-      const activePage =
-        container.querySelector(".page-link.active")?.textContent || "1";
-      fetch(`${API_URL}/chapters/${chapterId}/comments?page=${activePage}`, {
-        credentials: "include",
-        cache: "no-cache",
-      });
-    }
   } catch {
     // silent
   }
@@ -1359,10 +1337,9 @@ function initReplyFormHandlers(
 
       const chapterId = container.dataset.chapterId;
       if (chapterId) {
-        await loadComments(container, chapterId, getCurrentPage(container), true, false);
+        await loadComments(container, chapterId, 1, true, false, commentId);
       } else {
-        const activePage = container.querySelector(".page-link.active")?.textContent || "1";
-        loadMyComments(parseInt(activePage, 10));
+        await loadMyComments(1);
       }
     } catch (err: any) {
       console.error("Failed to submit answer", err);
@@ -1379,16 +1356,10 @@ function initReplyFormHandlers(
   });
 }
 
-function getCurrentPage(container: HTMLElement): number {
-  const activePage = container.querySelector(".page-link.active")?.textContent;
-  return activePage ? parseInt(activePage, 10) : 1;
-}
-
 async function handleDeleteComment(
   btn: HTMLElement,
   container?: HTMLElement,
   chapterId?: string,
-  currentPage?: number,
 ): Promise<void> {
   const commentId = btn.dataset.commentId;
   if (!commentId) return;
@@ -1403,19 +1374,32 @@ async function handleDeleteComment(
 
     if (!res.ok) return;
 
-    if (container && chapterId) {
-      const wrapper = btn.closest(".mc-comment-wrapper");
-      const item = wrapper || btn.closest(".comment-item");
-      if (item) item.remove();
+    const wrapper = btn.closest(".mc-comment-wrapper");
+    const item = wrapper || btn.closest(".comment-item");
+    if (item) item.remove();
 
-      const activePage =
-        container.querySelector(".page-link.active")?.textContent || "1";
-      fetch(`${API_URL}/chapters/${chapterId}/comments?page=${activePage}`, {
-        credentials: "include",
-        cache: "no-cache",
-      });
-    } else if (currentPage !== undefined) {
-      loadMyComments(currentPage);
+    if (container && chapterId) {
+      const countEl = container.querySelector(".comments-count");
+      if (countEl) {
+        const current = parseInt(countEl.textContent || "0", 10);
+        if (current > 0) countEl.textContent = String(current - 1);
+      }
+      const listEl = container.querySelector(".comments-list");
+      if (listEl && listEl.querySelectorAll(".comment-item").length === 0) {
+        listEl.innerHTML =
+          '<div class="comments-empty">Комментариев пока нет. Будьте первым!</div>';
+      }
+    } else {
+      const countEl = document.getElementById("mc-count");
+      if (countEl) {
+        const current = parseInt(countEl.textContent || "0", 10);
+        if (current > 0) countEl.textContent = String(current - 1);
+      }
+      const listEl = document.getElementById("mc-list");
+      const emptyEl = document.getElementById("mc-empty");
+      if (listEl && listEl.querySelectorAll(".comment-item").length === 0 && emptyEl) {
+        emptyEl.style.display = "block";
+      }
     }
   } catch {
     // silent
@@ -1425,7 +1409,7 @@ async function handleDeleteComment(
 async function handleDeleteAnswer(
   answerId: string,
   container: HTMLElement,
-  chapterId: string,
+  chapterId?: string,
 ): Promise<void> {
   if (!confirm("Вы уверены, что хотите удалить этот ответ?")) return;
 
@@ -1441,14 +1425,6 @@ async function handleDeleteAnswer(
       `.comment-answer[data-answer-id="${answerId}"]`,
     );
     if (answerEl) answerEl.remove();
-
-    fetch(
-      `${API_URL}/chapters/${chapterId}/comments?page=${getCurrentPage(container)}`,
-      {
-        credentials: "include",
-        cache: "no-cache",
-      },
-    );
   } catch {
     // silent
   }
@@ -1456,7 +1432,6 @@ async function handleDeleteAnswer(
 
 async function handleDeleteMyAnswer(
   answerId: string,
-  currentPage: number,
 ): Promise<void> {
   if (!confirm("Вы уверены, что хотите удалить этот ответ?")) return;
 
@@ -1468,7 +1443,10 @@ async function handleDeleteMyAnswer(
 
     if (!res.ok) return;
 
-    loadMyComments(currentPage);
+    const answerEl = document.querySelector(
+      `.comment-answer[data-answer-id="${answerId}"]`,
+    );
+    if (answerEl) answerEl.remove();
   } catch {
     // silent
   }
@@ -1765,14 +1743,25 @@ function truncateText(text: string, maxLength: number): string {
   return text.slice(0, maxLength) + "…";
 }
 
-function renderMyComments(listEl: HTMLElement, comments: Comment[]): void {
-  if (comments.length === 0) {
+function renderMyComments(
+  listEl: HTMLElement,
+  comments: Comment[],
+  append: boolean = false,
+): void {
+  if (!append && comments.length === 0) {
     listEl.innerHTML = "";
     return;
   }
 
-  let html = "";
   let lastChapterId: string | null = null;
+  if (append) {
+    const lastItem = listEl.querySelector<HTMLElement>(
+      ".mc-comment-wrapper:last-child .comment-item",
+    );
+    lastChapterId = lastItem?.dataset.chapterId || null;
+  }
+
+  let html = "";
   comments.forEach((c) => {
     const showSeparator = c.chapter_id !== lastChapterId;
     lastChapterId = c.chapter_id;
@@ -1796,7 +1785,16 @@ function renderMyComments(listEl: HTMLElement, comments: Comment[]): void {
       </div>`;
     }
   });
-  listEl.innerHTML = html;
+
+  if (append) {
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    while (temp.firstChild) {
+      listEl.appendChild(temp.firstChild);
+    }
+  } else {
+    listEl.innerHTML = html;
+  }
 }
 
 function buildSparklinePath(
@@ -1921,7 +1919,15 @@ async function loadCommentStats(): Promise<void> {
   }
 }
 
+let isMyCommentsLoading = false;
+let myCommentsCurrentPage = 1;
+let myCommentsTotalPages = 1;
+let myCommentsObserver: IntersectionObserver | null = null;
+
 async function loadMyComments(page: number = 1): Promise<void> {
+  if (isMyCommentsLoading) return;
+  isMyCommentsLoading = true;
+
   if (!profileManager.getProfileCache()) {
     await profileManager.fetchProfile();
   }
@@ -1929,12 +1935,20 @@ async function loadMyComments(page: number = 1): Promise<void> {
   const listEl = document.getElementById("mc-list");
   const emptyEl = document.getElementById("mc-empty");
   const loadingEl = document.getElementById("mc-loading");
-  const paginationEl = document.getElementById("mc-pagination");
   const countEl = document.getElementById("mc-count");
+  const loader = document.getElementById("mc-loader");
 
-  if (!listEl || !emptyEl || !paginationEl) return;
+  if (!listEl || !emptyEl) {
+    isMyCommentsLoading = false;
+    return;
+  }
 
-  if (loadingEl) loadingEl.style.display = "block";
+  if (page === 1 && loadingEl) {
+    loadingEl.style.display = "block";
+  }
+  if (page > 1 && loader) {
+    loader.style.display = "flex";
+  }
 
   try {
     const res = await fetch(`${API_URL}/profile/me/comments?page=${page}`, {
@@ -1958,35 +1972,57 @@ async function loadMyComments(page: number = 1): Promise<void> {
 
     if (loadingEl) loadingEl.style.display = "none";
 
-    if (data.total_count === 0) {
+    myCommentsTotalPages = data.total_pages;
+    myCommentsCurrentPage = data.page;
+
+    if (data.total_count === 0 && page === 1) {
       emptyEl.style.display = "block";
       listEl.innerHTML = "";
-      paginationEl.innerHTML = "";
       if (countEl) countEl.textContent = "";
+      if (loader) loader.style.display = "none";
       return;
     }
 
     emptyEl.style.display = "none";
     if (countEl) countEl.textContent = `${data.total_count}`;
 
-    renderMyComments(listEl, data.comments);
+    renderMyComments(listEl, data.comments, page > 1);
 
-    if (data.total_pages > 1) {
-      paginationEl.innerHTML = buildPaginationHTML(data.page, data.total_pages);
-    } else {
-      paginationEl.innerHTML = "";
+    if (loader) {
+      loader.style.display =
+        myCommentsCurrentPage < myCommentsTotalPages ? "flex" : "none";
     }
   } catch (err) {
     console.error("Failed to load user comments", err);
     if (loadingEl) loadingEl.style.display = "none";
-    listEl.innerHTML =
-      '<div class="comments-error">Не удалось загрузить комментарии</div>';
+    if (page === 1) {
+      listEl.innerHTML =
+        '<div class="comments-error">Не удалось загрузить комментарии</div>';
+    }
+  } finally {
+    isMyCommentsLoading = false;
+    if (loader && myCommentsCurrentPage < myCommentsTotalPages) {
+      loader.style.display = "flex";
+    }
   }
+}
+
+async function loadMoreMyComments(): Promise<void> {
+  if (isMyCommentsLoading || myCommentsCurrentPage >= myCommentsTotalPages) return;
+  await loadMyComments(myCommentsCurrentPage + 1);
 }
 
 export function initMyCommentsPage(): void {
   const content = document.getElementById("mc-content");
   if (!content) return;
+
+  if (initializedContainers.has(content)) return;
+  initializedContainers.add(content);
+
+  profileManager.onLogin(() => {
+    loadCommentStats();
+    loadMyComments(1);
+  });
 
   if (!profileManager.isLoggedIn()) {
     const emptyEl = document.getElementById("mc-empty");
@@ -1996,6 +2032,26 @@ export function initMyCommentsPage(): void {
         "Войдите в аккаунт, чтобы видеть свои комментарии";
     }
     return;
+  }
+
+  const loader = document.getElementById("mc-loader");
+  if (loader) {
+    myCommentsObserver?.disconnect();
+    myCommentsObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (
+            entry.isIntersecting &&
+            !isMyCommentsLoading &&
+            myCommentsCurrentPage < myCommentsTotalPages
+          ) {
+            loadMoreMyComments();
+          }
+        });
+      },
+      { rootMargin: "200px" },
+    );
+    myCommentsObserver.observe(loader);
   }
 
   loadCommentStats();
@@ -2046,28 +2102,14 @@ export function initMyCommentsPage(): void {
     if (deleteBtn) {
       e.preventDefault();
       deleteBtn.closest(".comment-menu")?.classList.remove("active");
-      const activePage =
-        content.querySelector(".page-link.active")?.textContent || "1";
 
       const answerId = deleteBtn.dataset.answerId;
       if (answerId) {
-        handleDeleteMyAnswer(answerId, parseInt(activePage, 10));
+        handleDeleteMyAnswer(answerId);
       } else {
-        handleDeleteComment(
-          deleteBtn,
-          undefined,
-          undefined,
-          parseInt(activePage, 10),
-        );
+        handleDeleteComment(deleteBtn);
       }
       return;
-    }
-
-    const pageBtn = target.closest(".page-link[data-page]") as HTMLElement;
-    if (pageBtn && !pageBtn.classList.contains("disabled")) {
-      const page = parseInt(pageBtn.dataset.page || "1", 10);
-      loadMyComments(page);
-      content.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
 }
