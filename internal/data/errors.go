@@ -23,4 +23,6 @@ var (
 	ErrCannotDeleteAnswer    = errors.New("cannot delete answer with current status")
 	ErrInvalidAnswerLength   = errors.New("invalid answer content length")
 	ErrCommentNotApproved    = errors.New("comment must be approved to answer")
+	ErrCannotEditComment     = errors.New("cannot edit comment with current status")
+	ErrCannotEditAnswer      = errors.New("cannot edit answer with current status")
 )

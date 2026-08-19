@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	stdhtml "html"
 	"net/http"
@@ -34,6 +35,9 @@ import (
 //go:embed sql/comments_create.sql
 var queryCommentsCreate string
 
+//go:embed sql/comments_edit.sql
+var queryCommentsEdit string
+
 //go:embed sql/comments_get_by_id.sql
 var queryCommentsGetByID string
 
@@ -55,8 +59,14 @@ var queryCommentVotesScore string
 //go:embed sql/comment_answers_create.sql
 var queryCommentAnswersCreate string
 
+//go:embed sql/comment_answers_edit.sql
+var queryCommentAnswersEdit string
+
 //go:embed sql/comment_answers_update_status.sql
 var queryCommentAnswersUpdateStatus string
+
+//go:embed sql/comment_answers_delete_by_comment_user.sql
+var queryCommentAnswersDeleteByCommentUser string
 
 //go:embed sql/comment_answers_set_telegram_message_id.sql
 var queryCommentAnswersSetTelegramMessageID string
@@ -265,18 +275,29 @@ func renderMarkdown(content string) string {
 	return strings.TrimSpace(result)
 }
 
-func CreateComment(ctx context.Context, userID string, input models.CreateCommentInput) (*models.Comment, error) {
-	contentLen := utf8.RuneCountInString(input.Content)
-	if contentLen == 0 || contentLen > 3000 {
-		return nil, ErrInvalidContentLength
+func validateSubmission(userID, content string, maxLen int, isAnswer bool, turnstileToken, smartCaptchaToken, ip string) error {
+	contentLen := utf8.RuneCountInString(content)
+	if contentLen == 0 || contentLen > maxLen {
+		if isAnswer {
+			return ErrInvalidAnswerLength
+		}
+		return ErrInvalidContentLength
 	}
 
 	if !checkCommentRateLimit(userID) {
-		return nil, ErrRateLimitExceeded
+		return ErrRateLimitExceeded
 	}
 
-	if !verifyCommentsCaptcha(input.TurnstileToken, input.SmartCaptchaToken, input.IP) {
-		return nil, ErrCaptchaFailed
+	if !verifyCommentsCaptcha(turnstileToken, smartCaptchaToken, ip) {
+		return ErrCaptchaFailed
+	}
+
+	return nil
+}
+
+func CreateComment(ctx context.Context, userID string, input models.CreateCommentInput) (*models.Comment, error) {
+	if err := validateSubmission(userID, input.Content, 3000, false, input.TurnstileToken, input.SmartCaptchaToken, input.IP); err != nil {
+		return nil, err
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -291,7 +312,7 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 	var comment models.Comment
 	err := database.DB.QueryRow(dbCtx, queryCommentsCreate,
 		input.ChapterID, userID, contentHTML,
-	).Scan(&comment.ID, &comment.ChapterID, &comment.UserID, &comment.ContentHTML, &comment.Status, &comment.CreatedAt)
+	).Scan(&comment.ID, &comment.ChapterID, &comment.UserID, &comment.ContentHTML, &comment.Status, &comment.EditedAt, &comment.CreatedAt)
 
 	if err != nil {
 		logger.Error("Failed to create comment: %v", err)
@@ -316,12 +337,133 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 	return &comment, nil
 }
 
-func GetVisibleComments(ctx context.Context, chapterID, userID string, page int) (*models.CommentsPage, error) {
-	pageSize := 12
-	offset := (page - 1) * pageSize
+func EditComment(ctx context.Context, commentID, userID string, input models.EditCommentInput) (*models.Comment, error) {
+	if err := validateSubmission(userID, input.Content, 3000, false, input.TurnstileToken, input.SmartCaptchaToken, input.IP); err != nil {
+		return nil, err
+	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
+	var ownerID, status, oldContentHTML string
+	err := database.DB.QueryRow(dbCtx, `SELECT user_id, status, content_html FROM comments WHERE id = $1`, commentID).Scan(&ownerID, &status, &oldContentHTML)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrCommentNotFound
+		}
+		return nil, err
+	}
+
+	if ownerID != userID {
+		return nil, ErrNotCommentAuthor
+	}
+
+	if status != "approved" && status != "rejected" {
+		return nil, ErrCannotEditComment
+	}
+
+	contentHTML := renderMarkdown(input.Content)
+
+	var comment models.Comment
+	err = database.DB.QueryRow(dbCtx, queryCommentsEdit,
+		contentHTML, commentID, userID,
+	).Scan(&comment.ID, &comment.ChapterID, &comment.UserID, &comment.ContentHTML, &comment.Status, &comment.EditedAt, &comment.CreatedAt)
+
+	if err != nil {
+		logger.Error("Failed to edit comment: %v", err)
+		return nil, err
+	}
+
+	var user models.ProfilePublic
+	var avatarUpdatedAt time.Time
+	if err := database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar, avatar_updated_at FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar, &avatarUpdatedAt); err != nil {
+		logger.Warn("Failed to fetch user data for edited comment: %v", err)
+	}
+	comment.UserDisplayName = user.DisplayName
+	comment.UserAvatarSeed = user.AvatarSeed
+	comment.UserHasCustomAvatar = user.HasCustomAvatar
+	comment.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+
+	go sendEditedCommentToTelegram(context.Background(), &comment, oldContentHTML)
+
+	recordCommentTime(userID)
+
+	logger.Info("Comment %s edited by user %s", comment.ID, userID)
+	return &comment, nil
+}
+
+func CalculateCommentsPagination(page, pageSize, totalCount int, isDeepLink bool, targetPage int) (limit, offset, resultPage, totalPages int) {
+	if totalCount > 0 && pageSize > 0 {
+		totalPages = (totalCount + pageSize - 1) / pageSize
+	}
+	if isDeepLink {
+		return targetPage * pageSize, 0, targetPage, totalPages
+	}
+	return pageSize, (page - 1) * pageSize, page, totalPages
+}
+
+func GetVisibleComments(ctx context.Context, chapterID, userID string, page int, targetID ...string) (*models.CommentsPage, error) {
+	pageSize := 12
+
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var target string
+	if len(targetID) > 0 {
+		target = targetID[0]
+	}
+
+	targetPage := page
+	isDeepLink := false
+
+	if target != "" {
+		targetCommentID := target
+		if strings.HasPrefix(target, "can_") {
+			var parentCommentID string
+			err := database.DB.QueryRow(dbCtx, `
+				SELECT comment_id
+				FROM comment_answers
+				WHERE id = $1
+				  AND status != 'deleted'
+				  AND (status = 'approved' OR (status IN ('pending', 'rejected') AND user_id = $2))
+			`, target, userID).Scan(&parentCommentID)
+			if err == nil && parentCommentID != "" {
+				targetCommentID = parentCommentID
+			} else {
+				targetCommentID = ""
+			}
+		}
+
+		if targetCommentID != "" {
+			var targetCreatedAt time.Time
+			err := database.DB.QueryRow(dbCtx, `
+				SELECT created_at
+				FROM comments
+				WHERE id = $1
+				  AND chapter_id = $2
+				  AND status != 'deleted'
+				  AND (status = 'approved' OR (status IN ('pending', 'rejected') AND user_id = $3))
+			`, targetCommentID, chapterID, userID).Scan(&targetCreatedAt)
+			if err == nil {
+				var pos int
+				err = database.DB.QueryRow(dbCtx, `
+					SELECT COUNT(*)
+					FROM comments c
+					WHERE c.chapter_id = $1
+					  AND c.status != 'deleted'
+					  AND (
+					    c.status = 'approved'
+					    OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
+					  )
+					  AND (c.created_at > $3 OR (c.created_at = $3 AND c.id < $4))
+				`, chapterID, userID, targetCreatedAt, targetCommentID).Scan(&pos)
+				if err == nil {
+					targetPage = (pos / pageSize) + 1
+					isDeepLink = true
+				}
+			}
+		}
+	}
 
 	var totalCount int
 	err := database.DB.QueryRow(dbCtx, `
@@ -342,16 +484,18 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 	if totalCount == 0 {
 		return &models.CommentsPage{
 			Comments:   []models.Comment{},
-			Page:       page,
+			Page:       1,
 			PageSize:   pageSize,
 			TotalCount: 0,
 			TotalPages: 0,
 		}, nil
 	}
 
+	limit, offset, resultPage, totalPages := CalculateCommentsPagination(page, pageSize, totalCount, isDeepLink, targetPage)
+
 	rows, err := database.DB.Query(dbCtx, `
         SELECT
-            c.id, c.chapter_id, c.user_id, c.content_html, c.status, c.created_at,
+            c.id, c.chapter_id, c.user_id, c.content_html, c.status, c.edited_at, c.created_at,
             u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at,
             COALESCE((SELECT SUM(value) FROM comment_votes WHERE comment_id = c.id), 0)::int,
             COALESCE((SELECT value FROM comment_votes WHERE comment_id = c.id AND user_id = $2), 0)::int
@@ -363,9 +507,9 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
             c.status = 'approved'
             OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
           )
-        ORDER BY c.created_at DESC
+        ORDER BY c.created_at DESC, c.id ASC
         LIMIT $3 OFFSET $4
-    `, chapterID, userID, pageSize, offset)
+    `, chapterID, userID, limit, offset)
 	if err != nil {
 		logger.Error("Failed to get visible comments: %v", err)
 		return nil, err
@@ -377,7 +521,7 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 		var c models.Comment
 		var avatarUpdatedAt time.Time
 		if err := rows.Scan(
-			&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status,
+			&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.EditedAt,
 			&c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed,
 			&c.UserHasCustomAvatar, &avatarUpdatedAt,
 			&c.Score, &c.UserVote,
@@ -397,7 +541,7 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 
 		answerRows, err := database.DB.Query(dbCtx, `
 			SELECT
-				ca.id, ca.comment_id, ca.user_id, ca.content_html, ca.status, ca.created_at,
+				ca.id, ca.comment_id, ca.user_id, ca.content_html, ca.status, ca.edited_at, ca.created_at,
 				u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at
 			FROM comment_answers ca
 			JOIN users u ON ca.user_id = u.id
@@ -419,7 +563,7 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 				var a models.CommentAnswer
 				var avatarUpdatedAt time.Time
 				if err := answerRows.Scan(
-					&a.ID, &a.CommentID, &a.UserID, &a.ContentHTML, &a.Status,
+					&a.ID, &a.CommentID, &a.UserID, &a.ContentHTML, &a.Status, &a.EditedAt,
 					&a.CreatedAt, &a.UserDisplayName, &a.UserAvatarSeed,
 					&a.UserHasCustomAvatar, &avatarUpdatedAt,
 				); err != nil {
@@ -438,10 +582,9 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 		}
 	}
 
-	totalPages := (totalCount + pageSize - 1) / pageSize
 	return &models.CommentsPage{
 		Comments:   comments,
-		Page:       page,
+		Page:       resultPage,
 		PageSize:   pageSize,
 		TotalCount: totalCount,
 		TotalPages: totalPages,
@@ -496,7 +639,7 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 
 	commentRows, err := database.DB.Query(dbCtx, `
 		SELECT
-			c.id, c.chapter_id, c.user_id, c.content_html, c.status, c.created_at,
+			c.id, c.chapter_id, c.user_id, c.content_html, c.status, c.edited_at, c.created_at,
 			u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at,
 			COALESCE((SELECT SUM(value) FROM comment_votes WHERE comment_id = c.id), 0)::int,
 			COALESCE((SELECT value FROM comment_votes WHERE comment_id = c.id AND user_id = $2), 0)::int,
@@ -518,7 +661,7 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 		var c models.Comment
 		var avatarUpdatedAt time.Time
 		if err := commentRows.Scan(
-			&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status,
+			&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.EditedAt,
 			&c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed,
 			&c.UserHasCustomAvatar, &avatarUpdatedAt,
 			&c.Score, &c.UserVote,
@@ -533,7 +676,7 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 
 	answerRows, err := database.DB.Query(dbCtx, `
 		SELECT
-			ca.id, ca.comment_id, ca.user_id, ca.content_html, ca.status, ca.created_at,
+			ca.id, ca.comment_id, ca.user_id, ca.content_html, ca.status, ca.edited_at, ca.created_at,
 			u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at
 		FROM comment_answers ca
 		JOIN users u ON ca.user_id = u.id
@@ -563,7 +706,7 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 			var a models.CommentAnswer
 			var avatarUpdatedAt time.Time
 			if err := answerRows.Scan(
-				&a.ID, &a.CommentID, &a.UserID, &a.ContentHTML, &a.Status,
+				&a.ID, &a.CommentID, &a.UserID, &a.ContentHTML, &a.Status, &a.EditedAt,
 				&a.CreatedAt, &a.UserDisplayName, &a.UserAvatarSeed,
 				&a.UserHasCustomAvatar, &avatarUpdatedAt,
 			); err != nil {
@@ -619,8 +762,8 @@ func VoteComment(ctx context.Context, commentID, userID string, value int) (int,
 
 	var exists bool
 	err := database.DB.QueryRow(dbCtx,
-		`SELECT EXISTS(SELECT 1 FROM comments WHERE id = $1 AND status = 'approved')`,
-		commentID,
+		`SELECT EXISTS(SELECT 1 FROM comments WHERE id = $1 AND (status = 'approved' OR (status = 'pending' AND user_id = $2)))`,
+		commentID, userID,
 	).Scan(&exists)
 	if err != nil || !exists {
 		return 0, ErrCommentNotFound
@@ -686,6 +829,11 @@ func DeleteComment(ctx context.Context, commentID, userID string) error {
 		return err
 	}
 
+	if _, err := database.DB.Exec(dbCtx, queryCommentAnswersDeleteByCommentUser, commentID, userID); err != nil {
+		logger.Error("Failed to delete user answers for comment %s: %v", commentID, err)
+		return err
+	}
+
 	logger.Info("Comment %s deleted by user %s", commentID, userID)
 	return nil
 }
@@ -696,7 +844,7 @@ func GetCommentByID(ctx context.Context, commentID string) (*models.Comment, err
 
 	var c models.Comment
 	err := database.DB.QueryRow(dbCtx, queryCommentsGetByID, commentID).Scan(
-		&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.TelegramMessageID, &c.CreatedAt,
+		&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.EditedAt, &c.TelegramMessageID, &c.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -705,17 +853,8 @@ func GetCommentByID(ctx context.Context, commentID string) (*models.Comment, err
 }
 
 func CreateCommentAnswer(ctx context.Context, userID string, input models.CreateCommentAnswerInput) (*models.CommentAnswer, error) {
-	contentLen := utf8.RuneCountInString(input.Content)
-	if contentLen == 0 || contentLen > 500 {
-		return nil, ErrInvalidAnswerLength
-	}
-
-	if !checkCommentRateLimit(userID) {
-		return nil, ErrRateLimitExceeded
-	}
-
-	if !verifyCommentsCaptcha(input.TurnstileToken, input.SmartCaptchaToken, input.IP) {
-		return nil, ErrCaptchaFailed
+	if err := validateSubmission(userID, input.Content, 500, true, input.TurnstileToken, input.SmartCaptchaToken, input.IP); err != nil {
+		return nil, err
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -727,7 +866,10 @@ func CreateCommentAnswer(ctx context.Context, userID string, input models.Create
 		input.CommentID,
 	).Scan(&commentStatus)
 	if err != nil {
-		return nil, ErrCommentNotFound
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrCommentNotFound
+		}
+		return nil, err
 	}
 	if commentStatus != "approved" {
 		return nil, ErrCommentNotApproved
@@ -738,7 +880,7 @@ func CreateCommentAnswer(ctx context.Context, userID string, input models.Create
 	var answer models.CommentAnswer
 	err = database.DB.QueryRow(dbCtx, queryCommentAnswersCreate,
 		input.CommentID, userID, contentHTML,
-	).Scan(&answer.ID, &answer.CommentID, &answer.UserID, &answer.ContentHTML, &answer.Status, &answer.CreatedAt)
+	).Scan(&answer.ID, &answer.CommentID, &answer.UserID, &answer.ContentHTML, &answer.Status, &answer.EditedAt, &answer.CreatedAt)
 
 	if err != nil {
 		logger.Error("Failed to create comment answer: %v", err)
@@ -760,6 +902,61 @@ func CreateCommentAnswer(ctx context.Context, userID string, input models.Create
 	recordCommentTime(userID)
 
 	logger.Info("Comment answer created: %s by user %s on comment %s", answer.ID, userID, input.CommentID)
+	return &answer, nil
+}
+
+func EditCommentAnswer(ctx context.Context, answerID, userID string, input models.EditCommentAnswerInput) (*models.CommentAnswer, error) {
+	if err := validateSubmission(userID, input.Content, 500, true, input.TurnstileToken, input.SmartCaptchaToken, input.IP); err != nil {
+		return nil, err
+	}
+
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var ownerID, status, oldContentHTML string
+	err := database.DB.QueryRow(dbCtx, `SELECT user_id, status, content_html FROM comment_answers WHERE id = $1`, answerID).Scan(&ownerID, &status, &oldContentHTML)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrCommentAnswerNotFound
+		}
+		return nil, err
+	}
+
+	if ownerID != userID {
+		return nil, ErrNotAnswerAuthor
+	}
+
+	if status != "approved" && status != "rejected" {
+		return nil, ErrCannotEditAnswer
+	}
+
+	contentHTML := renderMarkdown(input.Content)
+
+	var answer models.CommentAnswer
+	err = database.DB.QueryRow(dbCtx, queryCommentAnswersEdit,
+		contentHTML, answerID, userID,
+	).Scan(&answer.ID, &answer.CommentID, &answer.UserID, &answer.ContentHTML, &answer.Status, &answer.EditedAt, &answer.CreatedAt)
+
+	if err != nil {
+		logger.Error("Failed to edit comment answer: %v", err)
+		return nil, err
+	}
+
+	var user models.ProfilePublic
+	var avatarUpdatedAt time.Time
+	if err := database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar, avatar_updated_at FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar, &avatarUpdatedAt); err != nil {
+		logger.Warn("Failed to fetch user data for edited answer: %v", err)
+	}
+	answer.UserDisplayName = user.DisplayName
+	answer.UserAvatarSeed = user.AvatarSeed
+	answer.UserHasCustomAvatar = user.HasCustomAvatar
+	answer.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+
+	go sendEditedAnswerToTelegram(context.Background(), &answer, oldContentHTML)
+
+	recordCommentTime(userID)
+
+	logger.Info("Comment answer %s edited by user %s", answer.ID, userID)
 	return &answer, nil
 }
 
@@ -832,6 +1029,28 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 	sendTelegramMessage(ctx, "comment", comment.ID, text, "approve", "reject", queryCommentsSetTelegramMessageID)
 }
 
+func sendEditedCommentToTelegram(ctx context.Context, comment *models.Comment, oldContentHTML string) {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var novelID, novelTitle, chapterID, chapterTitle string
+	var chapterNum int
+	err := database.DB.QueryRow(dbCtx, queryCommentsTelegramInfo, comment.ChapterID).Scan(
+		&novelID, &novelTitle, &chapterID, &chapterNum, &chapterTitle,
+	)
+	if err != nil {
+		logger.Warn("Failed to fetch novel/chapter info for edited comment %s: %v", comment.ID, err)
+		chapterID = comment.ChapterID
+	}
+
+	text := buildEditedCommentTelegramText(
+		novelID, novelTitle, chapterID, chapterNum, chapterTitle,
+		comment.UserDisplayName, oldContentHTML, comment.ContentHTML,
+	)
+
+	sendTelegramMessage(ctx, "comment", comment.ID, text, "approve", "reject", queryCommentsSetTelegramMessageID)
+}
+
 func sendAnswerToTelegram(ctx context.Context, answer *models.CommentAnswer) {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -850,6 +1069,29 @@ func sendAnswerToTelegram(ctx context.Context, answer *models.CommentAnswer) {
 		novelID, novelTitle, chapterID, chapterNum, chapterTitle,
 		parentAuthorName, parentContentHTML,
 		answer.UserDisplayName, answer.ContentHTML,
+	)
+
+	sendTelegramMessage(ctx, "answer", answer.ID, text, "approve_answer", "reject_answer", queryCommentAnswersSetTelegramMessageID)
+}
+
+func sendEditedAnswerToTelegram(ctx context.Context, answer *models.CommentAnswer, oldContentHTML string) {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var novelID, novelTitle, chapterID, chapterTitle, parentAuthorName, parentContentHTML string
+	var chapterNum int
+	err := database.DB.QueryRow(dbCtx, queryCommentAnswersTelegramInfo, answer.CommentID).Scan(
+		&novelID, &novelTitle, &chapterID, &chapterNum, &chapterTitle,
+		&parentAuthorName, &parentContentHTML,
+	)
+	if err != nil {
+		logger.Warn("Failed to fetch parent comment info for edited answer %s: %v", answer.ID, err)
+	}
+
+	text := buildEditedAnswerTelegramText(
+		novelID, novelTitle, chapterID, chapterNum, chapterTitle,
+		parentAuthorName, parentContentHTML,
+		answer.UserDisplayName, oldContentHTML, answer.ContentHTML,
 	)
 
 	sendTelegramMessage(ctx, "answer", answer.ID, text, "approve_answer", "reject_answer", queryCommentAnswersSetTelegramMessageID)
@@ -879,29 +1121,40 @@ func buildTelegramMetadataTable(novelURL, displayNovelTitle, chapterURL string, 
 	return sb.String()
 }
 
-func buildCommentTelegramText(novelID, novelTitle, chapterID string, chapterNum int, chapterTitle, authorName, contentHTML string) string {
-	displayNovelTitle := novelTitle
-	if displayNovelTitle == "" {
-		displayNovelTitle = "Страница новеллы"
+func resolveDisplayTitle(novelTitle string) string {
+	if novelTitle == "" {
+		return "Страница новеллы"
 	}
+	return novelTitle
+}
 
-	var novelURL string
+func resolveNovelURL(novelID string) string {
 	if novelID != "" {
-		novelURL = fmt.Sprintf("%s/%s", telegramBaseURL, novelID)
-	} else {
-		novelURL = telegramBaseURL
+		return fmt.Sprintf("%s/%s", telegramBaseURL, novelID)
 	}
+	return telegramBaseURL
+}
 
-	var chapterURL string
+func resolveChapterURL(novelID, chapterID string) string {
 	if novelID != "" && chapterID != "" {
-		chapterURL = fmt.Sprintf("%s/%s/chapter/%s", telegramBaseURL, novelID, chapterID)
-	} else if chapterID != "" {
-		chapterURL = fmt.Sprintf("%s/chapter/%s", telegramBaseURL, chapterID)
-	} else {
-		chapterURL = telegramBaseURL
+		return fmt.Sprintf("%s/%s/chapter/%s", telegramBaseURL, novelID, chapterID)
 	}
+	if chapterID != "" {
+		return fmt.Sprintf("%s/chapter/%s", telegramBaseURL, chapterID)
+	}
+	return telegramBaseURL
+}
 
-	metadataTable := buildTelegramMetadataTable(novelURL, displayNovelTitle, chapterURL, chapterNum, chapterTitle, authorName, "")
+func truncateTelegramText(text string, maxRunes int) string {
+	runes := []rune(text)
+	if len(runes) <= maxRunes {
+		return text
+	}
+	return string(runes[:maxRunes]) + "..."
+}
+
+func buildCommentTelegramText(novelID, novelTitle, chapterID string, chapterNum int, chapterTitle, authorName, contentHTML string) string {
+	metadataTable := buildTelegramMetadataTable(resolveNovelURL(novelID), resolveDisplayTitle(novelTitle), resolveChapterURL(novelID, chapterID), chapterNum, chapterTitle, authorName, "")
 	formattedContent := htmlToTelegramHTML(contentHTML)
 
 	var sb strings.Builder
@@ -910,11 +1163,22 @@ func buildCommentTelegramText(novelID, novelTitle, chapterID string, chapterNum 
 	sb.WriteString("\n")
 	fmt.Fprintf(&sb, "<details open><summary>Текст</summary>%s</details>", formattedContent)
 
-	text := sb.String()
-	if len(text) > 30000 {
-		text = text[:29990] + "..."
-	}
-	return text
+	return truncateTelegramText(sb.String(), 30000)
+}
+
+func buildEditedCommentTelegramText(novelID, novelTitle, chapterID string, chapterNum int, chapterTitle, authorName, oldContentHTML, newContentHTML string) string {
+	metadataTable := buildTelegramMetadataTable(resolveNovelURL(novelID), resolveDisplayTitle(novelTitle), resolveChapterURL(novelID, chapterID), chapterNum, chapterTitle, authorName, "")
+	formattedOldContent := htmlToTelegramHTML(oldContentHTML)
+	formattedNewContent := htmlToTelegramHTML(newContentHTML)
+
+	var sb strings.Builder
+	sb.WriteString("<p>📝 Новая редакция комментария</p>\n")
+	sb.WriteString(metadataTable)
+	sb.WriteString("\n")
+	fmt.Fprintf(&sb, "<details><summary>Старая версия</summary>%s</details>\n", formattedOldContent)
+	fmt.Fprintf(&sb, "<details open><summary>Текст</summary>%s</details>", formattedNewContent)
+
+	return truncateTelegramText(sb.String(), 30000)
 }
 
 func buildAnswerTelegramText(
@@ -922,28 +1186,7 @@ func buildAnswerTelegramText(
 	parentAuthorName, parentContentHTML string,
 	answerAuthorName, answerContentHTML string,
 ) string {
-	displayNovelTitle := novelTitle
-	if displayNovelTitle == "" {
-		displayNovelTitle = "Страница новеллы"
-	}
-
-	var novelURL string
-	if novelID != "" {
-		novelURL = fmt.Sprintf("%s/%s", telegramBaseURL, novelID)
-	} else {
-		novelURL = telegramBaseURL
-	}
-
-	var chapterURL string
-	if novelID != "" && chapterID != "" {
-		chapterURL = fmt.Sprintf("%s/%s/chapter/%s", telegramBaseURL, novelID, chapterID)
-	} else if chapterID != "" {
-		chapterURL = fmt.Sprintf("%s/chapter/%s", telegramBaseURL, chapterID)
-	} else {
-		chapterURL = telegramBaseURL
-	}
-
-	metadataTable := buildTelegramMetadataTable(novelURL, displayNovelTitle, chapterURL, chapterNum, chapterTitle, answerAuthorName, parentAuthorName)
+	metadataTable := buildTelegramMetadataTable(resolveNovelURL(novelID), resolveDisplayTitle(novelTitle), resolveChapterURL(novelID, chapterID), chapterNum, chapterTitle, answerAuthorName, parentAuthorName)
 	formattedParentContent := htmlToTelegramHTML(parentContentHTML)
 	formattedAnswerContent := htmlToTelegramHTML(answerContentHTML)
 
@@ -954,11 +1197,28 @@ func buildAnswerTelegramText(
 	fmt.Fprintf(&sb, "<details><summary>Комментарий</summary>%s</details>\n", formattedParentContent)
 	fmt.Fprintf(&sb, "<details open><summary>Ответ</summary>%s</details>", formattedAnswerContent)
 
-	text := sb.String()
-	if len(text) > 30000 {
-		text = text[:29990] + "..."
-	}
-	return text
+	return truncateTelegramText(sb.String(), 30000)
+}
+
+func buildEditedAnswerTelegramText(
+	novelID, novelTitle, chapterID string, chapterNum int, chapterTitle string,
+	parentAuthorName, parentContentHTML string,
+	answerAuthorName, oldContentHTML, newContentHTML string,
+) string {
+	metadataTable := buildTelegramMetadataTable(resolveNovelURL(novelID), resolveDisplayTitle(novelTitle), resolveChapterURL(novelID, chapterID), chapterNum, chapterTitle, answerAuthorName, parentAuthorName)
+	formattedParentContent := htmlToTelegramHTML(parentContentHTML)
+	formattedOldContent := htmlToTelegramHTML(oldContentHTML)
+	formattedNewContent := htmlToTelegramHTML(newContentHTML)
+
+	var sb strings.Builder
+	sb.WriteString("<p>📝 Новая редакция ответа</p>\n")
+	sb.WriteString(metadataTable)
+	sb.WriteString("\n")
+	fmt.Fprintf(&sb, "<details><summary>Комментарий</summary>%s</details>\n", formattedParentContent)
+	fmt.Fprintf(&sb, "<details><summary>Старая версия</summary>%s</details>\n", formattedOldContent)
+	fmt.Fprintf(&sb, "<details open><summary>Ответ</summary>%s</details>", formattedNewContent)
+
+	return truncateTelegramText(sb.String(), 30000)
 }
 
 func sendTelegramMessage(ctx context.Context, kind, id, text, approveAction, rejectAction, setMessageIDQuery string) {

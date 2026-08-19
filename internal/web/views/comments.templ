@@ -7,7 +7,9 @@ templ CommentsSection(chapterId string) {
 		</div>
 		<div class="comment-form-wrapper"></div>
 		<div class="comments-list"></div>
-		<div class="comments-pagination pagination"></div>
+		<div class="comments-loader" id="comments-loader" style="display: none;">
+			<span>Загрузка...</span>
+		</div>
 	</div>
 }
 
@@ -23,7 +25,9 @@ templ MyComments(props BaseProps) {
 			</div>
 			<div class="mc-loading" id="mc-loading" style="display: none;">Загрузка комментариев...</div>
 			<div class="mc-list" id="mc-list"></div>
-			<div class="mc-pagination pagination" id="mc-pagination"></div>
+			<div class="comments-loader" id="mc-loader" style="display: none;">
+				<span>Загрузка...</span>
+			</div>
 		</div>
 	}
 }

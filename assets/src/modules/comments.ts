@@ -9,12 +9,32 @@ const LAST_COMMENT_TIME_KEY = "kappalib_last_comment_time";
 
 const initializedContainers = new WeakSet<HTMLElement>();
 
+document.addEventListener("click", (e) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest(".comment-menu")) {
+    document.querySelectorAll(".comment-menu.active").forEach((m) => {
+      m.classList.remove("active");
+      m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+    });
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    document.querySelectorAll(".comment-menu.active").forEach((m) => {
+      m.classList.remove("active");
+      m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+    });
+  }
+});
+
 interface CommentAnswer {
   id: string;
   comment_id: string;
   user_id: string;
   content_html: string;
   status: string;
+  edited_at?: string | null;
   created_at: string;
   user_display_name: string;
   user_avatar_seed: string;
@@ -29,6 +49,7 @@ interface Comment {
   user_id: string;
   content_html: string;
   status: string;
+  edited_at?: string | null;
   created_at: string;
   user_display_name: string;
   user_avatar_seed: string;
@@ -62,6 +83,120 @@ interface CommentStats {
   replies: number;
 }
 
+function nodeToMarkdown(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent || "";
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return "";
+  }
+
+  const el = node as HTMLElement;
+  const tagName = el.tagName.toLowerCase();
+
+  const getChildrenMarkdown = () => {
+    let res = "";
+    node.childNodes.forEach((child) => {
+      res += nodeToMarkdown(child);
+    });
+    return res;
+  };
+
+  switch (tagName) {
+    case "span":
+      if (el.classList.contains("spoiler")) {
+        return `||${getChildrenMarkdown()}||`;
+      }
+      return getChildrenMarkdown();
+    case "strong":
+    case "b":
+      return `**${getChildrenMarkdown()}**`;
+    case "em":
+    case "i":
+      return `*${getChildrenMarkdown()}*`;
+    case "del":
+    case "s":
+    case "strike":
+      return `~~${getChildrenMarkdown()}~~`;
+    case "code":
+      if (el.parentElement?.tagName.toLowerCase() === "pre") {
+        return getChildrenMarkdown();
+      }
+      return `\`${getChildrenMarkdown()}\``;
+    case "pre": {
+      const codeText = el.textContent || "";
+      return `\`\`\`\n${codeText.replace(/\n+$/, "")}\n\`\`\`\n\n`;
+    }
+    case "blockquote": {
+      const inner = getChildrenMarkdown().trim();
+      const quoted = inner
+        .split("\n")
+        .map((line) => (line.length > 0 ? `> ${line}` : ">"))
+        .join("\n");
+      return `${quoted}\n\n`;
+    }
+    case "a": {
+      const href = el.getAttribute("href") || "";
+      const text = getChildrenMarkdown();
+      if (!href) return text;
+      return `[${text}](${href})`;
+    }
+    case "img": {
+      const src = el.getAttribute("src") || "";
+      const alt = el.getAttribute("alt") || "";
+      if (!src) return "";
+      return `![${alt}](${src})`;
+    }
+    case "h1":
+      return `# ${getChildrenMarkdown().trim()}\n\n`;
+    case "h2":
+      return `## ${getChildrenMarkdown().trim()}\n\n`;
+    case "h3":
+      return `### ${getChildrenMarkdown().trim()}\n\n`;
+    case "h4":
+      return `#### ${getChildrenMarkdown().trim()}\n\n`;
+    case "h5":
+      return `##### ${getChildrenMarkdown().trim()}\n\n`;
+    case "h6":
+      return `###### ${getChildrenMarkdown().trim()}\n\n`;
+    case "ul": {
+      let list = "";
+      el.querySelectorAll(":scope > li").forEach((li) => {
+        list += `- ${nodeToMarkdown(li).trim()}\n`;
+      });
+      return `${list}\n`;
+    }
+    case "ol": {
+      let list = "";
+      let idx = 1;
+      el.querySelectorAll(":scope > li").forEach((li) => {
+        list += `${idx}. ${nodeToMarkdown(li).trim()}\n`;
+        idx++;
+      });
+      return `${list}\n`;
+    }
+    case "li":
+      return getChildrenMarkdown();
+    case "p":
+      return `${getChildrenMarkdown().trim()}\n\n`;
+    case "br":
+      return "\n";
+    case "div":
+      return `${getChildrenMarkdown()}\n`;
+    default:
+      return getChildrenMarkdown();
+  }
+}
+
+function htmlToMarkdown(html: string): string {
+  if (!html) return "";
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+  let md = nodeToMarkdown(temp);
+  md = md.replace(/\n{3,}/g, "\n\n");
+  return md.trim();
+}
+
 function getLastCommentTime(): number {
   const stored = localStorage.getItem(LAST_COMMENT_TIME_KEY);
   return stored ? parseInt(stored, 10) : 0;
@@ -78,17 +213,32 @@ function getRemainingCooldown(): number {
 
 function startCooldownTimer(button: HTMLButtonElement): void {
   const updateButton = () => {
+    if (!button.isConnected) return;
     const remaining = getRemainingCooldown();
     if (remaining <= 0) {
       button.disabled = false;
-      button.textContent = "Отправить";
+      if (button.classList.contains("comment-edit-submit-btn")) {
+        button.textContent = "Сохранить";
+      } else {
+        button.textContent = "Отправить";
+      }
       return;
     }
     button.disabled = true;
     button.textContent = `Кулдаун ${Math.ceil(remaining / 1000)} сек.`;
-    requestAnimationFrame(() => setTimeout(updateButton, 100));
+    setTimeout(updateButton, 100);
   };
   updateButton();
+}
+
+function startAllCooldownTimers(): void {
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      "#comment-submit, .comment-reply-submit-btn, .comment-edit-submit-btn",
+    )
+    .forEach((btn) => {
+      startCooldownTimer(btn);
+    });
 }
 
 function pluralize(
@@ -131,7 +281,10 @@ function formatRelativeTime(dateStr: string): string {
   return `${years} ${pluralize(years, "год", "года", "лет")} назад`;
 }
 
-function createCommentHTML(comment: Comment): string {
+function createCommentHTML(
+  comment: Comment,
+  options?: { chapterUrl?: string },
+): string {
   const avatarUrl = getAvatarUrl(
     comment.user_id,
     comment.user_has_custom_avatar,
@@ -160,45 +313,57 @@ function createCommentHTML(comment: Comment): string {
       statusBadge = `<span class="comment-date">${formatRelativeTime(comment.created_at)}</span>`;
   }
 
+  const editedBadge = comment.edited_at
+    ? ' <span class="comment-edited">(ред.)</span>'
+    : "";
+
   const isApproved = comment.status === "approved";
   const isOwn = comment.user_id === profileManager.getProfileId();
 
   const upActive = comment.user_vote === 1 ? " vote-active" : "";
   const downActive = comment.user_vote === -1 ? " vote-active" : "";
 
-  const voteHTML = isApproved
-    ? `<div class="comment-votes">
-        <button class="vote-btn vote-up${upActive}" data-vote="1" data-comment-id="${comment.id}" aria-label="Лайк">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-6a1 1 0 0 1 1-1h3.293a.707.707 0 0 0 .5-1.207l-7.086-7.086a1 1 0 0 0-1.414 0l-7.086 7.086a.707.707 0 0 0 .5 1.207H8a1 1 0 0 1 1 1z"/>
-          </svg>
-        </button>
-        <span class="vote-score" data-comment-id="${comment.id}">${comment.score}</span>
-        <button class="vote-btn vote-down${downActive}" data-vote="-1" data-comment-id="${comment.id}" aria-label="Дизлайк">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 0 1 1h3.293a.707.707 0 0 1 .5 1.207l-7.086 7.086a1 1 0 0 1-1.414 0l-7.086-7.086a.707.707 0 0 1 .5-1.207H8a1 1 0 0 0 1-1z"/>
-          </svg>
-        </button>
-      </div>`
-    : `<div class="comment-votes">
-        <button class="vote-btn vote-disabled" aria-label="Лайк" disabled>
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-6a1 1 0 0 1 1-1h3.293a.707.707 0 0 0 .5-1.207l-7.086-7.086a1 1 0 0 0-1.414 0l-7.086 7.086a.707.707 0 0 0 .5 1.207H8a1 1 0 0 1 1 1z"/>
-          </svg>
-        </button>
-        <span class="vote-score">0</span>
-        <button class="vote-btn vote-disabled" aria-label="Дизлайк" disabled>
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 0 1 1h3.293a.707.707 0 0 1 .5 1.207l-7.086 7.086a1 1 0 0 1-1.414 0l-7.086-7.086a.707.707 0 0 1 .5-1.207H8a1 1 0 0 0 1-1z"/>
-          </svg>
-        </button>
-      </div>`;
+  const voteHTML = `<div class="comment-votes">
+      <button class="vote-btn vote-up${upActive}" data-vote="1" data-comment-id="${comment.id}" aria-label="Лайк">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-6a1 1 0 0 1 1-1h3.293a.707.707 0 0 0 .5-1.207l-7.086-7.086a1 1 0 0 0-1.414 0l-7.086 7.086a.707.707 0 0 0 .5 1.207H8a1 1 0 0 1 1 1z"/>
+        </svg>
+      </button>
+      <span class="vote-score" data-comment-id="${comment.id}">${comment.score}</span>
+      <button class="vote-btn vote-down${downActive}" data-vote="-1" data-comment-id="${comment.id}" aria-label="Дизлайк">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 0 1 1h3.293a.707.707 0 0 1 .5 1.207l-7.086 7.086a1 1 0 0 1-1.414 0l-7.086-7.086a.707.707 0 0 1 .5-1.207H8a1 1 0 0 0 1-1z"/>
+        </svg>
+      </button>
+    </div>`;
 
   let actionHTML = "";
-  if (isOwn && isApproved) {
-    actionHTML = `<button class="comment-delete-btn" data-comment-id="${comment.id}" aria-label="Удалить">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-      </button>`;
+  const canEdit = isOwn && (comment.status === "approved" || comment.status === "rejected");
+  const canDelete = isOwn && comment.status === "approved";
+
+  if (canEdit || canDelete) {
+    let itemsHTML = "";
+    if (canEdit) {
+      itemsHTML += `<button class="comment-dropdown-item comment-edit-btn" data-comment-id="${comment.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          <span>Редактировать</span>
+        </button>`;
+    }
+    if (canDelete) {
+      itemsHTML += `<button class="comment-dropdown-item comment-delete-btn danger" data-comment-id="${comment.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          <span>Удалить</span>
+        </button>`;
+    }
+
+    actionHTML = `<div class="comment-menu">
+        <button class="comment-menu-btn" aria-label="Действия" aria-haspopup="true" aria-expanded="false">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
+        <div class="comment-dropdown-menu">
+          ${itemsHTML}
+        </div>
+      </div>`;
   }
 
   const replyHTML = isApproved
@@ -213,6 +378,28 @@ function createCommentHTML(comment: Comment): string {
       ? `<div class="comment-footer">${voteHTML}${replyHTML}</div>`
       : "";
 
+  const chapterUrl =
+    options?.chapterUrl ||
+    (comment.novel_id && comment.chapter_id
+      ? `/${comment.novel_id}/chapter/${comment.chapter_id}`
+      : "");
+
+  let jumpHTML = "";
+  if (chapterUrl) {
+    jumpHTML = `<a href="${chapterUrl}#${comment.id}" class="comment-jump-link" title="Перейти к комментарию в главе" aria-label="Перейти к комментарию">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+        <polyline points="15 3 21 3 21 9"/>
+        <line x1="10" x2="21" y1="14" y2="3"/>
+      </svg>
+    </a>`;
+  }
+
+  const actionsHTML =
+    jumpHTML || actionHTML
+      ? `<div class="comment-header-actions">${jumpHTML}${actionHTML}</div>`
+      : "";
+
   let answersHTML = "";
   if (comment.answers && comment.answers.length > 0) {
     answersHTML = `<div class="comment-answers">`;
@@ -223,15 +410,19 @@ function createCommentHTML(comment: Comment): string {
   }
 
   return `
-    <div class="comment-item${extraClass}" data-comment-id="${comment.id}" data-comment-status="${comment.status}" tabindex="0">
-      <div class="comment-header">
+    <div class="comment-item${extraClass}" id="${comment.id}" data-comment-id="${comment.id}" data-chapter-id="${comment.chapter_id}" data-comment-status="${comment.status}" tabindex="0">
+      <div class="comment-main-row">
         <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
-        <span class="comment-author">${comment.user_display_name} ${statusBadge}</span>
-        ${actionHTML}
-      </div>
-      <div class="comment-body">
-        <div class="comment-content">${comment.content_html}</div>
-        ${footerHTML}
+        <div class="comment-main">
+          <div class="comment-header">
+            <span class="comment-author">${comment.user_display_name} ${statusBadge}${editedBadge}</span>
+            ${actionsHTML}
+          </div>
+          <div class="comment-body">
+            <div class="comment-content">${comment.content_html}</div>
+            ${footerHTML}
+          </div>
+        </div>
       </div>
       ${answersHTML}
     </div>
@@ -263,6 +454,10 @@ function createAnswerHTML(answer: CommentAnswer): string {
       statusBadge = `<span class="comment-date">${formatRelativeTime(answer.created_at)}</span>`;
   }
 
+  const editedBadge = answer.edited_at
+    ? ' <span class="comment-edited">(ред.)</span>'
+    : "";
+
   if (answer.is_new) {
     extraClass += " is-new";
   }
@@ -270,117 +465,87 @@ function createAnswerHTML(answer: CommentAnswer): string {
   const isOwn = answer.user_id === profileManager.getProfileId();
 
   let actionHTML = "";
-  if (isOwn && answer.status === "approved") {
-    actionHTML = `<button class="comment-delete-btn" data-answer-id="${answer.id}" aria-label="Удалить">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-      </button>`;
+  const canEdit = isOwn && (answer.status === "approved" || answer.status === "rejected");
+  const canDelete = isOwn && answer.status === "approved";
+
+  if (canEdit || canDelete) {
+    let itemsHTML = "";
+    if (canEdit) {
+      itemsHTML += `<button class="comment-dropdown-item comment-edit-btn" data-answer-id="${answer.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          <span>Редактировать</span>
+        </button>`;
+    }
+    if (canDelete) {
+      itemsHTML += `<button class="comment-dropdown-item comment-delete-btn danger" data-answer-id="${answer.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          <span>Удалить</span>
+        </button>`;
+    }
+
+    actionHTML = `<div class="comment-menu">
+        <button class="comment-menu-btn" aria-label="Действия" aria-haspopup="true" aria-expanded="false">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
+        <div class="comment-dropdown-menu">
+          ${itemsHTML}
+        </div>
+      </div>`;
   }
 
   const newBadge = answer.is_new ? ' <span class="comment-new-badge">Новый ответ</span>' : '';
 
   return `
-    <div class="comment-answer${extraClass}" data-answer-id="${answer.id}" tabindex="0">
-      <div class="comment-header">
-        <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
-        <span class="comment-author">${answer.user_display_name} ${statusBadge}${newBadge}</span>
-        ${actionHTML}
+    <div class="comment-answer${extraClass}" id="${answer.id}" data-answer-id="${answer.id}" tabindex="0">
+      <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
+      <div class="comment-main">
+        <div class="comment-header">
+          <span class="comment-author">${answer.user_display_name} ${statusBadge}${editedBadge}${newBadge}</span>
+          ${actionHTML}
+        </div>
+        <div class="comment-body"><div class="comment-content">${answer.content_html}</div></div>
       </div>
-      <div class="comment-body"><div class="comment-content">${answer.content_html}</div></div>
     </div>
   `;
 }
 
-function renderComments(container: HTMLElement, comments: Comment[]): void {
-  let html = "";
+function renderComments(
+  container: HTMLElement,
+  comments: Comment[],
+  append: boolean = false,
+): void {
+  const listEl = container.querySelector(".comments-list");
+  if (!listEl) return;
 
+  if (!append) {
+    if (comments.length === 0) {
+      listEl.innerHTML =
+        '<div class="comments-empty">Комментариев пока нет. Будьте первым!</div>';
+      return;
+    }
+    listEl.innerHTML = "";
+  }
+
+  let html = "";
   comments.forEach((c) => {
     html += createCommentHTML(c);
   });
 
-  const listEl = container.querySelector(".comments-list");
-  if (listEl) {
-    if (html) {
-      listEl.innerHTML = html;
-    } else {
-      listEl.innerHTML =
-        '<div class="comments-empty">Комментариев пока нет. Будьте первым!</div>';
+  if (append) {
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    while (temp.firstChild) {
+      listEl.appendChild(temp.firstChild);
     }
-  }
-}
-
-function buildPaginationHTML(page: number, totalPages: number): string {
-  let html = "";
-
-  if (page > 1) {
-    html += `<button class="page-link prev-next" data-page="${page - 1}">←</button>`;
   } else {
-    html += `<span class="page-link prev-next disabled">←</span>`;
+    listEl.innerHTML = html;
   }
-
-  const pages = calculatePagination(page, totalPages);
-  pages.forEach((p) => {
-    if (p === -1) {
-      html += `<span class="page-ellipsis">...</span>`;
-    } else if (p === page) {
-      html += `<span class="page-link active">${p}</span>`;
-    } else {
-      html += `<button class="page-link" data-page="${p}">${p}</button>`;
-    }
-  });
-
-  if (page < totalPages) {
-    html += `<button class="page-link prev-next" data-page="${page + 1}">→</button>`;
-  } else {
-    html += `<span class="page-link prev-next disabled">→</span>`;
-  }
-
-  return html;
 }
 
-function renderPagination(
-  container: HTMLElement,
-  page: number,
-  totalPages: number,
-): void {
-  const paginationEl = container.querySelector(".comments-pagination");
-  if (!paginationEl || totalPages <= 1) {
-    if (paginationEl) paginationEl.innerHTML = "";
-    return;
-  }
-
-  paginationEl.innerHTML = buildPaginationHTML(page, totalPages);
-}
-
-function calculatePagination(current: number, total: number): number[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-
-  const pages: number[] = [1];
-  let start = current - 2;
-  let end = current + 2;
-
-  if (start <= 2) {
-    start = 2;
-    end = 5;
-  }
-
-  if (end >= total - 1) {
-    end = total - 1;
-    start = total - 4;
-  }
-
-  if (start > 2) pages.push(-1);
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i);
-  }
-
-  if (end < total - 1) pages.push(-1);
-
-  pages.push(total);
-  return pages;
-}
+let isCommentsLoading = false;
+let commentsCurrentPage = 1;
+let commentsTotalPages = 1;
+let commentsObserver: IntersectionObserver | null = null;
 
 async function loadComments(
   container: HTMLElement,
@@ -388,16 +553,30 @@ async function loadComments(
   page: number = 1,
   noCache: boolean = false,
   showLoader: boolean = true,
+  commentId?: string,
 ): Promise<void> {
+  if (isCommentsLoading) return;
+  isCommentsLoading = true;
+
   const listEl = container.querySelector(".comments-list");
-  if (listEl && showLoader) {
+  const loader = container.querySelector<HTMLElement>("#comments-loader");
+
+  if (page === 1 && showLoader && listEl) {
     listEl.innerHTML =
       '<div class="comments-loading">Загрузка комментариев...</div>';
   }
 
+  if (page > 1 && loader) {
+    loader.style.display = "flex";
+  }
+
   try {
+    const url = commentId
+      ? `${API_URL}/chapters/${chapterId}/comments?comment_id=${commentId}`
+      : `${API_URL}/chapters/${chapterId}/comments?page=${page}`;
+
     const res = await fetch(
-      `${API_URL}/chapters/${chapterId}/comments?page=${page}`,
+      url,
       noCache
         ? { credentials: "include", cache: "no-cache" }
         : { credentials: "include" },
@@ -406,20 +585,184 @@ async function loadComments(
 
     const data: CommentsPage = await res.json();
 
-    renderComments(container, data.comments);
-    renderPagination(container, data.page, data.total_pages);
+    commentsTotalPages = data.total_pages;
+    commentsCurrentPage = data.page;
+
+    renderComments(container, data.comments, page > 1);
 
     const countEl = container.querySelector(".comments-count");
     if (countEl) {
       countEl.textContent = `${data.total_count}`;
     }
+
+    if (loader) {
+      loader.style.display =
+        commentsCurrentPage < commentsTotalPages ? "flex" : "none";
+    }
+
+    if (page === 1 && window.location.hash && window.location.hash !== "#comments-section") {
+      try {
+        const targetEl = document.querySelector(window.location.hash) as HTMLElement | null;
+        if (targetEl) {
+          smoothScrollToTarget(
+            () => targetEl,
+            () => targetEl,
+            (el) => {
+              highlightTargetElement(el);
+            },
+          );
+        }
+      } catch {}
+    }
   } catch (err) {
     console.error("Failed to load comments", err);
-    if (listEl && showLoader) {
+    if (listEl && page === 1 && showLoader) {
       listEl.innerHTML =
         '<div class="comments-error">Не удалось загрузить комментарии</div>';
     }
+  } finally {
+    isCommentsLoading = false;
+    if (loader && commentsCurrentPage < commentsTotalPages) {
+      loader.style.display = "flex";
+    }
   }
+}
+
+async function loadMoreComments(
+  container: HTMLElement,
+  chapterId: string,
+): Promise<void> {
+  if (isCommentsLoading || commentsCurrentPage >= commentsTotalPages) return;
+  await loadComments(
+    container,
+    chapterId,
+    commentsCurrentPage + 1,
+    false,
+    false,
+  );
+}
+
+let activeScrollAnimationId: number | null = null;
+
+function cancelActiveScrollAnimation(): void {
+  if (activeScrollAnimationId !== null) {
+    cancelAnimationFrame(activeScrollAnimationId);
+    activeScrollAnimationId = null;
+  }
+}
+
+function highlightTargetElement(el: HTMLElement): void {
+  el.classList.add("comment-highlight");
+  setTimeout(() => {
+    el.classList.remove("comment-highlight");
+  }, 2500);
+}
+
+function smoothScrollToTarget(
+  getTargetElement: () => HTMLElement | null,
+  fallbackTarget: () => HTMLElement | null,
+  onComplete?: (targetEl: HTMLElement) => void,
+): void {
+  cancelActiveScrollAnimation();
+
+  const startY = window.scrollY;
+  const initialEl = getTargetElement() || fallbackTarget();
+  if (!initialEl) return;
+
+  const getTargetY = (): number => {
+    const el = getTargetElement();
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const offset = (window.innerHeight - rect.height) / 2;
+      return Math.max(0, window.scrollY + rect.top - Math.max(20, offset));
+    }
+    const fallback = fallbackTarget();
+    if (fallback) {
+      return Math.max(
+        0,
+        window.scrollY + fallback.getBoundingClientRect().top - 20,
+      );
+    }
+    return window.scrollY;
+  };
+
+  const initialTargetY = getTargetY();
+  const distance = Math.abs(initialTargetY - startY);
+  const duration = Math.min(1000, Math.max(400, distance * 0.25));
+  let startTime: number | null = null;
+
+  const onUserInterrupt = () => {
+    cancelActiveScrollAnimation();
+    window.removeEventListener("wheel", onUserInterrupt);
+    window.removeEventListener("touchstart", onUserInterrupt);
+  };
+  window.addEventListener("wheel", onUserInterrupt, {
+    passive: true,
+    once: true,
+  });
+  window.addEventListener("touchstart", onUserInterrupt, {
+    passive: true,
+    once: true,
+  });
+
+  function step(timestamp: number): void {
+    if (!startTime) startTime = timestamp;
+    const elapsed = timestamp - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    const ease =
+      progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+    const currentTargetY = getTargetY();
+    window.scrollTo(0, startY + (currentTargetY - startY) * ease);
+
+    if (progress < 1) {
+      activeScrollAnimationId = requestAnimationFrame(step);
+    } else {
+      activeScrollAnimationId = null;
+      window.removeEventListener("wheel", onUserInterrupt);
+      window.removeEventListener("touchstart", onUserInterrupt);
+      const finalEl = getTargetElement();
+      if (finalEl && onComplete) {
+        onComplete(finalEl);
+      }
+    }
+  }
+
+  activeScrollAnimationId = requestAnimationFrame(step);
+}
+
+function startSmoothScrollToHash(): void {
+  const hash = window.location.hash;
+  if (!hash) return;
+
+  if (hash === "#comments-section") {
+    const section = document.getElementById("comments-section");
+    if (section) {
+      smoothScrollToTarget(
+        () => section,
+        () => section,
+      );
+    }
+    return;
+  }
+
+  const container = document.getElementById("comments-section");
+  smoothScrollToTarget(
+    () => {
+      try {
+        return document.querySelector(hash) as HTMLElement | null;
+      } catch {
+        return null;
+      }
+    },
+    () => container,
+    (targetEl) => {
+      highlightTargetElement(targetEl);
+    },
+  );
 }
 
 let turnstileWidgetId: string | null = null;
@@ -480,10 +823,16 @@ async function initTurnstileForComments(container: HTMLElement): Promise<void> {
 
   await loadTurnstileScript();
 
-  const turnstileContainer = container.querySelector(
-    "#comments-turnstile-container",
-  );
-  if (!turnstileContainer || turnstileLoaded || !(window as any).turnstile) return;
+  let turnstileContainer =
+    container.querySelector<HTMLElement>("#comments-turnstile-container") ||
+    document.getElementById("comments-turnstile-container");
+  if (!turnstileContainer) {
+    turnstileContainer = document.createElement("div");
+    turnstileContainer.id = "comments-turnstile-container";
+    turnstileContainer.style.display = "none";
+    document.body.appendChild(turnstileContainer);
+  }
+  if (turnstileLoaded || !(window as any).turnstile) return;
 
   turnstileLoaded = true;
 
@@ -689,11 +1038,13 @@ async function getSmartCaptchaToken(): Promise<string | null> {
 }
 
 function updateCharCounter(textarea: HTMLTextAreaElement): void {
-  const counter = document.getElementById("comment-char-counter");
+  const form = textarea.closest(".comment-form");
+  const counter = form?.querySelector(".comment-char-counter");
   if (counter) {
+    const isReply = textarea.classList.contains("comment-reply-textarea");
+    const maxLen = isReply ? 500 : 3000;
+    const warnThreshold = isReply ? 400 : 2500;
     const len = textarea.value.length;
-    const maxLen = replyTargetCommentId ? 500 : 3000;
-    const warnThreshold = replyTargetCommentId ? 400 : 2500;
     counter.textContent = `${len}/${maxLen}`;
     counter.classList.toggle("count-warning", len > warnThreshold);
     counter.classList.toggle("count-error", len >= maxLen);
@@ -710,6 +1061,13 @@ function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
     textarea.scrollHeight > maxHeight ? "auto" : "hidden";
 }
 
+function getTargetCommentIdFromHash(): string | undefined {
+  const hash = window.location.hash;
+  if (!hash) return undefined;
+  const match = hash.match(/^#((?:cmt|ans)_[a-z0-9]{8})$/);
+  return match ? match[1] : undefined;
+}
+
 export function initComments(): void {
   const container = document.getElementById("comments-section");
   if (!container) return;
@@ -722,7 +1080,41 @@ export function initComments(): void {
   if (initializedContainers.has(container)) return;
   initializedContainers.add(container);
 
-  loadComments(container, chapterId);
+  const loader = container.querySelector<HTMLElement>("#comments-loader");
+  if (loader) {
+    commentsObserver?.disconnect();
+    commentsObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (
+            entry.isIntersecting &&
+            !isCommentsLoading &&
+            commentsCurrentPage < commentsTotalPages
+          ) {
+            loadMoreComments(container, chapterId);
+          }
+        });
+      },
+      { rootMargin: "200px" },
+    );
+    commentsObserver.observe(loader);
+  }
+
+  window.addEventListener("hashchange", () => {
+    const targetId = getTargetCommentIdFromHash();
+    if (targetId && !document.getElementById(targetId)) {
+      startSmoothScrollToHash();
+      loadComments(container, chapterId, 1, false, true, targetId);
+    } else {
+      startSmoothScrollToHash();
+    }
+  });
+
+  const initialCommentId = getTargetCommentIdFromHash();
+  if (initialCommentId || window.location.hash === "#comments-section") {
+    startSmoothScrollToHash();
+  }
+  loadComments(container, chapterId, 1, false, true, initialCommentId);
 
   profileManager.onLogin(() => {
     renderCommentForm(container);
@@ -740,7 +1132,7 @@ export function initComments(): void {
     const voteBtn = target.closest(".vote-btn") as HTMLElement | null;
     if (voteBtn) {
       e.preventDefault();
-      handleVote(voteBtn, container, chapterId);
+      handleVote(voteBtn);
       return;
     }
 
@@ -751,9 +1143,39 @@ export function initComments(): void {
       return;
     }
 
+    const editBtn = target.closest(".comment-edit-btn") as HTMLElement | null;
+    if (editBtn) {
+      e.preventDefault();
+      editBtn.closest(".comment-menu")?.classList.remove("active");
+      const answerId = editBtn.dataset.answerId;
+      if (answerId) {
+        handleEditAnswer(editBtn, container, chapterId);
+      } else {
+        handleEditComment(editBtn, container, chapterId);
+      }
+      return;
+    }
+
+    const menuBtn = target.closest(".comment-menu-btn") as HTMLElement | null;
+    if (menuBtn) {
+      e.preventDefault();
+      const menu = menuBtn.closest(".comment-menu");
+      const wasActive = menu?.classList.contains("active");
+      document.querySelectorAll(".comment-menu.active").forEach((m) => {
+        m.classList.remove("active");
+        m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+      });
+      if (!wasActive && menu) {
+        menu.classList.add("active");
+        menuBtn.setAttribute("aria-expanded", "true");
+      }
+      return;
+    }
+
     const deleteBtn = target.closest(".comment-delete-btn") as HTMLElement | null;
     if (deleteBtn) {
       e.preventDefault();
+      deleteBtn.closest(".comment-menu")?.classList.remove("active");
       const answerId = deleteBtn.dataset.answerId;
       if (answerId) {
         handleDeleteAnswer(answerId, container, chapterId);
@@ -762,21 +1184,11 @@ export function initComments(): void {
       }
       return;
     }
-
-    const pageBtn = target.closest(".page-link[data-page]") as HTMLElement;
-    if (pageBtn && !pageBtn.classList.contains("disabled")) {
-      const page = parseInt(pageBtn.dataset.page || "1", 10);
-      loadComments(container, chapterId, page);
-
-      container.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   });
 }
 
 async function handleVote(
   btn: HTMLElement,
-  container?: HTMLElement,
-  chapterId?: string,
 ): Promise<void> {
   if (!profileManager.isLoggedIn()) return;
 
@@ -808,111 +1220,591 @@ async function handleVote(
     scoreEl.textContent = String(data.score);
     upBtn.classList.toggle("vote-active", data.user_vote === 1);
     downBtn.classList.toggle("vote-active", data.user_vote === -1);
-
-    if (container && chapterId) {
-      const activePage =
-        container.querySelector(".page-link.active")?.textContent || "1";
-      fetch(`${API_URL}/chapters/${chapterId}/comments?page=${activePage}`, {
-        credentials: "include",
-        cache: "no-cache",
-      });
-    }
-  } catch {
-    // silent
-  }
+  } catch {}
 }
 
-let replyTargetCommentId: string | null = null;
+function renderToolbarHTML(imageInputAttr: string): string {
+  return `
+    <div class="comment-toolbar">
+      <button type="button" class="toolbar-btn" data-action="bold" title="Жирный">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
+      </button>
+      <button type="button" class="toolbar-btn" data-action="italic" title="Курсив">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg>
+      </button>
+      <button type="button" class="toolbar-btn" data-action="spoiler" title="Спойлер">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+      <button type="button" class="toolbar-btn" data-action="quote" title="Цитата">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>
+      </button>
+      <span class="toolbar-separator"></span>
+      <button type="button" class="toolbar-btn" data-action="image" title="Изображение (до 5 МБ)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+      </button>
+      <input type="file" ${imageInputAttr} accept="image/jpeg,image/png,image/gif" style="display:none"/>
+    </div>
+  `;
+}
 
-function handleReply(btn: HTMLElement, container: HTMLElement): void {
-  if (!profileManager.isLoggedIn()) return;
-
-  const commentId = btn.dataset.commentId;
-  const author = btn.dataset.author;
-  if (!commentId || !author) return;
-
-  replyTargetCommentId = commentId;
-
-  const formWrapper = container.querySelector(".comment-form-wrapper");
-  const form = formWrapper?.querySelector(".comment-form");
-  if (!form) return;
-
-  const existingBanner = form.querySelector(".comment-reply-banner");
-  if (existingBanner) existingBanner.remove();
-
-  const banner = document.createElement("div");
-  banner.className = "comment-reply-banner";
-  banner.innerHTML = `Ответ пользователю <strong>${author}</strong>. <span class="reply-banner-cancel">Отменить?</span>`;
-  banner.addEventListener("click", () => {
-    cancelReplyMode(container);
+function initToolbarHandlers(
+  toolbar: HTMLElement,
+  textarea: HTMLTextAreaElement,
+  imageInput: HTMLInputElement | null,
+  container: HTMLElement,
+): void {
+  imageInput?.addEventListener("change", async () => {
+    const file = imageInput.files?.[0];
+    if (!file || !textarea) return;
+    imageInput.value = "";
+    initTurnstileForComments(container);
+    await uploadCommentImage(file, textarea);
   });
 
-  const textareaEl = form.querySelector(
-    "#comment-textarea",
-  ) as HTMLTextAreaElement | null;
-  if (textareaEl) {
-    textareaEl.insertAdjacentElement("afterend", banner);
+  toolbar.querySelectorAll(".toolbar-btn").forEach((btn) => {
+    btn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const action = (btn as HTMLElement).dataset.action;
+      switch (action) {
+        case "bold":
+          wrapSelection(textarea, "**", "**");
+          break;
+        case "italic":
+          wrapSelection(textarea, "*", "*");
+          break;
+        case "spoiler":
+          wrapSelection(textarea, "||", "||");
+          break;
+        case "quote":
+          insertLinePrefix(textarea, "> ");
+          break;
+        case "image":
+          if (!isUploadingImage) imageInput?.click();
+          break;
+      }
+      updateCharCounter(textarea);
+      autoResizeTextarea(textarea);
+    });
+  });
+}
+
+async function sendCommentPayload(
+  url: string,
+  method: "POST" | "PATCH",
+  content: string,
+  submitBtn: HTMLButtonElement,
+): Promise<boolean> {
+  const originalText = submitBtn.textContent || (method === "PATCH" ? "Сохранить" : "Отправить");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Проверка...";
+
+  let turnstileTok: string | null = await getTurnstileToken();
+  let smartCaptchaTok: string | null = null;
+
+  if (!turnstileTok) {
+    submitBtn.textContent = "Проверка...";
+    smartCaptchaTok = await getSmartCaptchaToken();
+  }
+
+  if (!turnstileTok && !smartCaptchaTok) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+    return false;
+  }
+
+  submitBtn.textContent = method === "PATCH" ? "Сохранение..." : "Отправка...";
+
+  const payload: {
+    content: string;
+    turnstile_token?: string;
+    smart_captcha_token?: string;
+  } = {
+    content: content,
+  };
+
+  if (smartCaptchaTok) {
+    payload.smart_captcha_token = smartCaptchaTok;
+  } else if (turnstileTok) {
+    payload.turnstile_token = turnstileTok;
+  }
+
+  let res = await fetch(url, {
+    method: method,
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    if (
+      res.status === 400 &&
+      err.detail === "Captcha verification failed" &&
+      turnstileTok &&
+      !smartCaptchaTok
+    ) {
+      submitBtn.textContent = "Проверка...";
+      smartCaptchaTok = await getSmartCaptchaToken();
+      if (smartCaptchaTok) {
+        submitBtn.textContent = method === "PATCH" ? "Сохранение..." : "Отправка...";
+        payload.turnstile_token = undefined;
+        payload.smart_captcha_token = smartCaptchaTok;
+        res = await fetch(url, {
+          method: method,
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const retryErr = await res.json();
+          throw new Error(retryErr.detail || "Failed to submit");
+        }
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        return false;
+      }
+    } else {
+      throw new Error(err.detail || "Failed to submit");
+    }
+  }
+
+  return true;
+}
+
+function handleReply(btn: HTMLElement, container: HTMLElement): void {
+  if (!profileManager.isLoggedIn()) {
+    alert("Войдите в аккаунт, чтобы ответить");
+    return;
+  }
+
+  const commentId = btn.dataset.commentId;
+  const author = btn.dataset.author || "";
+  if (!commentId) return;
+
+  const commentItem = btn.closest(".comment-item") as HTMLElement | null;
+  if (!commentItem) return;
+
+  const existingForm = commentItem.querySelector(".comment-reply-form-wrapper");
+  if (existingForm) {
+    existingForm.remove();
+    return;
+  }
+
+  document.querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper").forEach((el) => {
+    const parentMain = el.closest(".comment-main");
+    const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
+    if (parentBody) parentBody.style.display = "";
+    el.remove();
+  });
+
+  const formWrapper = document.createElement("div");
+  formWrapper.className = "comment-reply-form-wrapper";
+  formWrapper.innerHTML = `
+    <div class="comment-form comment-reply-form">
+      ${renderToolbarHTML('class="comment-reply-image-input"')}
+      <textarea
+        class="comment-textarea comment-reply-textarea"
+        placeholder="Ответ пользователю ${author}..."
+        maxlength="500"
+        rows="2"
+      ></textarea>
+      <div class="comment-form-footer">
+        <span class="comment-char-counter">0/500</span>
+        <div class="comment-reply-actions">
+          <button type="button" class="comment-reply-cancel-btn">Отмена</button>
+          <button type="button" class="action-btn btn-primary comment-submit-btn comment-reply-submit-btn">Отправить</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const answersEl = commentItem.querySelector(".comment-answers");
+  if (answersEl) {
+    commentItem.insertBefore(formWrapper, answersEl);
   } else {
-    form.insertBefore(banner, form.firstChild);
+    commentItem.appendChild(formWrapper);
   }
 
-  const textarea = form.querySelector(
-    "#comment-textarea",
-  ) as HTMLTextAreaElement;
-  if (textarea) {
-    textarea.maxLength = 500;
-    textarea.placeholder = `Ваш ответ...`;
-  }
+  initReplyFormHandlers(formWrapper, commentId, container);
 
-  const counter = form.querySelector("#comment-char-counter") as HTMLElement;
-  if (counter) {
-    const currentLen = textarea?.value.length || 0;
-    counter.textContent = `${currentLen}/500`;
-    counter.classList.toggle("count-warning", currentLen > 400);
-    counter.classList.toggle("count-error", currentLen >= 500);
-  }
-
-  form.scrollIntoView({ behavior: "smooth", block: "center" });
+  const textarea = formWrapper.querySelector(".comment-reply-textarea") as HTMLTextAreaElement | null;
   textarea?.focus();
 }
 
-function cancelReplyMode(container: HTMLElement): void {
-  replyTargetCommentId = null;
-
-  const formWrapper = container.querySelector(".comment-form-wrapper");
-  const form = formWrapper?.querySelector(".comment-form");
-  if (!form) return;
-
-  const banner = form.querySelector(".comment-reply-banner");
-  if (banner) banner.remove();
-
-  const textarea = form.querySelector(
-    "#comment-textarea",
-  ) as HTMLTextAreaElement;
-  if (textarea) {
-    textarea.maxLength = 3000;
-    textarea.placeholder = "Ваш комментарий...";
+function handleEditComment(btn: HTMLElement, container: HTMLElement, chapterId?: string): void {
+  if (!profileManager.isLoggedIn()) {
+    alert("Войдите в аккаунт, чтобы редактировать комментарий");
+    return;
   }
 
-  const counter = form.querySelector("#comment-char-counter") as HTMLElement;
-  if (counter && textarea) {
-    const currentLen = textarea.value.length;
-    counter.textContent = `${currentLen}/3000`;
-    counter.classList.toggle("count-warning", currentLen > 2500);
-    counter.classList.toggle("count-error", currentLen >= 3000);
+  const commentId = btn.dataset.commentId;
+  if (!commentId) return;
+
+  const commentItem = btn.closest(".comment-item") as HTMLElement | null;
+  if (!commentItem) return;
+
+  const mainEl = commentItem.querySelector(".comment-main") as HTMLElement | null;
+  const bodyEl = commentItem.querySelector(".comment-body") as HTMLElement | null;
+  const contentEl = commentItem.querySelector(".comment-content") as HTMLElement | null;
+  if (!mainEl || !bodyEl || !contentEl) return;
+
+  if (commentItem.querySelector(".comment-edit-form-wrapper")) {
+    return;
   }
+
+  document.querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper").forEach((el) => {
+    const parentMain = el.closest(".comment-main");
+    const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
+    if (parentBody) parentBody.style.display = "";
+    el.remove();
+  });
+
+  const markdownText = htmlToMarkdown(contentEl.innerHTML);
+  bodyEl.style.display = "none";
+
+  const formWrapper = document.createElement("div");
+  formWrapper.className = "comment-edit-form-wrapper";
+  formWrapper.innerHTML = `
+    <div class="comment-form comment-edit-form">
+      ${renderToolbarHTML('class="comment-edit-image-input"')}
+      <textarea
+        class="comment-textarea comment-edit-textarea"
+        placeholder="Ваш комментарий..."
+        maxlength="3000"
+        rows="2"
+      ></textarea>
+      <div class="comment-form-footer">
+        <span class="comment-char-counter">${markdownText.length}/3000</span>
+        <a href="/markdown" target="_blank" class="comment-markdown-hint">Формат</a>
+        <div class="comment-edit-actions">
+          <button type="button" class="comment-edit-cancel-btn">Отмена</button>
+          <button type="button" class="action-btn btn-primary comment-submit-btn comment-edit-submit-btn">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  mainEl.appendChild(formWrapper);
+
+  const textarea = formWrapper.querySelector(".comment-edit-textarea") as HTMLTextAreaElement;
+  const submitBtn = formWrapper.querySelector(".comment-edit-submit-btn") as HTMLButtonElement;
+  const cancelBtn = formWrapper.querySelector(".comment-edit-cancel-btn") as HTMLButtonElement;
+  const toolbar = formWrapper.querySelector(".comment-toolbar") as HTMLElement | null;
+  const imageInput = formWrapper.querySelector(".comment-edit-image-input") as HTMLInputElement | null;
+
+  textarea.value = markdownText;
+  autoResizeTextarea(textarea);
+
+  if (getRemainingCooldown() > 0) {
+    startCooldownTimer(submitBtn);
+  }
+
+  if (toolbar) {
+    initToolbarHandlers(toolbar, textarea, imageInput, container);
+  }
+
+  cancelBtn.addEventListener("click", () => {
+    formWrapper.remove();
+    bodyEl.style.display = "";
+  });
+
+  textarea.addEventListener("input", () => {
+    updateCharCounter(textarea);
+    autoResizeTextarea(textarea);
+  });
+
+  textarea.addEventListener("focus", () => {
+    initTurnstileForComments(container);
+  });
+
+  submitBtn.addEventListener("click", async () => {
+    if (getRemainingCooldown() > 0) {
+      startCooldownTimer(submitBtn);
+      return;
+    }
+
+    const content = textarea.value.trim();
+    if (!content) return;
+
+    if (content.length > 3000) {
+      alert("Комментарий слишком длинный (максимум 3000 символов)");
+      return;
+    }
+
+    try {
+      const ok = await sendCommentPayload(
+        `${API_URL}/comments/${commentId}`,
+        "PATCH",
+        content,
+        submitBtn,
+      );
+      if (!ok) return;
+
+      setLastCommentTime();
+      startAllCooldownTimers();
+      formWrapper.remove();
+
+      if (turnstileWidgetId && (window as any).turnstile) {
+        (window as any).turnstile.reset(turnstileWidgetId);
+      }
+
+      if (chapterId) {
+        await loadComments(container, chapterId, 1, true, false, commentId);
+      } else {
+        await loadMyComments(myCommentsCurrentPage);
+      }
+    } catch (err: any) {
+      console.error("Failed to edit comment", err);
+      bodyEl.style.display = "";
+      formWrapper.remove();
+      const msg =
+        err && typeof err === "object" && "message" in err && err.message
+          ? err.message === "Failed to submit"
+            ? "Не удалось сохранить. Попробуйте ещё раз."
+            : err.message
+          : "Не удалось сохранить. Попробуйте ещё раз.";
+      alert(msg);
+    }
+  });
+
+  textarea.focus();
 }
 
-function getCurrentPage(container: HTMLElement): number {
-  const activePage = container.querySelector(".page-link.active")?.textContent;
-  return activePage ? parseInt(activePage, 10) : 1;
+function handleEditAnswer(btn: HTMLElement, container: HTMLElement, chapterId?: string): void {
+  if (!profileManager.isLoggedIn()) {
+    alert("Войдите в аккаунт, чтобы редактировать ответ");
+    return;
+  }
+
+  const answerId = btn.dataset.answerId;
+  if (!answerId) return;
+
+  const answerItem = btn.closest(".comment-answer") as HTMLElement | null;
+  if (!answerItem) return;
+
+  const mainEl = answerItem.querySelector(".comment-main") as HTMLElement | null;
+  const bodyEl = answerItem.querySelector(".comment-body") as HTMLElement | null;
+  const contentEl = answerItem.querySelector(".comment-content") as HTMLElement | null;
+  if (!mainEl || !bodyEl || !contentEl) return;
+
+  if (answerItem.querySelector(".comment-edit-form-wrapper")) {
+    return;
+  }
+
+  document.querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper").forEach((el) => {
+    const parentMain = el.closest(".comment-main");
+    const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
+    if (parentBody) parentBody.style.display = "";
+    el.remove();
+  });
+
+  const markdownText = htmlToMarkdown(contentEl.innerHTML);
+  bodyEl.style.display = "none";
+
+  const formWrapper = document.createElement("div");
+  formWrapper.className = "comment-edit-form-wrapper";
+  formWrapper.innerHTML = `
+    <div class="comment-form comment-edit-form">
+      ${renderToolbarHTML('class="comment-edit-image-input"')}
+      <textarea
+        class="comment-textarea comment-edit-textarea comment-reply-textarea"
+        placeholder="Ваш ответ..."
+        maxlength="500"
+        rows="2"
+      ></textarea>
+      <div class="comment-form-footer">
+        <span class="comment-char-counter">${markdownText.length}/500</span>
+        <a href="/markdown" target="_blank" class="comment-markdown-hint">Формат</a>
+        <div class="comment-edit-actions">
+          <button type="button" class="comment-edit-cancel-btn">Отмена</button>
+          <button type="button" class="action-btn btn-primary comment-submit-btn comment-edit-submit-btn">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  mainEl.appendChild(formWrapper);
+
+  const textarea = formWrapper.querySelector(".comment-edit-textarea") as HTMLTextAreaElement;
+  const submitBtn = formWrapper.querySelector(".comment-edit-submit-btn") as HTMLButtonElement;
+  const cancelBtn = formWrapper.querySelector(".comment-edit-cancel-btn") as HTMLButtonElement;
+  const toolbar = formWrapper.querySelector(".comment-toolbar") as HTMLElement | null;
+  const imageInput = formWrapper.querySelector(".comment-edit-image-input") as HTMLInputElement | null;
+
+  textarea.value = markdownText;
+  autoResizeTextarea(textarea);
+
+  if (getRemainingCooldown() > 0) {
+    startCooldownTimer(submitBtn);
+  }
+
+  if (toolbar) {
+    initToolbarHandlers(toolbar, textarea, imageInput, container);
+  }
+
+  cancelBtn.addEventListener("click", () => {
+    formWrapper.remove();
+    bodyEl.style.display = "";
+  });
+
+  textarea.addEventListener("input", () => {
+    updateCharCounter(textarea);
+    autoResizeTextarea(textarea);
+  });
+
+  textarea.addEventListener("focus", () => {
+    initTurnstileForComments(container);
+  });
+
+  submitBtn.addEventListener("click", async () => {
+    if (getRemainingCooldown() > 0) {
+      startCooldownTimer(submitBtn);
+      return;
+    }
+
+    const content = textarea.value.trim();
+    if (!content) return;
+
+    if (content.length > 500) {
+      alert("Ответ слишком длинный (максимум 500 символов)");
+      return;
+    }
+
+    try {
+      const ok = await sendCommentPayload(
+        `${API_URL}/comment-answers/${answerId}`,
+        "PATCH",
+        content,
+        submitBtn,
+      );
+      if (!ok) return;
+
+      setLastCommentTime();
+      startAllCooldownTimers();
+      formWrapper.remove();
+
+      if (turnstileWidgetId && (window as any).turnstile) {
+        (window as any).turnstile.reset(turnstileWidgetId);
+      }
+
+      if (chapterId) {
+        await loadComments(container, chapterId, 1, true, false, answerId);
+      } else {
+        await loadMyComments(myCommentsCurrentPage);
+      }
+    } catch (err: any) {
+      console.error("Failed to edit answer", err);
+      bodyEl.style.display = "";
+      formWrapper.remove();
+      const msg =
+        err && typeof err === "object" && "message" in err && err.message
+          ? err.message === "Failed to submit"
+            ? "Не удалось сохранить. Попробуйте ещё раз."
+            : err.message
+          : "Не удалось сохранить. Попробуйте ещё раз.";
+      alert(msg);
+    }
+  });
+
+  textarea.focus();
+}
+
+function initReplyFormHandlers(
+  formWrapper: HTMLElement,
+  commentId: string,
+  container: HTMLElement,
+): void {
+  const textarea = formWrapper.querySelector(".comment-reply-textarea") as HTMLTextAreaElement | null;
+  const submitBtn = formWrapper.querySelector(".comment-reply-submit-btn") as HTMLButtonElement | null;
+  const cancelBtn = formWrapper.querySelector(".comment-reply-cancel-btn") as HTMLButtonElement | null;
+  const toolbar = formWrapper.querySelector(".comment-toolbar") as HTMLElement | null;
+  const imageInput = formWrapper.querySelector(".comment-reply-image-input") as HTMLInputElement | null;
+
+  if (!textarea || !submitBtn) return;
+
+  if (getRemainingCooldown() > 0) {
+    startCooldownTimer(submitBtn);
+  }
+
+  if (toolbar) {
+    initToolbarHandlers(toolbar, textarea, imageInput, container);
+  }
+
+  cancelBtn?.addEventListener("click", () => {
+    formWrapper.remove();
+  });
+
+  textarea.addEventListener("input", () => {
+    updateCharCounter(textarea);
+    autoResizeTextarea(textarea);
+  });
+
+  textarea.addEventListener("focus", () => {
+    initTurnstileForComments(container);
+  });
+
+  submitBtn.addEventListener("click", async () => {
+    if (getRemainingCooldown() > 0) {
+      startCooldownTimer(submitBtn);
+      return;
+    }
+
+    const content = textarea.value.trim();
+    if (!content) return;
+
+    if (content.length > 500) {
+      alert("Ответ слишком длинный (максимум 500 символов)");
+      return;
+    }
+
+    if (!profileManager.isLoggedIn()) {
+      alert("Войдите в аккаунт, чтобы оставить ответ");
+      return;
+    }
+
+    try {
+      const ok = await sendCommentPayload(
+        `${API_URL}/comments/${commentId}/answers`,
+        "POST",
+        content,
+        submitBtn,
+      );
+      if (!ok) return;
+
+      setLastCommentTime();
+      startAllCooldownTimers();
+      formWrapper.remove();
+
+      if (turnstileWidgetId && (window as any).turnstile) {
+        (window as any).turnstile.reset(turnstileWidgetId);
+      }
+
+      const chapterId = container.dataset.chapterId;
+      if (chapterId) {
+        await loadComments(container, chapterId, 1, true, false, commentId);
+      } else {
+        await loadMyComments(1);
+      }
+    } catch (err: any) {
+      console.error("Failed to submit answer", err);
+      const msg =
+        err && typeof err === "object" && "message" in err && err.message
+          ? err.message === "Failed to submit"
+            ? "Не удалось отправить. Попробуйте ещё раз."
+            : err.message
+          : "Не удалось отправить. Попробуйте ещё раз.";
+      alert(msg);
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Отправить";
+    }
+  });
 }
 
 async function handleDeleteComment(
   btn: HTMLElement,
   container?: HTMLElement,
   chapterId?: string,
-  currentPage?: number,
 ): Promise<void> {
   const commentId = btn.dataset.commentId;
   if (!commentId) return;
@@ -927,29 +1819,56 @@ async function handleDeleteComment(
 
     if (!res.ok) return;
 
-    if (container && chapterId) {
-      const wrapper = btn.closest(".mc-comment-wrapper");
-      const item = wrapper || btn.closest(".comment-item");
+    const wrapper = btn.closest(".mc-comment-wrapper") as HTMLElement | null;
+    if (wrapper) {
+      const separator = wrapper.querySelector(".mc-chapter-separator");
+      const nextWrapper = wrapper.nextElementSibling as HTMLElement | null;
+      if (
+        separator &&
+        nextWrapper &&
+        nextWrapper.classList.contains("mc-comment-wrapper")
+      ) {
+        const nextSeparator = nextWrapper.querySelector(".mc-chapter-separator");
+        if (!nextSeparator) {
+          nextWrapper.insertBefore(separator, nextWrapper.firstChild);
+        }
+      }
+      wrapper.remove();
+    } else {
+      const item = btn.closest(".comment-item");
       if (item) item.remove();
-
-      const activePage =
-        container.querySelector(".page-link.active")?.textContent || "1";
-      fetch(`${API_URL}/chapters/${chapterId}/comments?page=${activePage}`, {
-        credentials: "include",
-        cache: "no-cache",
-      });
-    } else if (currentPage !== undefined) {
-      loadMyComments(currentPage);
     }
-  } catch {
-    // silent
-  }
+
+    if (container && chapterId) {
+      const countEl = container.querySelector(".comments-count");
+      if (countEl) {
+        const current = parseInt(countEl.textContent || "0", 10);
+        if (current > 0) countEl.textContent = String(current - 1);
+      }
+      const listEl = container.querySelector(".comments-list");
+      if (listEl && listEl.querySelectorAll(".comment-item").length === 0) {
+        listEl.innerHTML =
+          '<div class="comments-empty">Комментариев пока нет. Будьте первым!</div>';
+      }
+    } else {
+      const countEl = document.getElementById("mc-count");
+      if (countEl) {
+        const current = parseInt(countEl.textContent || "0", 10);
+        if (current > 0) countEl.textContent = String(current - 1);
+      }
+      const listEl = document.getElementById("mc-list");
+      const emptyEl = document.getElementById("mc-empty");
+      if (listEl && listEl.querySelectorAll(".comment-item").length === 0 && emptyEl) {
+        emptyEl.style.display = "block";
+      }
+    }
+  } catch {}
 }
 
 async function handleDeleteAnswer(
   answerId: string,
   container: HTMLElement,
-  chapterId: string,
+  chapterId?: string,
 ): Promise<void> {
   if (!confirm("Вы уверены, что хотите удалить этот ответ?")) return;
 
@@ -965,22 +1884,11 @@ async function handleDeleteAnswer(
       `.comment-answer[data-answer-id="${answerId}"]`,
     );
     if (answerEl) answerEl.remove();
-
-    fetch(
-      `${API_URL}/chapters/${chapterId}/comments?page=${getCurrentPage(container)}`,
-      {
-        credentials: "include",
-        cache: "no-cache",
-      },
-    );
-  } catch {
-    // silent
-  }
+  } catch {}
 }
 
 async function handleDeleteMyAnswer(
   answerId: string,
-  currentPage: number,
 ): Promise<void> {
   if (!confirm("Вы уверены, что хотите удалить этот ответ?")) return;
 
@@ -992,10 +1900,11 @@ async function handleDeleteMyAnswer(
 
     if (!res.ok) return;
 
-    loadMyComments(currentPage);
-  } catch {
-    // silent
-  }
+    const answerEl = document.querySelector(
+      `.comment-answer[data-answer-id="${answerId}"]`,
+    );
+    if (answerEl) answerEl.remove();
+  } catch {}
 }
 
 function renderCommentForm(container: HTMLElement): void {
@@ -1005,35 +1914,7 @@ function renderCommentForm(container: HTMLElement): void {
   if (profileManager.isLoggedIn()) {
     formWrapper.innerHTML = `
       <div class="comment-form">
-        <div class="comment-toolbar">
-          <button type="button" class="toolbar-btn" data-action="h1" title="Заголовок 1">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="m17 12 3-2v8"/></svg>
-          </button>
-          <button type="button" class="toolbar-btn" data-action="h2" title="Заголовок 2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M21 18h-4c0-4 4-3 4-6 0-1.5-2-2.5-4-1"/></svg>
-          </button>
-          <button type="button" class="toolbar-btn" data-action="h3" title="Заголовок 3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M17.5 10.5c1.7-1 3.5 0 3.5 1.5a2 2 0 0 1-2 2"/><path d="M17 17.5c2 1.5 4 .3 4-1.5a2 2 0 0 0-2-2"/></svg>
-          </button>
-          <span class="toolbar-separator"></span>
-          <button type="button" class="toolbar-btn" data-action="bold" title="Жирный">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
-          </button>
-          <button type="button" class="toolbar-btn" data-action="italic" title="Курсив">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg>
-          </button>
-          <button type="button" class="toolbar-btn" data-action="spoiler" title="Спойлер">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
-          <button type="button" class="toolbar-btn" data-action="quote" title="Цитата">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>
-          </button>
-          <span class="toolbar-separator"></span>
-          <button type="button" class="toolbar-btn" data-action="image" title="Изображение (до 5 МБ)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-          </button>
-          <input type="file" id="comment-image-input" accept="image/jpeg,image/png,image/gif" style="display:none"/>
-        </div>
+        ${renderToolbarHTML('id="comment-image-input"')}
         <textarea
           id="comment-textarea"
           class="comment-textarea"
@@ -1139,12 +2020,9 @@ function wrapSelection(
   autoResizeTextarea(textarea);
 }
 
-const headingPrefixes = ["# ", "## ", "### "];
-
 function insertLinePrefix(
   textarea: HTMLTextAreaElement,
   prefix: string,
-  alternates?: string[],
 ): void {
   const start = textarea.selectionStart;
   const lineStart = textarea.value.lastIndexOf("\n", start - 1) + 1;
@@ -1162,32 +2040,13 @@ function insertLinePrefix(
       lineStart,
       start - prefix.length,
     );
-    textarea.focus();
-    updateCharCounter(textarea);
-    autoResizeTextarea(textarea);
-    return;
+  } else {
+    const before = textarea.value.substring(0, lineStart);
+    const after = textarea.value.substring(lineStart);
+    textarea.value = `${before}${prefix}${after}`;
+    textarea.selectionStart = textarea.selectionEnd = start + prefix.length;
   }
 
-  if (alternates) {
-    for (const alt of alternates) {
-      if (alt !== prefix && lineContent.startsWith(alt)) {
-        const before = textarea.value.substring(0, lineStart);
-        const after = textarea.value.substring(lineStart + alt.length);
-        textarea.value = `${before}${prefix}${after}`;
-        textarea.selectionStart = textarea.selectionEnd =
-          start - alt.length + prefix.length;
-        textarea.focus();
-        updateCharCounter(textarea);
-        autoResizeTextarea(textarea);
-        return;
-      }
-    }
-  }
-
-  const before = textarea.value.substring(0, lineStart);
-  const after = textarea.value.substring(lineStart);
-  textarea.value = `${before}${prefix}${after}`;
-  textarea.selectionStart = textarea.selectionEnd = start + prefix.length;
   textarea.focus();
   updateCharCounter(textarea);
   autoResizeTextarea(textarea);
@@ -1339,14 +2198,25 @@ function truncateText(text: string, maxLength: number): string {
   return text.slice(0, maxLength) + "…";
 }
 
-function renderMyComments(listEl: HTMLElement, comments: Comment[]): void {
-  if (comments.length === 0) {
+function renderMyComments(
+  listEl: HTMLElement,
+  comments: Comment[],
+  append: boolean = false,
+): void {
+  if (!append && comments.length === 0) {
     listEl.innerHTML = "";
     return;
   }
 
-  let html = "";
   let lastChapterId: string | null = null;
+  if (append) {
+    const lastItem = listEl.querySelector<HTMLElement>(
+      ".mc-comment-wrapper:last-child .comment-item",
+    );
+    lastChapterId = lastItem?.dataset.chapterId || null;
+  }
+
+  let html = "";
   comments.forEach((c) => {
     const showSeparator = c.chapter_id !== lastChapterId;
     lastChapterId = c.chapter_id;
@@ -1362,15 +2232,24 @@ function renderMyComments(listEl: HTMLElement, comments: Comment[]): void {
             <span class="mc-chapter-num">Глава ${c.chapter_num || ""}</span>
           </a>
         </div>
-        ${createCommentHTML(c)}
+        ${createCommentHTML(c, { chapterUrl })}
       </div>`;
     } else {
       html += `<div class="mc-comment-wrapper">
-        ${createCommentHTML(c)}
+        ${createCommentHTML(c, { chapterUrl })}
       </div>`;
     }
   });
-  listEl.innerHTML = html;
+
+  if (append) {
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    while (temp.firstChild) {
+      listEl.appendChild(temp.firstChild);
+    }
+  } else {
+    listEl.innerHTML = html;
+  }
 }
 
 function buildSparklinePath(
@@ -1468,7 +2347,7 @@ async function loadCommentStats(): Promise<void> {
       data.rating === 0
         ? "var(--secondary)"
         : data.rating > 0
-          ? "var(--color-success)"
+          ? "var(--accent-primary)"
           : "var(--color-danger)";
 
     container.innerHTML =
@@ -1495,7 +2374,15 @@ async function loadCommentStats(): Promise<void> {
   }
 }
 
+let isMyCommentsLoading = false;
+let myCommentsCurrentPage = 1;
+let myCommentsTotalPages = 1;
+let myCommentsObserver: IntersectionObserver | null = null;
+
 async function loadMyComments(page: number = 1): Promise<void> {
+  if (isMyCommentsLoading) return;
+  isMyCommentsLoading = true;
+
   if (!profileManager.getProfileCache()) {
     await profileManager.fetchProfile();
   }
@@ -1503,12 +2390,20 @@ async function loadMyComments(page: number = 1): Promise<void> {
   const listEl = document.getElementById("mc-list");
   const emptyEl = document.getElementById("mc-empty");
   const loadingEl = document.getElementById("mc-loading");
-  const paginationEl = document.getElementById("mc-pagination");
   const countEl = document.getElementById("mc-count");
+  const loader = document.getElementById("mc-loader");
 
-  if (!listEl || !emptyEl || !paginationEl) return;
+  if (!listEl || !emptyEl) {
+    isMyCommentsLoading = false;
+    return;
+  }
 
-  if (loadingEl) loadingEl.style.display = "block";
+  if (page === 1 && loadingEl) {
+    loadingEl.style.display = "block";
+  }
+  if (page > 1 && loader) {
+    loader.style.display = "flex";
+  }
 
   try {
     const res = await fetch(`${API_URL}/profile/me/comments?page=${page}`, {
@@ -1532,35 +2427,57 @@ async function loadMyComments(page: number = 1): Promise<void> {
 
     if (loadingEl) loadingEl.style.display = "none";
 
-    if (data.total_count === 0) {
+    myCommentsTotalPages = data.total_pages;
+    myCommentsCurrentPage = data.page;
+
+    if (data.total_count === 0 && page === 1) {
       emptyEl.style.display = "block";
       listEl.innerHTML = "";
-      paginationEl.innerHTML = "";
       if (countEl) countEl.textContent = "";
+      if (loader) loader.style.display = "none";
       return;
     }
 
     emptyEl.style.display = "none";
     if (countEl) countEl.textContent = `${data.total_count}`;
 
-    renderMyComments(listEl, data.comments);
+    renderMyComments(listEl, data.comments, page > 1);
 
-    if (data.total_pages > 1) {
-      paginationEl.innerHTML = buildPaginationHTML(data.page, data.total_pages);
-    } else {
-      paginationEl.innerHTML = "";
+    if (loader) {
+      loader.style.display =
+        myCommentsCurrentPage < myCommentsTotalPages ? "flex" : "none";
     }
   } catch (err) {
     console.error("Failed to load user comments", err);
     if (loadingEl) loadingEl.style.display = "none";
-    listEl.innerHTML =
-      '<div class="comments-error">Не удалось загрузить комментарии</div>';
+    if (page === 1) {
+      listEl.innerHTML =
+        '<div class="comments-error">Не удалось загрузить комментарии</div>';
+    }
+  } finally {
+    isMyCommentsLoading = false;
+    if (loader && myCommentsCurrentPage < myCommentsTotalPages) {
+      loader.style.display = "flex";
+    }
   }
+}
+
+async function loadMoreMyComments(): Promise<void> {
+  if (isMyCommentsLoading || myCommentsCurrentPage >= myCommentsTotalPages) return;
+  await loadMyComments(myCommentsCurrentPage + 1);
 }
 
 export function initMyCommentsPage(): void {
   const content = document.getElementById("mc-content");
   if (!content) return;
+
+  if (initializedContainers.has(content)) return;
+  initializedContainers.add(content);
+
+  profileManager.onLogin(() => {
+    loadCommentStats();
+    loadMyComments(1);
+  });
 
   if (!profileManager.isLoggedIn()) {
     const emptyEl = document.getElementById("mc-empty");
@@ -1570,6 +2487,26 @@ export function initMyCommentsPage(): void {
         "Войдите в аккаунт, чтобы видеть свои комментарии";
     }
     return;
+  }
+
+  const loader = document.getElementById("mc-loader");
+  if (loader) {
+    myCommentsObserver?.disconnect();
+    myCommentsObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (
+            entry.isIntersecting &&
+            !isMyCommentsLoading &&
+            myCommentsCurrentPage < myCommentsTotalPages
+          ) {
+            loadMoreMyComments();
+          }
+        });
+      },
+      { rootMargin: "200px" },
+    );
+    myCommentsObserver.observe(loader);
   }
 
   loadCommentStats();
@@ -1591,33 +2528,56 @@ export function initMyCommentsPage(): void {
       return;
     }
 
+    const replyBtn = target.closest(".comment-reply-btn") as HTMLElement | null;
+    if (replyBtn) {
+      e.preventDefault();
+      handleReply(replyBtn, content);
+      return;
+    }
+
+    const menuBtn = target.closest(".comment-menu-btn") as HTMLElement | null;
+    if (menuBtn) {
+      e.preventDefault();
+      const menu = menuBtn.closest(".comment-menu");
+      const wasActive = menu?.classList.contains("active");
+      document.querySelectorAll(".comment-menu.active").forEach((m) => {
+        m.classList.remove("active");
+        m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+      });
+      if (!wasActive && menu) {
+        menu.classList.add("active");
+        menuBtn.setAttribute("aria-expanded", "true");
+      }
+      return;
+    }
+
+    const editBtn = target.closest(".comment-edit-btn") as HTMLElement | null;
+    if (editBtn) {
+      e.preventDefault();
+      editBtn.closest(".comment-menu")?.classList.remove("active");
+      const answerId = editBtn.dataset.answerId;
+      if (answerId) {
+        handleEditAnswer(editBtn, content);
+      } else {
+        handleEditComment(editBtn, content);
+      }
+      return;
+    }
+
     const deleteBtn = target.closest(
       ".comment-delete-btn",
     ) as HTMLElement | null;
     if (deleteBtn) {
       e.preventDefault();
-      const activePage =
-        content.querySelector(".page-link.active")?.textContent || "1";
+      deleteBtn.closest(".comment-menu")?.classList.remove("active");
 
       const answerId = deleteBtn.dataset.answerId;
       if (answerId) {
-        handleDeleteMyAnswer(answerId, parseInt(activePage, 10));
+        handleDeleteMyAnswer(answerId);
       } else {
-        handleDeleteComment(
-          deleteBtn,
-          undefined,
-          undefined,
-          parseInt(activePage, 10),
-        );
+        handleDeleteComment(deleteBtn);
       }
       return;
-    }
-
-    const pageBtn = target.closest(".page-link[data-page]") as HTMLElement;
-    if (pageBtn && !pageBtn.classList.contains("disabled")) {
-      const page = parseInt(pageBtn.dataset.page || "1", 10);
-      loadMyComments(page);
-      content.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
 }
@@ -1630,6 +2590,7 @@ function initFormHandlers(container: HTMLElement): void {
     "#comment-submit",
   ) as HTMLButtonElement;
   const chapterId = container.dataset.chapterId;
+  const toolbar = container.querySelector(".comment-toolbar") as HTMLElement | null;
   const imageInput = container.querySelector(
     "#comment-image-input",
   ) as HTMLInputElement;
@@ -1640,47 +2601,9 @@ function initFormHandlers(container: HTMLElement): void {
     startCooldownTimer(submitBtn);
   }
 
-  container.querySelectorAll(".toolbar-btn").forEach((btn) => {
-    btn.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      if (!textarea) return;
-      const action = (btn as HTMLElement).dataset.action;
-      switch (action) {
-        case "h1":
-          insertLinePrefix(textarea, "# ", headingPrefixes);
-          break;
-        case "h2":
-          insertLinePrefix(textarea, "## ", headingPrefixes);
-          break;
-        case "h3":
-          insertLinePrefix(textarea, "### ", headingPrefixes);
-          break;
-        case "bold":
-          wrapSelection(textarea, "**", "**");
-          break;
-        case "italic":
-          wrapSelection(textarea, "*", "*");
-          break;
-        case "spoiler":
-          wrapSelection(textarea, "||", "||");
-          break;
-        case "quote":
-          insertLinePrefix(textarea, "> ");
-          break;
-        case "image":
-          if (!isUploadingImage) imageInput?.click();
-          break;
-      }
-    });
-  });
-
-  imageInput?.addEventListener("change", async () => {
-    const file = imageInput.files?.[0];
-    if (!file || !textarea) return;
-    imageInput.value = "";
-    initTurnstileForComments(container);
-    await uploadCommentImage(file, textarea);
-  });
+  if (toolbar && textarea) {
+    initToolbarHandlers(toolbar, textarea, imageInput, container);
+  }
 
   if (textarea) {
     textarea.addEventListener("input", () => {
@@ -1695,18 +2618,16 @@ function initFormHandlers(container: HTMLElement): void {
 
   if (submitBtn && textarea) {
     submitBtn.addEventListener("click", async () => {
+      if (getRemainingCooldown() > 0) {
+        startCooldownTimer(submitBtn);
+        return;
+      }
+
       const content = textarea.value.trim();
       if (!content) return;
 
-      const isReplyMode = !!replyTargetCommentId;
-      const maxLen = isReplyMode ? 500 : 3000;
-
-      if (content.length > maxLen) {
-        alert(
-          isReplyMode
-            ? "Ответ слишком длинный (максимум 500 символов)"
-            : "Комментарий слишком длинный (максимум 3000 символов)",
-        );
+      if (content.length > 3000) {
+        alert("Комментарий слишком длинный (максимум 3000 символов)");
         return;
       }
 
@@ -1715,101 +2636,27 @@ function initFormHandlers(container: HTMLElement): void {
         return;
       }
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Проверка...";
-
-      let turnstileTok: string | null = await getTurnstileToken();
-      let smartCaptchaTok: string | null = null;
-
-      if (!turnstileTok) {
-        submitBtn.textContent = "Проверка...";
-        smartCaptchaTok = await getSmartCaptchaToken();
-      }
-
-      if (!turnstileTok && !smartCaptchaTok) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Отправить";
-        return;
-      }
-
-      submitBtn.textContent = "Отправка...";
-
       try {
-        const targetCommentId = replyTargetCommentId;
-        const url = isReplyMode
-          ? `${API_URL}/comments/${targetCommentId}/answers`
-          : `${API_URL}/chapters/${chapterId}/comments`;
+        const ok = await sendCommentPayload(
+          `${API_URL}/chapters/${chapterId}/comments`,
+          "POST",
+          content,
+          submitBtn,
+        );
+        if (!ok) return;
 
-        const payload: {
-          content: string;
-          turnstile_token?: string;
-          smart_captcha_token?: string;
-        } = {
-          content: content,
-        };
-
-        if (smartCaptchaTok) {
-          payload.smart_captcha_token = smartCaptchaTok;
-        } else if (turnstileTok) {
-          payload.turnstile_token = turnstileTok;
-        }
-
-        let res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          if (
-            res.status === 400 &&
-            err.detail === "Captcha verification failed" &&
-            turnstileTok &&
-            !smartCaptchaTok
-          ) {
-            submitBtn.textContent = "Проверка...";
-            smartCaptchaTok = await getSmartCaptchaToken();
-            if (smartCaptchaTok) {
-              submitBtn.textContent = "Отправка...";
-              payload.turnstile_token = undefined;
-              payload.smart_captcha_token = smartCaptchaTok;
-              res = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify(payload),
-              });
-              if (!res.ok) {
-                const retryErr = await res.json();
-                throw new Error(retryErr.detail || "Failed to submit");
-              }
-            } else {
-              submitBtn.disabled = false;
-              submitBtn.textContent = "Отправить";
-              return;
-            }
-          } else {
-            throw new Error(err.detail || "Failed to submit");
-          }
-        }
+        setLastCommentTime();
+        startAllCooldownTimers();
 
         textarea.value = "";
         updateCharCounter(textarea);
         autoResizeTextarea(textarea);
-
-        if (isReplyMode) {
-          cancelReplyMode(container);
-        }
 
         if (turnstileWidgetId && (window as any).turnstile) {
           (window as any).turnstile.reset(turnstileWidgetId);
         }
 
         await loadComments(container, chapterId, 1, true, false);
-        setLastCommentTime();
-        startCooldownTimer(submitBtn);
       } catch (err: any) {
         console.error("Failed to submit", err);
         const msg =

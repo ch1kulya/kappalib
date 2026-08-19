@@ -126,6 +126,7 @@ type Comment struct {
 	UserID              string          `json:"user_id"`
 	ContentHTML         string          `json:"content_html"`
 	Status              string          `json:"status"`
+	EditedAt            *time.Time      `json:"edited_at,omitempty"`
 	TelegramMessageID   *int64          `json:"telegram_message_id,omitempty"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UserDisplayName     string          `json:"user_display_name,omitempty"`
@@ -141,18 +142,19 @@ type Comment struct {
 }
 
 type CommentAnswer struct {
-	ID                  string    `json:"id"`
-	CommentID           string    `json:"comment_id"`
-	UserID              string    `json:"user_id"`
-	ContentHTML         string    `json:"content_html"`
-	Status              string    `json:"status"`
-	TelegramMessageID   *int64    `json:"telegram_message_id,omitempty"`
-	CreatedAt           time.Time `json:"created_at"`
-	UserDisplayName     string    `json:"user_display_name,omitempty"`
-	UserAvatarSeed      string    `json:"user_avatar_seed,omitempty"`
-	UserHasCustomAvatar bool      `json:"user_has_custom_avatar,omitempty"`
-	UserAvatarUpdatedAt int64     `json:"user_avatar_updated_at,omitempty"`
-	IsNew               bool      `json:"is_new"`
+	ID                  string     `json:"id"`
+	CommentID           string     `json:"comment_id"`
+	UserID              string     `json:"user_id"`
+	ContentHTML         string     `json:"content_html"`
+	Status              string     `json:"status"`
+	EditedAt            *time.Time `json:"edited_at,omitempty"`
+	TelegramMessageID   *int64     `json:"telegram_message_id,omitempty"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UserDisplayName     string     `json:"user_display_name,omitempty"`
+	UserAvatarSeed      string     `json:"user_avatar_seed,omitempty"`
+	UserHasCustomAvatar bool       `json:"user_has_custom_avatar,omitempty"`
+	UserAvatarUpdatedAt int64      `json:"user_avatar_updated_at,omitempty"`
+	IsNew               bool       `json:"is_new"`
 }
 
 type CommentsPage struct {
@@ -214,6 +216,20 @@ type CreateCommentInput struct {
 
 type CreateCommentAnswerInput struct {
 	CommentID         string `json:"comment_id"`
+	Content           string `json:"content"`
+	TurnstileToken    string `json:"turnstile_token,omitempty"`
+	SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
+	IP                string `json:"-"`
+}
+
+type EditCommentInput struct {
+	Content           string `json:"content"`
+	TurnstileToken    string `json:"turnstile_token,omitempty"`
+	SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
+	IP                string `json:"-"`
+}
+
+type EditCommentAnswerInput struct {
 	Content           string `json:"content"`
 	TurnstileToken    string `json:"turnstile_token,omitempty"`
 	SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
