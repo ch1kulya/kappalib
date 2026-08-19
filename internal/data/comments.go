@@ -465,23 +465,31 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int,
 		}
 	}
 
-	var totalCount int
+	var topLevelCount, answersCount int
 	err := database.DB.QueryRow(dbCtx, `
-        SELECT COUNT(*)
+        SELECT
+            COUNT(DISTINCT c.id) AS top_level_count,
+            COUNT(DISTINCT ca.id) AS answers_count
         FROM comments c
+        LEFT JOIN comment_answers ca ON ca.comment_id = c.id
+            AND ca.status != 'deleted'
+            AND (
+                ca.status = 'approved'
+                OR (ca.status IN ('pending', 'rejected') AND ca.user_id = $2)
+            )
         WHERE c.chapter_id = $1
           AND c.status != 'deleted'
           AND (
             c.status = 'approved'
             OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
           )
-    `, chapterID, userID).Scan(&totalCount)
+    `, chapterID, userID).Scan(&topLevelCount, &answersCount)
 	if err != nil {
 		logger.Error("Failed to count visible comments: %v", err)
 		return nil, err
 	}
 
-	if totalCount == 0 {
+	if topLevelCount == 0 {
 		return &models.CommentsPage{
 			Comments:   []models.Comment{},
 			Page:       1,
@@ -491,7 +499,9 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int,
 		}, nil
 	}
 
-	limit, offset, resultPage, totalPages := CalculateCommentsPagination(page, pageSize, totalCount, isDeepLink, targetPage)
+	totalCount := topLevelCount + answersCount
+
+	limit, offset, resultPage, totalPages := CalculateCommentsPagination(page, pageSize, topLevelCount, isDeepLink, targetPage)
 
 	rows, err := database.DB.Query(dbCtx, `
         SELECT

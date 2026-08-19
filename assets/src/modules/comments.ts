@@ -592,7 +592,7 @@ async function loadComments(
 
     const countEl = container.querySelector(".comments-count");
     if (countEl) {
-      countEl.textContent = `${data.total_count}`;
+      countEl.textContent = `(${data.total_count})`;
     }
 
     if (loader) {
@@ -1842,8 +1842,8 @@ async function handleDeleteComment(
     if (container && chapterId) {
       const countEl = container.querySelector(".comments-count");
       if (countEl) {
-        const current = parseInt(countEl.textContent || "0", 10);
-        if (current > 0) countEl.textContent = String(current - 1);
+        const current = parseInt((countEl.textContent || "").replace(/\D/g, "") || "0", 10);
+        if (current > 0) countEl.textContent = `(${current - 1})`;
       }
       const listEl = container.querySelector(".comments-list");
       if (listEl && listEl.querySelectorAll(".comment-item").length === 0) {
@@ -1853,8 +1853,12 @@ async function handleDeleteComment(
     } else {
       const countEl = document.getElementById("mc-count");
       if (countEl) {
-        const current = parseInt(countEl.textContent || "0", 10);
-        if (current > 0) countEl.textContent = String(current - 1);
+        const current = parseInt((countEl.textContent || "").replace(/\D/g, "") || "0", 10);
+        if (current > 1) {
+          countEl.textContent = `(${current - 1})`;
+        } else {
+          countEl.textContent = "";
+        }
       }
       const listEl = document.getElementById("mc-list");
       const emptyEl = document.getElementById("mc-empty");
@@ -1884,6 +1888,14 @@ async function handleDeleteAnswer(
       `.comment-answer[data-answer-id="${answerId}"]`,
     );
     if (answerEl) answerEl.remove();
+
+    if (container && chapterId) {
+      const countEl = container.querySelector(".comments-count");
+      if (countEl) {
+        const current = parseInt((countEl.textContent || "").replace(/\D/g, "") || "0", 10);
+        if (current > 0) countEl.textContent = `(${current - 1})`;
+      }
+    }
   } catch {}
 }
 
@@ -1904,6 +1916,16 @@ async function handleDeleteMyAnswer(
       `.comment-answer[data-answer-id="${answerId}"]`,
     );
     if (answerEl) answerEl.remove();
+
+    const countEl = document.getElementById("mc-count");
+    if (countEl) {
+      const current = parseInt((countEl.textContent || "").replace(/\D/g, "") || "0", 10);
+      if (current > 1) {
+        countEl.textContent = `(${current - 1})`;
+      } else {
+        countEl.textContent = "";
+      }
+    }
   } catch {}
 }
 
@@ -2439,7 +2461,7 @@ async function loadMyComments(page: number = 1): Promise<void> {
     }
 
     emptyEl.style.display = "none";
-    if (countEl) countEl.textContent = `${data.total_count}`;
+    if (countEl) countEl.textContent = `(${data.total_count})`;
 
     renderMyComments(listEl, data.comments, page > 1);
 
