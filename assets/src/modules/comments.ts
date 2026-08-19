@@ -458,13 +458,17 @@ async function loadComments(
         commentsCurrentPage < commentsTotalPages ? "flex" : "none";
     }
 
-    if (page === 1 && activeScrollAnimationId === null) {
+    if (page === 1 && window.location.hash && window.location.hash !== "#comments-section") {
       try {
-        const targetEl = window.location.hash
-          ? (document.querySelector(window.location.hash) as HTMLElement | null)
-          : null;
+        const targetEl = document.querySelector(window.location.hash) as HTMLElement | null;
         if (targetEl) {
-          highlightTargetElement(targetEl);
+          smoothScrollToTarget(
+            () => targetEl,
+            () => targetEl,
+            (el) => {
+              highlightTargetElement(el);
+            },
+          );
         }
       } catch {}
     }
