@@ -3399,9 +3399,9 @@ a.update-log-item:active {
 }
 
 .mc-count {
-    font-size: 0.9rem;
+    font-size: 1.05rem;
     color: var(--secondary);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .mc-list {
@@ -3553,9 +3553,9 @@ a.update-log-item:active {
 }
 
 .comments-count {
-    font-size: 0.9rem;
+    font-size: 1.05rem;
     color: var(--secondary);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .comment-form-wrapper {
