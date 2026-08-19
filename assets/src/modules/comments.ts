@@ -1065,9 +1065,7 @@ async function handleVote(
     scoreEl.textContent = String(data.score);
     upBtn.classList.toggle("vote-active", data.user_vote === 1);
     downBtn.classList.toggle("vote-active", data.user_vote === -1);
-  } catch {
-    // silent
-  }
+  } catch {}
 }
 
 function renderToolbarHTML(imageInputAttr: string): string {
@@ -1378,9 +1376,25 @@ async function handleDeleteComment(
 
     if (!res.ok) return;
 
-    const wrapper = btn.closest(".mc-comment-wrapper");
-    const item = wrapper || btn.closest(".comment-item");
-    if (item) item.remove();
+    const wrapper = btn.closest(".mc-comment-wrapper") as HTMLElement | null;
+    if (wrapper) {
+      const separator = wrapper.querySelector(".mc-chapter-separator");
+      const nextWrapper = wrapper.nextElementSibling as HTMLElement | null;
+      if (
+        separator &&
+        nextWrapper &&
+        nextWrapper.classList.contains("mc-comment-wrapper")
+      ) {
+        const nextSeparator = nextWrapper.querySelector(".mc-chapter-separator");
+        if (!nextSeparator) {
+          nextWrapper.insertBefore(separator, nextWrapper.firstChild);
+        }
+      }
+      wrapper.remove();
+    } else {
+      const item = btn.closest(".comment-item");
+      if (item) item.remove();
+    }
 
     if (container && chapterId) {
       const countEl = container.querySelector(".comments-count");
@@ -1405,9 +1419,7 @@ async function handleDeleteComment(
         emptyEl.style.display = "block";
       }
     }
-  } catch {
-    // silent
-  }
+  } catch {}
 }
 
 async function handleDeleteAnswer(
@@ -1429,9 +1441,7 @@ async function handleDeleteAnswer(
       `.comment-answer[data-answer-id="${answerId}"]`,
     );
     if (answerEl) answerEl.remove();
-  } catch {
-    // silent
-  }
+  } catch {}
 }
 
 async function handleDeleteMyAnswer(
@@ -1451,9 +1461,7 @@ async function handleDeleteMyAnswer(
       `.comment-answer[data-answer-id="${answerId}"]`,
     );
     if (answerEl) answerEl.remove();
-  } catch {
-    // silent
-  }
+  } catch {}
 }
 
 function renderCommentForm(container: HTMLElement): void {
