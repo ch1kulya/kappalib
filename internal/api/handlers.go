@@ -100,6 +100,7 @@ type ProfileIDInput struct {
 type GetCommentsInput struct {
 	ChapterID string `path:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
 	Page      int    `query:"page" default:"1" minimum:"1" maximum:"9999"`
+	CommentID string `query:"comment_id" pattern:"^(cmt|ans)_[a-z0-9]{8}$"`
 }
 
 type CreateCommentInput struct {
@@ -399,7 +400,7 @@ func HandleLogout(ctx context.Context, input *struct{}) (*LogoutResponse, error)
 func HandleGetComments(ctx context.Context, input *GetCommentsInput) (*CommentsPageResponse, error) {
 	userID := auth.GetUserIDFromContext(ctx)
 
-	comments, err := data.GetVisibleComments(ctx, input.ChapterID, userID, input.Page)
+	comments, err := data.GetVisibleComments(ctx, input.ChapterID, userID, input.Page, input.CommentID)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch comments")
 	}

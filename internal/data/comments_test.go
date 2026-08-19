@@ -306,3 +306,176 @@ func TestBuildAnswerTelegramText(t *testing.T) {
 	}
 }
 
+func TestCalculateCommentsPagination(t *testing.T) {
+	tests := []struct {
+		name            string
+		page            int
+		pageSize        int
+		totalCount      int
+		isDeepLink      bool
+		targetPage      int
+		wantLimit       int
+		wantOffset      int
+		wantResultPage  int
+		wantTotalPages  int
+	}{
+		{
+			name:           "standard page 1",
+			page:           1,
+			pageSize:       12,
+			totalCount:     25,
+			isDeepLink:     false,
+			targetPage:     1,
+			wantLimit:      12,
+			wantOffset:     0,
+			wantResultPage: 1,
+			wantTotalPages: 3,
+		},
+		{
+			name:           "standard page 2",
+			page:           2,
+			pageSize:       12,
+			totalCount:     25,
+			isDeepLink:     false,
+			targetPage:     1,
+			wantLimit:      12,
+			wantOffset:     12,
+			wantResultPage: 2,
+			wantTotalPages: 3,
+		},
+		{
+			name:           "standard page 3",
+			page:           3,
+			pageSize:       12,
+			totalCount:     25,
+			isDeepLink:     false,
+			targetPage:     1,
+			wantLimit:      12,
+			wantOffset:     24,
+			wantResultPage: 3,
+			wantTotalPages: 3,
+		},
+		{
+			name:           "deep link page 1",
+			page:           1,
+			pageSize:       12,
+			totalCount:     50,
+			isDeepLink:     true,
+			targetPage:     1,
+			wantLimit:      12,
+			wantOffset:     0,
+			wantResultPage: 1,
+			wantTotalPages: 5,
+		},
+		{
+			name:           "deep link page 3 fetches pages 1 to 3",
+			page:           1,
+			pageSize:       12,
+			totalCount:     50,
+			isDeepLink:     true,
+			targetPage:     3,
+			wantLimit:      36,
+			wantOffset:     0,
+			wantResultPage: 3,
+			wantTotalPages: 5,
+		},
+		{
+			name:           "deep link page 5 fetches pages 1 to 5",
+			page:           1,
+			pageSize:       12,
+			totalCount:     50,
+			isDeepLink:     true,
+			targetPage:     5,
+			wantLimit:      60,
+			wantOffset:     0,
+			wantResultPage: 5,
+			wantTotalPages: 5,
+		},
+		{
+			name:           "zero count produces zero total pages",
+			page:           1,
+			pageSize:       12,
+			totalCount:     0,
+			isDeepLink:     false,
+			targetPage:     1,
+			wantLimit:      12,
+			wantOffset:     0,
+			wantResultPage: 1,
+			wantTotalPages: 0,
+		},
+		{
+			name:           "single item count produces one page",
+			page:           1,
+			pageSize:       12,
+			totalCount:     1,
+			isDeepLink:     false,
+			targetPage:     1,
+			wantLimit:      12,
+			wantOffset:     0,
+			wantResultPage: 1,
+			wantTotalPages: 1,
+		},
+		{
+			name:           "exact page size count",
+			page:           1,
+			pageSize:       12,
+			totalCount:     12,
+			isDeepLink:     false,
+			targetPage:     1,
+			wantLimit:      12,
+			wantOffset:     0,
+			wantResultPage: 1,
+			wantTotalPages: 1,
+		},
+		{
+			name:           "exact page size plus one count",
+			page:           1,
+			pageSize:       12,
+			totalCount:     13,
+			isDeepLink:     false,
+			targetPage:     1,
+			wantLimit:      12,
+			wantOffset:     0,
+			wantResultPage: 1,
+			wantTotalPages: 2,
+		},
+		{
+			name:           "exact two pages count",
+			page:           1,
+			pageSize:       12,
+			totalCount:     24,
+			isDeepLink:     false,
+			targetPage:     1,
+			wantLimit:      12,
+			wantOffset:     0,
+			wantResultPage: 1,
+			wantTotalPages: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotLimit, gotOffset, gotResultPage, gotTotalPages := CalculateCommentsPagination(
+				tt.page,
+				tt.pageSize,
+				tt.totalCount,
+				tt.isDeepLink,
+				tt.targetPage,
+			)
+
+			if gotLimit != tt.wantLimit {
+				t.Errorf("limit = %d, want %d", gotLimit, tt.wantLimit)
+			}
+			if gotOffset != tt.wantOffset {
+				t.Errorf("offset = %d, want %d", gotOffset, tt.wantOffset)
+			}
+			if gotResultPage != tt.wantResultPage {
+				t.Errorf("resultPage = %d, want %d", gotResultPage, tt.wantResultPage)
+			}
+			if gotTotalPages != tt.wantTotalPages {
+				t.Errorf("totalPages = %d, want %d", gotTotalPages, tt.wantTotalPages)
+			}
+		})
+	}
+}
+

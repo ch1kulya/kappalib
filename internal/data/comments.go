@@ -316,12 +316,78 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 	return &comment, nil
 }
 
-func GetVisibleComments(ctx context.Context, chapterID, userID string, page int) (*models.CommentsPage, error) {
+func CalculateCommentsPagination(page, pageSize, totalCount int, isDeepLink bool, targetPage int) (limit, offset, resultPage, totalPages int) {
+	if totalCount > 0 && pageSize > 0 {
+		totalPages = (totalCount + pageSize - 1) / pageSize
+	}
+	if isDeepLink {
+		return targetPage * pageSize, 0, targetPage, totalPages
+	}
+	return pageSize, (page - 1) * pageSize, page, totalPages
+}
+
+func GetVisibleComments(ctx context.Context, chapterID, userID string, page int, targetID ...string) (*models.CommentsPage, error) {
 	pageSize := 12
-	offset := (page - 1) * pageSize
 
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
+	var target string
+	if len(targetID) > 0 {
+		target = targetID[0]
+	}
+
+	targetPage := page
+	isDeepLink := false
+
+	if target != "" {
+		targetCommentID := target
+		if strings.HasPrefix(target, "ans_") {
+			var parentCommentID string
+			err := database.DB.QueryRow(dbCtx, `
+				SELECT comment_id
+				FROM comment_answers
+				WHERE id = $1
+				  AND status != 'deleted'
+				  AND (status = 'approved' OR (status IN ('pending', 'rejected') AND user_id = $2))
+			`, target, userID).Scan(&parentCommentID)
+			if err == nil && parentCommentID != "" {
+				targetCommentID = parentCommentID
+			} else {
+				targetCommentID = ""
+			}
+		}
+
+		if targetCommentID != "" {
+			var targetCreatedAt time.Time
+			err := database.DB.QueryRow(dbCtx, `
+				SELECT created_at
+				FROM comments
+				WHERE id = $1
+				  AND chapter_id = $2
+				  AND status != 'deleted'
+				  AND (status = 'approved' OR (status IN ('pending', 'rejected') AND user_id = $3))
+			`, targetCommentID, chapterID, userID).Scan(&targetCreatedAt)
+			if err == nil {
+				var pos int
+				err = database.DB.QueryRow(dbCtx, `
+					SELECT COUNT(*)
+					FROM comments c
+					WHERE c.chapter_id = $1
+					  AND c.status != 'deleted'
+					  AND (
+					    c.status = 'approved'
+					    OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
+					  )
+					  AND (c.created_at > $3 OR (c.created_at = $3 AND c.id < $4))
+				`, chapterID, userID, targetCreatedAt, targetCommentID).Scan(&pos)
+				if err == nil {
+					targetPage = (pos / pageSize) + 1
+					isDeepLink = true
+				}
+			}
+		}
+	}
 
 	var totalCount int
 	err := database.DB.QueryRow(dbCtx, `
@@ -342,12 +408,14 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 	if totalCount == 0 {
 		return &models.CommentsPage{
 			Comments:   []models.Comment{},
-			Page:       page,
+			Page:       1,
 			PageSize:   pageSize,
 			TotalCount: 0,
 			TotalPages: 0,
 		}, nil
 	}
+
+	limit, offset, resultPage, totalPages := CalculateCommentsPagination(page, pageSize, totalCount, isDeepLink, targetPage)
 
 	rows, err := database.DB.Query(dbCtx, `
         SELECT
@@ -363,9 +431,9 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
             c.status = 'approved'
             OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
           )
-        ORDER BY c.created_at DESC
+        ORDER BY c.created_at DESC, c.id ASC
         LIMIT $3 OFFSET $4
-    `, chapterID, userID, pageSize, offset)
+    `, chapterID, userID, limit, offset)
 	if err != nil {
 		logger.Error("Failed to get visible comments: %v", err)
 		return nil, err
@@ -438,10 +506,9 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int)
 		}
 	}
 
-	totalPages := (totalCount + pageSize - 1) / pageSize
 	return &models.CommentsPage{
 		Comments:   comments,
-		Page:       page,
+		Page:       resultPage,
 		PageSize:   pageSize,
 		TotalCount: totalCount,
 		TotalPages: totalPages,
