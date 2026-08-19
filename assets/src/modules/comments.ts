@@ -34,6 +34,7 @@ interface CommentAnswer {
   user_id: string;
   content_html: string;
   status: string;
+  edited_at?: string | null;
   created_at: string;
   user_display_name: string;
   user_avatar_seed: string;
@@ -48,6 +49,7 @@ interface Comment {
   user_id: string;
   content_html: string;
   status: string;
+  edited_at?: string | null;
   created_at: string;
   user_display_name: string;
   user_avatar_seed: string;
@@ -81,6 +83,120 @@ interface CommentStats {
   replies: number;
 }
 
+function nodeToMarkdown(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent || "";
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return "";
+  }
+
+  const el = node as HTMLElement;
+  const tagName = el.tagName.toLowerCase();
+
+  const getChildrenMarkdown = () => {
+    let res = "";
+    node.childNodes.forEach((child) => {
+      res += nodeToMarkdown(child);
+    });
+    return res;
+  };
+
+  switch (tagName) {
+    case "span":
+      if (el.classList.contains("spoiler")) {
+        return `||${getChildrenMarkdown()}||`;
+      }
+      return getChildrenMarkdown();
+    case "strong":
+    case "b":
+      return `**${getChildrenMarkdown()}**`;
+    case "em":
+    case "i":
+      return `*${getChildrenMarkdown()}*`;
+    case "del":
+    case "s":
+    case "strike":
+      return `~~${getChildrenMarkdown()}~~`;
+    case "code":
+      if (el.parentElement?.tagName.toLowerCase() === "pre") {
+        return getChildrenMarkdown();
+      }
+      return `\`${getChildrenMarkdown()}\``;
+    case "pre": {
+      const codeText = el.textContent || "";
+      return `\`\`\`\n${codeText.replace(/\n+$/, "")}\n\`\`\`\n\n`;
+    }
+    case "blockquote": {
+      const inner = getChildrenMarkdown().trim();
+      const quoted = inner
+        .split("\n")
+        .map((line) => (line.length > 0 ? `> ${line}` : ">"))
+        .join("\n");
+      return `${quoted}\n\n`;
+    }
+    case "a": {
+      const href = el.getAttribute("href") || "";
+      const text = getChildrenMarkdown();
+      if (!href) return text;
+      return `[${text}](${href})`;
+    }
+    case "img": {
+      const src = el.getAttribute("src") || "";
+      const alt = el.getAttribute("alt") || "";
+      if (!src) return "";
+      return `![${alt}](${src})`;
+    }
+    case "h1":
+      return `# ${getChildrenMarkdown().trim()}\n\n`;
+    case "h2":
+      return `## ${getChildrenMarkdown().trim()}\n\n`;
+    case "h3":
+      return `### ${getChildrenMarkdown().trim()}\n\n`;
+    case "h4":
+      return `#### ${getChildrenMarkdown().trim()}\n\n`;
+    case "h5":
+      return `##### ${getChildrenMarkdown().trim()}\n\n`;
+    case "h6":
+      return `###### ${getChildrenMarkdown().trim()}\n\n`;
+    case "ul": {
+      let list = "";
+      el.querySelectorAll(":scope > li").forEach((li) => {
+        list += `- ${nodeToMarkdown(li).trim()}\n`;
+      });
+      return `${list}\n`;
+    }
+    case "ol": {
+      let list = "";
+      let idx = 1;
+      el.querySelectorAll(":scope > li").forEach((li) => {
+        list += `${idx}. ${nodeToMarkdown(li).trim()}\n`;
+        idx++;
+      });
+      return `${list}\n`;
+    }
+    case "li":
+      return getChildrenMarkdown();
+    case "p":
+      return `${getChildrenMarkdown().trim()}\n\n`;
+    case "br":
+      return "\n";
+    case "div":
+      return `${getChildrenMarkdown()}\n`;
+    default:
+      return getChildrenMarkdown();
+  }
+}
+
+function htmlToMarkdown(html: string): string {
+  if (!html) return "";
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+  let md = nodeToMarkdown(temp);
+  md = md.replace(/\n{3,}/g, "\n\n");
+  return md.trim();
+}
+
 function getLastCommentTime(): number {
   const stored = localStorage.getItem(LAST_COMMENT_TIME_KEY);
   return stored ? parseInt(stored, 10) : 0;
@@ -101,7 +217,11 @@ function startCooldownTimer(button: HTMLButtonElement): void {
     const remaining = getRemainingCooldown();
     if (remaining <= 0) {
       button.disabled = false;
-      button.textContent = "Отправить";
+      if (button.classList.contains("comment-edit-submit-btn")) {
+        button.textContent = "Сохранить";
+      } else {
+        button.textContent = "Отправить";
+      }
       return;
     }
     button.disabled = true;
@@ -114,7 +234,7 @@ function startCooldownTimer(button: HTMLButtonElement): void {
 function startAllCooldownTimers(): void {
   document
     .querySelectorAll<HTMLButtonElement>(
-      "#comment-submit, .comment-reply-submit-btn",
+      "#comment-submit, .comment-reply-submit-btn, .comment-edit-submit-btn",
     )
     .forEach((btn) => {
       startCooldownTimer(btn);
@@ -193,51 +313,55 @@ function createCommentHTML(
       statusBadge = `<span class="comment-date">${formatRelativeTime(comment.created_at)}</span>`;
   }
 
+  const editedBadge = comment.edited_at
+    ? ' <span class="comment-edited">(ред.)</span>'
+    : "";
+
   const isApproved = comment.status === "approved";
   const isOwn = comment.user_id === profileManager.getProfileId();
 
   const upActive = comment.user_vote === 1 ? " vote-active" : "";
   const downActive = comment.user_vote === -1 ? " vote-active" : "";
 
-  const voteHTML = isApproved
-    ? `<div class="comment-votes">
-        <button class="vote-btn vote-up${upActive}" data-vote="1" data-comment-id="${comment.id}" aria-label="Лайк">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-6a1 1 0 0 1 1-1h3.293a.707.707 0 0 0 .5-1.207l-7.086-7.086a1 1 0 0 0-1.414 0l-7.086 7.086a.707.707 0 0 0 .5 1.207H8a1 1 0 0 1 1 1z"/>
-          </svg>
-        </button>
-        <span class="vote-score" data-comment-id="${comment.id}">${comment.score}</span>
-        <button class="vote-btn vote-down${downActive}" data-vote="-1" data-comment-id="${comment.id}" aria-label="Дизлайк">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 0 1 1h3.293a.707.707 0 0 1 .5 1.207l-7.086 7.086a1 1 0 0 1-1.414 0l-7.086-7.086a.707.707 0 0 1 .5-1.207H8a1 1 0 0 0 1-1z"/>
-          </svg>
-        </button>
-      </div>`
-    : `<div class="comment-votes">
-        <button class="vote-btn vote-disabled" aria-label="Лайк" disabled>
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-6a1 1 0 0 1 1-1h3.293a.707.707 0 0 0 .5-1.207l-7.086-7.086a1 1 0 0 0-1.414 0l-7.086 7.086a.707.707 0 0 0 .5 1.207H8a1 1 0 0 1 1 1z"/>
-          </svg>
-        </button>
-        <span class="vote-score">0</span>
-        <button class="vote-btn vote-disabled" aria-label="Дизлайк" disabled>
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 0 1 1h3.293a.707.707 0 0 1 .5 1.207l-7.086 7.086a1 1 0 0 1-1.414 0l-7.086-7.086a.707.707 0 0 1 .5-1.207H8a1 1 0 0 0 1-1z"/>
-          </svg>
-        </button>
-      </div>`;
+  const voteHTML = `<div class="comment-votes">
+      <button class="vote-btn vote-up${upActive}" data-vote="1" data-comment-id="${comment.id}" aria-label="Лайк">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-6a1 1 0 0 1 1-1h3.293a.707.707 0 0 0 .5-1.207l-7.086-7.086a1 1 0 0 0-1.414 0l-7.086 7.086a.707.707 0 0 0 .5 1.207H8a1 1 0 0 1 1 1z"/>
+        </svg>
+      </button>
+      <span class="vote-score" data-comment-id="${comment.id}">${comment.score}</span>
+      <button class="vote-btn vote-down${downActive}" data-vote="-1" data-comment-id="${comment.id}" aria-label="Дизлайк">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 0 1 1h3.293a.707.707 0 0 1 .5 1.207l-7.086 7.086a1 1 0 0 1-1.414 0l-7.086-7.086a.707.707 0 0 1 .5-1.207H8a1 1 0 0 0 1-1z"/>
+        </svg>
+      </button>
+    </div>`;
 
   let actionHTML = "";
-  if (isOwn && isApproved) {
+  const canEdit = isOwn && (comment.status === "approved" || comment.status === "rejected");
+  const canDelete = isOwn && comment.status === "approved";
+
+  if (canEdit || canDelete) {
+    let itemsHTML = "";
+    if (canEdit) {
+      itemsHTML += `<button class="comment-dropdown-item comment-edit-btn" data-comment-id="${comment.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          <span>Редактировать</span>
+        </button>`;
+    }
+    if (canDelete) {
+      itemsHTML += `<button class="comment-dropdown-item comment-delete-btn danger" data-comment-id="${comment.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          <span>Удалить</span>
+        </button>`;
+    }
+
     actionHTML = `<div class="comment-menu">
         <button class="comment-menu-btn" aria-label="Действия" aria-haspopup="true" aria-expanded="false">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
         </button>
         <div class="comment-dropdown-menu">
-          <button class="comment-dropdown-item comment-delete-btn danger" data-comment-id="${comment.id}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-            <span>Удалить</span>
-          </button>
+          ${itemsHTML}
         </div>
       </div>`;
   }
@@ -291,7 +415,7 @@ function createCommentHTML(
         <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
         <div class="comment-main">
           <div class="comment-header">
-            <span class="comment-author">${comment.user_display_name} ${statusBadge}</span>
+            <span class="comment-author">${comment.user_display_name} ${statusBadge}${editedBadge}</span>
             ${actionsHTML}
           </div>
           <div class="comment-body">
@@ -330,6 +454,10 @@ function createAnswerHTML(answer: CommentAnswer): string {
       statusBadge = `<span class="comment-date">${formatRelativeTime(answer.created_at)}</span>`;
   }
 
+  const editedBadge = answer.edited_at
+    ? ' <span class="comment-edited">(ред.)</span>'
+    : "";
+
   if (answer.is_new) {
     extraClass += " is-new";
   }
@@ -337,16 +465,30 @@ function createAnswerHTML(answer: CommentAnswer): string {
   const isOwn = answer.user_id === profileManager.getProfileId();
 
   let actionHTML = "";
-  if (isOwn && answer.status === "approved") {
+  const canEdit = isOwn && (answer.status === "approved" || answer.status === "rejected");
+  const canDelete = isOwn && answer.status === "approved";
+
+  if (canEdit || canDelete) {
+    let itemsHTML = "";
+    if (canEdit) {
+      itemsHTML += `<button class="comment-dropdown-item comment-edit-btn" data-answer-id="${answer.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          <span>Редактировать</span>
+        </button>`;
+    }
+    if (canDelete) {
+      itemsHTML += `<button class="comment-dropdown-item comment-delete-btn danger" data-answer-id="${answer.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          <span>Удалить</span>
+        </button>`;
+    }
+
     actionHTML = `<div class="comment-menu">
         <button class="comment-menu-btn" aria-label="Действия" aria-haspopup="true" aria-expanded="false">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
         </button>
         <div class="comment-dropdown-menu">
-          <button class="comment-dropdown-item comment-delete-btn danger" data-answer-id="${answer.id}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-            <span>Удалить</span>
-          </button>
+          ${itemsHTML}
         </div>
       </div>`;
   }
@@ -358,7 +500,7 @@ function createAnswerHTML(answer: CommentAnswer): string {
       <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
       <div class="comment-main">
         <div class="comment-header">
-          <span class="comment-author">${answer.user_display_name} ${statusBadge}${newBadge}</span>
+          <span class="comment-author">${answer.user_display_name} ${statusBadge}${editedBadge}${newBadge}</span>
           ${actionHTML}
         </div>
         <div class="comment-body"><div class="comment-content">${answer.content_html}</div></div>
@@ -1001,6 +1143,19 @@ export function initComments(): void {
       return;
     }
 
+    const editBtn = target.closest(".comment-edit-btn") as HTMLElement | null;
+    if (editBtn) {
+      e.preventDefault();
+      editBtn.closest(".comment-menu")?.classList.remove("active");
+      const answerId = editBtn.dataset.answerId;
+      if (answerId) {
+        handleEditAnswer(editBtn, container, chapterId);
+      } else {
+        handleEditComment(editBtn, container, chapterId);
+      }
+      return;
+    }
+
     const menuBtn = target.closest(".comment-menu-btn") as HTMLElement | null;
     if (menuBtn) {
       e.preventDefault();
@@ -1127,15 +1282,19 @@ function initToolbarHandlers(
           if (!isUploadingImage) imageInput?.click();
           break;
       }
+      updateCharCounter(textarea);
+      autoResizeTextarea(textarea);
     });
   });
 }
 
-async function postCommentPayload(
+async function sendCommentPayload(
   url: string,
+  method: "POST" | "PATCH",
   content: string,
   submitBtn: HTMLButtonElement,
 ): Promise<boolean> {
+  const originalText = submitBtn.textContent || (method === "PATCH" ? "Сохранить" : "Отправить");
   submitBtn.disabled = true;
   submitBtn.textContent = "Проверка...";
 
@@ -1149,11 +1308,11 @@ async function postCommentPayload(
 
   if (!turnstileTok && !smartCaptchaTok) {
     submitBtn.disabled = false;
-    submitBtn.textContent = "Отправить";
+    submitBtn.textContent = originalText;
     return false;
   }
 
-  submitBtn.textContent = "Отправка...";
+  submitBtn.textContent = method === "PATCH" ? "Сохранение..." : "Отправка...";
 
   const payload: {
     content: string;
@@ -1170,7 +1329,7 @@ async function postCommentPayload(
   }
 
   let res = await fetch(url, {
-    method: "POST",
+    method: method,
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify(payload),
@@ -1187,11 +1346,11 @@ async function postCommentPayload(
       submitBtn.textContent = "Проверка...";
       smartCaptchaTok = await getSmartCaptchaToken();
       if (smartCaptchaTok) {
-        submitBtn.textContent = "Отправка...";
+        submitBtn.textContent = method === "PATCH" ? "Сохранение..." : "Отправка...";
         payload.turnstile_token = undefined;
         payload.smart_captcha_token = smartCaptchaTok;
         res = await fetch(url, {
-          method: "POST",
+          method: method,
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify(payload),
@@ -1202,7 +1361,7 @@ async function postCommentPayload(
         }
       } else {
         submitBtn.disabled = false;
-        submitBtn.textContent = "Отправить";
+        submitBtn.textContent = originalText;
         return false;
       }
     } else {
@@ -1232,7 +1391,12 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
     return;
   }
 
-  document.querySelectorAll(".comment-reply-form-wrapper").forEach((el) => el.remove());
+  document.querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper").forEach((el) => {
+    const parentMain = el.closest(".comment-main");
+    const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
+    if (parentBody) parentBody.style.display = "";
+    el.remove();
+  });
 
   const formWrapper = document.createElement("div");
   formWrapper.className = "comment-reply-form-wrapper";
@@ -1266,6 +1430,284 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
 
   const textarea = formWrapper.querySelector(".comment-reply-textarea") as HTMLTextAreaElement | null;
   textarea?.focus();
+}
+
+function handleEditComment(btn: HTMLElement, container: HTMLElement, chapterId?: string): void {
+  if (!profileManager.isLoggedIn()) {
+    alert("Войдите в аккаунт, чтобы редактировать комментарий");
+    return;
+  }
+
+  const commentId = btn.dataset.commentId;
+  if (!commentId) return;
+
+  const commentItem = btn.closest(".comment-item") as HTMLElement | null;
+  if (!commentItem) return;
+
+  const mainEl = commentItem.querySelector(".comment-main") as HTMLElement | null;
+  const bodyEl = commentItem.querySelector(".comment-body") as HTMLElement | null;
+  const contentEl = commentItem.querySelector(".comment-content") as HTMLElement | null;
+  if (!mainEl || !bodyEl || !contentEl) return;
+
+  if (commentItem.querySelector(".comment-edit-form-wrapper")) {
+    return;
+  }
+
+  document.querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper").forEach((el) => {
+    const parentMain = el.closest(".comment-main");
+    const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
+    if (parentBody) parentBody.style.display = "";
+    el.remove();
+  });
+
+  const markdownText = htmlToMarkdown(contentEl.innerHTML);
+  bodyEl.style.display = "none";
+
+  const formWrapper = document.createElement("div");
+  formWrapper.className = "comment-edit-form-wrapper";
+  formWrapper.innerHTML = `
+    <div class="comment-form comment-edit-form">
+      ${renderToolbarHTML('class="comment-edit-image-input"')}
+      <textarea
+        class="comment-textarea comment-edit-textarea"
+        placeholder="Ваш комментарий..."
+        maxlength="3000"
+        rows="2"
+      ></textarea>
+      <div class="comment-form-footer">
+        <span class="comment-char-counter">${markdownText.length}/3000</span>
+        <a href="/markdown" target="_blank" class="comment-markdown-hint">Формат</a>
+        <div class="comment-edit-actions">
+          <button type="button" class="comment-edit-cancel-btn">Отмена</button>
+          <button type="button" class="action-btn btn-primary comment-submit-btn comment-edit-submit-btn">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  mainEl.appendChild(formWrapper);
+
+  const textarea = formWrapper.querySelector(".comment-edit-textarea") as HTMLTextAreaElement;
+  const submitBtn = formWrapper.querySelector(".comment-edit-submit-btn") as HTMLButtonElement;
+  const cancelBtn = formWrapper.querySelector(".comment-edit-cancel-btn") as HTMLButtonElement;
+  const toolbar = formWrapper.querySelector(".comment-toolbar") as HTMLElement | null;
+  const imageInput = formWrapper.querySelector(".comment-edit-image-input") as HTMLInputElement | null;
+
+  textarea.value = markdownText;
+  autoResizeTextarea(textarea);
+
+  if (getRemainingCooldown() > 0) {
+    startCooldownTimer(submitBtn);
+  }
+
+  if (toolbar) {
+    initToolbarHandlers(toolbar, textarea, imageInput, container);
+  }
+
+  cancelBtn.addEventListener("click", () => {
+    formWrapper.remove();
+    bodyEl.style.display = "";
+  });
+
+  textarea.addEventListener("input", () => {
+    updateCharCounter(textarea);
+    autoResizeTextarea(textarea);
+  });
+
+  textarea.addEventListener("focus", () => {
+    initTurnstileForComments(container);
+  });
+
+  submitBtn.addEventListener("click", async () => {
+    if (getRemainingCooldown() > 0) {
+      startCooldownTimer(submitBtn);
+      return;
+    }
+
+    const content = textarea.value.trim();
+    if (!content) return;
+
+    if (content.length > 3000) {
+      alert("Комментарий слишком длинный (максимум 3000 символов)");
+      return;
+    }
+
+    try {
+      const ok = await sendCommentPayload(
+        `${API_URL}/comments/${commentId}`,
+        "PATCH",
+        content,
+        submitBtn,
+      );
+      if (!ok) return;
+
+      setLastCommentTime();
+      startAllCooldownTimers();
+      formWrapper.remove();
+
+      if (turnstileWidgetId && (window as any).turnstile) {
+        (window as any).turnstile.reset(turnstileWidgetId);
+      }
+
+      if (chapterId) {
+        await loadComments(container, chapterId, 1, true, false, commentId);
+      } else {
+        await loadMyComments(myCommentsCurrentPage);
+      }
+    } catch (err: any) {
+      console.error("Failed to edit comment", err);
+      bodyEl.style.display = "";
+      formWrapper.remove();
+      const msg =
+        err && typeof err === "object" && "message" in err && err.message
+          ? err.message === "Failed to submit"
+            ? "Не удалось сохранить. Попробуйте ещё раз."
+            : err.message
+          : "Не удалось сохранить. Попробуйте ещё раз.";
+      alert(msg);
+    }
+  });
+
+  textarea.focus();
+}
+
+function handleEditAnswer(btn: HTMLElement, container: HTMLElement, chapterId?: string): void {
+  if (!profileManager.isLoggedIn()) {
+    alert("Войдите в аккаунт, чтобы редактировать ответ");
+    return;
+  }
+
+  const answerId = btn.dataset.answerId;
+  if (!answerId) return;
+
+  const answerItem = btn.closest(".comment-answer") as HTMLElement | null;
+  if (!answerItem) return;
+
+  const mainEl = answerItem.querySelector(".comment-main") as HTMLElement | null;
+  const bodyEl = answerItem.querySelector(".comment-body") as HTMLElement | null;
+  const contentEl = answerItem.querySelector(".comment-content") as HTMLElement | null;
+  if (!mainEl || !bodyEl || !contentEl) return;
+
+  if (answerItem.querySelector(".comment-edit-form-wrapper")) {
+    return;
+  }
+
+  document.querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper").forEach((el) => {
+    const parentMain = el.closest(".comment-main");
+    const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
+    if (parentBody) parentBody.style.display = "";
+    el.remove();
+  });
+
+  const markdownText = htmlToMarkdown(contentEl.innerHTML);
+  bodyEl.style.display = "none";
+
+  const formWrapper = document.createElement("div");
+  formWrapper.className = "comment-edit-form-wrapper";
+  formWrapper.innerHTML = `
+    <div class="comment-form comment-edit-form">
+      ${renderToolbarHTML('class="comment-edit-image-input"')}
+      <textarea
+        class="comment-textarea comment-edit-textarea comment-reply-textarea"
+        placeholder="Ваш ответ..."
+        maxlength="500"
+        rows="2"
+      ></textarea>
+      <div class="comment-form-footer">
+        <span class="comment-char-counter">${markdownText.length}/500</span>
+        <a href="/markdown" target="_blank" class="comment-markdown-hint">Формат</a>
+        <div class="comment-edit-actions">
+          <button type="button" class="comment-edit-cancel-btn">Отмена</button>
+          <button type="button" class="action-btn btn-primary comment-submit-btn comment-edit-submit-btn">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  mainEl.appendChild(formWrapper);
+
+  const textarea = formWrapper.querySelector(".comment-edit-textarea") as HTMLTextAreaElement;
+  const submitBtn = formWrapper.querySelector(".comment-edit-submit-btn") as HTMLButtonElement;
+  const cancelBtn = formWrapper.querySelector(".comment-edit-cancel-btn") as HTMLButtonElement;
+  const toolbar = formWrapper.querySelector(".comment-toolbar") as HTMLElement | null;
+  const imageInput = formWrapper.querySelector(".comment-edit-image-input") as HTMLInputElement | null;
+
+  textarea.value = markdownText;
+  autoResizeTextarea(textarea);
+
+  if (getRemainingCooldown() > 0) {
+    startCooldownTimer(submitBtn);
+  }
+
+  if (toolbar) {
+    initToolbarHandlers(toolbar, textarea, imageInput, container);
+  }
+
+  cancelBtn.addEventListener("click", () => {
+    formWrapper.remove();
+    bodyEl.style.display = "";
+  });
+
+  textarea.addEventListener("input", () => {
+    updateCharCounter(textarea);
+    autoResizeTextarea(textarea);
+  });
+
+  textarea.addEventListener("focus", () => {
+    initTurnstileForComments(container);
+  });
+
+  submitBtn.addEventListener("click", async () => {
+    if (getRemainingCooldown() > 0) {
+      startCooldownTimer(submitBtn);
+      return;
+    }
+
+    const content = textarea.value.trim();
+    if (!content) return;
+
+    if (content.length > 500) {
+      alert("Ответ слишком длинный (максимум 500 символов)");
+      return;
+    }
+
+    try {
+      const ok = await sendCommentPayload(
+        `${API_URL}/comment-answers/${answerId}`,
+        "PATCH",
+        content,
+        submitBtn,
+      );
+      if (!ok) return;
+
+      setLastCommentTime();
+      startAllCooldownTimers();
+      formWrapper.remove();
+
+      if (turnstileWidgetId && (window as any).turnstile) {
+        (window as any).turnstile.reset(turnstileWidgetId);
+      }
+
+      if (chapterId) {
+        await loadComments(container, chapterId, 1, true, false, answerId);
+      } else {
+        await loadMyComments(myCommentsCurrentPage);
+      }
+    } catch (err: any) {
+      console.error("Failed to edit answer", err);
+      bodyEl.style.display = "";
+      formWrapper.remove();
+      const msg =
+        err && typeof err === "object" && "message" in err && err.message
+          ? err.message === "Failed to submit"
+            ? "Не удалось сохранить. Попробуйте ещё раз."
+            : err.message
+          : "Не удалось сохранить. Попробуйте ещё раз.";
+      alert(msg);
+    }
+  });
+
+  textarea.focus();
 }
 
 function initReplyFormHandlers(
@@ -1322,8 +1764,9 @@ function initReplyFormHandlers(
     }
 
     try {
-      const ok = await postCommentPayload(
+      const ok = await sendCommentPayload(
         `${API_URL}/comments/${commentId}/answers`,
+        "POST",
         content,
         submitBtn,
       );
@@ -2108,6 +2551,19 @@ export function initMyCommentsPage(): void {
       return;
     }
 
+    const editBtn = target.closest(".comment-edit-btn") as HTMLElement | null;
+    if (editBtn) {
+      e.preventDefault();
+      editBtn.closest(".comment-menu")?.classList.remove("active");
+      const answerId = editBtn.dataset.answerId;
+      if (answerId) {
+        handleEditAnswer(editBtn, content);
+      } else {
+        handleEditComment(editBtn, content);
+      }
+      return;
+    }
+
     const deleteBtn = target.closest(
       ".comment-delete-btn",
     ) as HTMLElement | null;
@@ -2181,8 +2637,9 @@ function initFormHandlers(container: HTMLElement): void {
       }
 
       try {
-        const ok = await postCommentPayload(
+        const ok = await sendCommentPayload(
           `${API_URL}/chapters/${chapterId}/comments`,
+          "POST",
           content,
           submitBtn,
         );

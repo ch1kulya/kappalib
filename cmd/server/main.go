@@ -424,6 +424,15 @@ func main() {
 		}, api.HandleDeleteComment)
 
 		huma.Register(humaApi, huma.Operation{
+			OperationID: "edit-comment",
+			Method:      http.MethodPatch,
+			Path:        "/comments/{commentId}",
+			Summary:     "Edit own comment",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Comments"},
+		}, api.HandleEditComment)
+
+		huma.Register(humaApi, huma.Operation{
 			OperationID: "create-comment-answer",
 			Method:      http.MethodPost,
 			Path:        "/comments/{commentId}/answers",
@@ -431,6 +440,15 @@ func main() {
 			Security:    []map[string][]string{{"sessionCookie": {}}},
 			Tags:        []string{"Comments"},
 		}, api.HandleCreateCommentAnswer)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "edit-comment-answer",
+			Method:      http.MethodPatch,
+			Path:        "/comment-answers/{answerId}",
+			Summary:     "Edit own comment answer",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Comments"},
+		}, api.HandleEditCommentAnswer)
 
 		huma.Register(humaApi, huma.Operation{
 			OperationID: "delete-comment-answer",

@@ -174,8 +174,8 @@ func TestGetCommentsInputValidation(t *testing.T) {
 			wantStatus: http.StatusOK,
 		},
 		{
-			name:       "valid chapter with comment_id ans",
-			path:       "/chapters/chp_12345678/comments?comment_id=ans_abcdef12",
+			name:       "valid chapter with comment_id can",
+			path:       "/chapters/chp_12345678/comments?comment_id=can_abcdef12",
 			wantStatus: http.StatusOK,
 		},
 		{
@@ -235,6 +235,120 @@ func TestGetCommentsInputValidation(t *testing.T) {
 			resp := humaApi.Get(tt.path)
 			if resp.Code != tt.wantStatus {
 				t.Errorf("GET %s returned status %d, want %d: %s", tt.path, resp.Code, tt.wantStatus, resp.Body.String())
+			}
+		})
+	}
+}
+
+func TestEditCommentInputValidation(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	type testResponse struct {
+		Body string
+	}
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "edit-comment",
+		Method:      http.MethodPatch,
+		Path:        "/comments/{commentId}",
+	}, func(ctx context.Context, input *EditCommentInput) (*testResponse, error) {
+		return &testResponse{Body: "ok"}, nil
+	})
+
+	tests := []struct {
+		name       string
+		path       string
+		body       map[string]any
+		wantStatus int
+	}{
+		{
+			name:       "valid comment id and body",
+			path:       "/comments/cmt_12345678",
+			body:       map[string]any{"content": "edited content"},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "invalid comment id format",
+			path:       "/comments/invalid_cmt",
+			body:       map[string]any{"content": "edited content"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "invalid comment id can prefix",
+			path:       "/comments/can_12345678",
+			body:       map[string]any{"content": "edited content"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "empty content",
+			path:       "/comments/cmt_12345678",
+			body:       map[string]any{"content": ""},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := humaApi.Patch(tt.path, tt.body)
+			if resp.Code != tt.wantStatus {
+				t.Errorf("PATCH %s returned status %d, want %d: %s", tt.path, resp.Code, tt.wantStatus, resp.Body.String())
+			}
+		})
+	}
+}
+
+func TestEditCommentAnswerInputValidation(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	type testResponse struct {
+		Body string
+	}
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "edit-comment-answer",
+		Method:      http.MethodPatch,
+		Path:        "/comment-answers/{answerId}",
+	}, func(ctx context.Context, input *EditCommentAnswerInput) (*testResponse, error) {
+		return &testResponse{Body: "ok"}, nil
+	})
+
+	tests := []struct {
+		name       string
+		path       string
+		body       map[string]any
+		wantStatus int
+	}{
+		{
+			name:       "valid answer id and body",
+			path:       "/comment-answers/can_12345678",
+			body:       map[string]any{"content": "edited answer content"},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "invalid answer id format",
+			path:       "/comment-answers/invalid_can",
+			body:       map[string]any{"content": "edited answer content"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "invalid answer id cmt prefix",
+			path:       "/comment-answers/cmt_12345678",
+			body:       map[string]any{"content": "edited answer content"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "empty content",
+			path:       "/comment-answers/can_12345678",
+			body:       map[string]any{"content": ""},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := humaApi.Patch(tt.path, tt.body)
+			if resp.Code != tt.wantStatus {
+				t.Errorf("PATCH %s returned status %d, want %d: %s", tt.path, resp.Code, tt.wantStatus, resp.Body.String())
 			}
 		})
 	}

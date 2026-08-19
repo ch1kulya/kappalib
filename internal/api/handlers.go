@@ -100,7 +100,7 @@ type ProfileIDInput struct {
 type GetCommentsInput struct {
 	ChapterID string `path:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
 	Page      int    `query:"page" default:"1" minimum:"1" maximum:"9999"`
-	CommentID string `query:"comment_id" pattern:"^(cmt|ans)_[a-z0-9]{8}$"`
+	CommentID string `query:"comment_id" pattern:"^(cmt|can)_[a-z0-9]{8}$"`
 }
 
 type CreateCommentInput struct {
@@ -109,6 +109,28 @@ type CreateCommentInput struct {
 	RealIP       string `header:"X-Real-IP"`
 	Body         struct {
 		Content           string `json:"content" minLength:"1" maxLength:"12000"`
+		TurnstileToken    string `json:"turnstile_token,omitempty"`
+		SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
+	}
+}
+
+type EditCommentInput struct {
+	CommentID    string `path:"commentId" pattern:"^cmt_[a-z0-9]{8}$"`
+	ForwardedFor string `header:"X-Forwarded-For"`
+	RealIP       string `header:"X-Real-IP"`
+	Body         struct {
+		Content           string `json:"content" minLength:"1" maxLength:"12000"`
+		TurnstileToken    string `json:"turnstile_token,omitempty"`
+		SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
+	}
+}
+
+type EditCommentAnswerInput struct {
+	AnswerID     string `path:"answerId" pattern:"^can_[a-z0-9]{8}$"`
+	ForwardedFor string `header:"X-Forwarded-For"`
+	RealIP       string `header:"X-Real-IP"`
+	Body         struct {
+		Content           string `json:"content" minLength:"1" maxLength:"2000"`
 		TurnstileToken    string `json:"turnstile_token,omitempty"`
 		SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
 	}
@@ -440,6 +462,41 @@ func HandleCreateComment(ctx context.Context, input *CreateCommentInput) (*Comme
 	return &CommentResponse{Body: *comment}, nil
 }
 
+func HandleEditComment(ctx context.Context, input *EditCommentInput) (*CommentResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	editInput := models.EditCommentInput{
+		Content:           input.Body.Content,
+		TurnstileToken:    input.Body.TurnstileToken,
+		SmartCaptchaToken: input.Body.SmartCaptchaToken,
+		IP:                extractIP(input.ForwardedFor, input.RealIP),
+	}
+
+	comment, err := data.EditComment(ctx, input.CommentID, userID, editInput)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRateLimitExceeded):
+			return nil, huma.Error429TooManyRequests("Подождите 30 секунд перед отправкой следующего комментария")
+		case errors.Is(err, data.ErrCaptchaFailed):
+			return nil, huma.Error400BadRequest("Captcha verification failed")
+		case errors.Is(err, data.ErrInvalidContentLength):
+			return nil, huma.Error400BadRequest("Comment must be 1-3000 characters")
+		case errors.Is(err, data.ErrCommentNotFound):
+			return nil, huma.Error404NotFound("Comment not found")
+		case errors.Is(err, data.ErrNotCommentAuthor):
+			return nil, huma.Error403Forbidden("You can only edit your own comments")
+		case errors.Is(err, data.ErrCannotEditComment):
+			return nil, huma.Error400BadRequest("Only approved or rejected comments can be edited")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to edit comment")
+		}
+	}
+	return &CommentResponse{Body: *comment}, nil
+}
+
 func HandleTelegramWebhook(ctx context.Context, input *TelegramWebhookInput) (*EmptyResponse, error) {
 	expectedSecret := data.GetTelegramWebhookSecret()
 	if expectedSecret == "" {
@@ -753,6 +810,41 @@ func HandleCreateCommentAnswer(ctx context.Context, input *CreateCommentAnswerIn
 			return nil, huma.Error400BadRequest("Comment must be approved to answer")
 		default:
 			return nil, huma.Error500InternalServerError("Failed to create answer")
+		}
+	}
+	return &CommentAnswerResponse{Body: *answer}, nil
+}
+
+func HandleEditCommentAnswer(ctx context.Context, input *EditCommentAnswerInput) (*CommentAnswerResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	editInput := models.EditCommentAnswerInput{
+		Content:           input.Body.Content,
+		TurnstileToken:    input.Body.TurnstileToken,
+		SmartCaptchaToken: input.Body.SmartCaptchaToken,
+		IP:                extractIP(input.ForwardedFor, input.RealIP),
+	}
+
+	answer, err := data.EditCommentAnswer(ctx, input.AnswerID, userID, editInput)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRateLimitExceeded):
+			return nil, huma.Error429TooManyRequests("Подождите 30 секунд перед отправкой следующего ответа")
+		case errors.Is(err, data.ErrCaptchaFailed):
+			return nil, huma.Error400BadRequest("Captcha verification failed")
+		case errors.Is(err, data.ErrInvalidAnswerLength):
+			return nil, huma.Error400BadRequest("Answer must be 1-500 characters")
+		case errors.Is(err, data.ErrCommentAnswerNotFound):
+			return nil, huma.Error404NotFound("Answer not found")
+		case errors.Is(err, data.ErrNotAnswerAuthor):
+			return nil, huma.Error403Forbidden("You can only edit your own answers")
+		case errors.Is(err, data.ErrCannotEditAnswer):
+			return nil, huma.Error400BadRequest("Only approved or rejected answers can be edited")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to edit answer")
 		}
 	}
 	return &CommentAnswerResponse{Body: *answer}, nil

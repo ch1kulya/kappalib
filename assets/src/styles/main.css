@@ -3894,6 +3894,12 @@ a.update-log-item:active {
     color: var(--tertiary);
 }
 
+.comment-edited {
+    font-size: 0.8rem;
+    color: var(--tertiary);
+    font-weight: 500;
+}
+
 .comment-moderation-badge {
     font-size: 0.7rem;
     padding: 1px 5px;
@@ -4199,8 +4205,18 @@ a.update-log-item:active {
         background 0.15s;
 }
 
-.comment-dropdown-item:hover {
-    background: var(--outline);
+@media (hover: hover) {
+    .comment-dropdown-item:hover {
+        color: var(--primary);
+    }
+
+    .comment-dropdown-item.danger:hover {
+        background: color-mix(in srgb, var(--color-danger), transparent 90%);
+        color: var(--color-danger);
+    }
+}
+
+.comment-dropdown-item:active {
     color: var(--primary);
 }
 
@@ -4208,9 +4224,8 @@ a.update-log-item:active {
     color: var(--color-danger);
 }
 
-.comment-dropdown-item.danger:hover {
+.comment-dropdown-item.danger:active {
     background: color-mix(in srgb, var(--color-danger), transparent 90%);
-    color: var(--color-danger);
 }
 
 .comment-dropdown-item svg {
@@ -4300,6 +4315,50 @@ a.update-log-item:active {
 }
 
 .comment-reply-cancel-btn:active {
+    color: var(--primary);
+}
+
+.comment-edit-form-wrapper {
+    margin-top: 0.5rem;
+}
+
+.comment-edit-form {
+    background: transparent;
+}
+
+.comment-edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.comment-edit-cancel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0 0.5rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--tertiary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: inherit;
+    transition:
+        color 0.15s,
+        background 0.15s;
+}
+
+@media (hover: hover) {
+    .comment-edit-cancel-btn:hover {
+        color: var(--primary);
+    }
+}
+
+.comment-edit-cancel-btn:active {
     color: var(--primary);
 }
 
