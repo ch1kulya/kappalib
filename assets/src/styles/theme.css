@@ -211,6 +211,206 @@
     --oauth-yandex-hover: light-dark(#c76e6a, #d88885);
 }
 
+:root[data-scheme="tokyonight"] {
+    --rgb-light: 225, 226, 231;
+    --rgb-dark: 26, 27, 38;
+    --bg-primary: light-dark(#e1e2e7, #1a1b26);
+    --primary: light-dark(#3760bf, #c0caf5);
+    --secondary: light-dark(#6172b0, #a9b1d6);
+    --tertiary: light-dark(#8990b3, #565f89);
+    --border: light-dark(#c4c8da, #292e42);
+    --outline: light-dark(#d5d8e7, #1f2335);
+    --accent-primary: #ff9e64;
+    --accent-text: #e1e2e7;
+    --accent-border: light-dark(
+        rgba(177, 92, 0, 0.15),
+        rgba(255, 158, 100, 0.15)
+    );
+    --color-success: light-dark(#387068, #9ece6a);
+    --color-success-glow: light-dark(
+        rgba(56, 112, 104, 0.2),
+        rgba(158, 206, 106, 0.2)
+    );
+    --color-warning: light-dark(#8c6c3e, #e0af68);
+    --color-warning-glow: light-dark(
+        rgba(140, 108, 62, 0.2),
+        rgba(224, 175, 104, 0.2)
+    );
+    --color-danger: light-dark(#c64343, #f7768e);
+    --color-danger-glow: light-dark(
+        rgba(198, 67, 67, 0.2),
+        rgba(247, 118, 142, 0.2)
+    );
+    --color-danger-dark: light-dark(#a83232, #db4b63);
+    --oauth-google: light-dark(#2e7de9, #7aa2f7);
+    --oauth-google-hover: light-dark(#226bce, #688fe0);
+    --oauth-github: light-dark(#3760bf, #c0caf5);
+    --oauth-github-hover: light-dark(#2a4e9e, #a9b1d6);
+    --oauth-github-text: light-dark(#e1e2e7, #1a1b26);
+    --oauth-yandex: light-dark(#b15c00, #ff9e64);
+    --oauth-yandex-hover: light-dark(#984e00, #e68c54);
+}
+
+:root[data-scheme="everforest"] {
+    --rgb-light: 253, 246, 227;
+    --rgb-dark: 45, 53, 59;
+    --bg-primary: light-dark(#fdf6e3, #2d353b);
+    --primary: light-dark(#5c6a72, #d3c6aa);
+    --secondary: light-dark(#829181, #9da9a0);
+    --tertiary: light-dark(#a6b0a0, #7a8478);
+    --border: light-dark(#e0dcc7, #475258);
+    --outline: light-dark(#f4f0d9, #343f44);
+    --accent-primary: #e69875;
+    --accent-text: #fdf6e3;
+    --accent-border: light-dark(
+        rgba(245, 125, 38, 0.15),
+        rgba(230, 152, 117, 0.15)
+    );
+    --color-success: light-dark(#8da101, #a7c080);
+    --color-success-glow: light-dark(
+        rgba(141, 161, 1, 0.2),
+        rgba(167, 192, 128, 0.2)
+    );
+    --color-warning: light-dark(#dfa000, #dbbc7f);
+    --color-warning-glow: light-dark(
+        rgba(223, 160, 0, 0.2),
+        rgba(219, 188, 127, 0.2)
+    );
+    --color-danger: light-dark(#f85552, #e67e80);
+    --color-danger-glow: light-dark(
+        rgba(248, 85, 82, 0.2),
+        rgba(230, 126, 128, 0.2)
+    );
+    --color-danger-dark: light-dark(#dc3e3b, #ce6466);
+    --oauth-google: light-dark(#3a94c5, #7fbbb3);
+    --oauth-google-hover: light-dark(#2f7ca6, #6fa79f);
+    --oauth-github: light-dark(#5c6a72, #d3c6aa);
+    --oauth-github-hover: light-dark(#475359, #baa988);
+    --oauth-github-text: light-dark(#fdf6e3, #2d353b);
+    --oauth-yandex: light-dark(#f57d26, #e69875);
+    --oauth-yandex-hover: light-dark(#dc6c1b, #d18664);
+}
+
+:root[data-scheme="flexoki"] {
+    --rgb-light: 255, 252, 240;
+    --rgb-dark: 16, 15, 15;
+    --bg-primary: light-dark(#fffcf0, #100f0f);
+    --primary: light-dark(#1c1b1a, #cecdc3);
+    --secondary: light-dark(#6f6e69, #878580);
+    --tertiary: light-dark(#878580, #6f6e69);
+    --border: light-dark(#cecdc3, #282726);
+    --outline: light-dark(#f2f0e5, #1c1b1a);
+    --accent-primary: #da702c;
+    --accent-text: #fffcf0;
+    --accent-border: light-dark(
+        rgba(218, 112, 44, 0.15),
+        rgba(188, 82, 21, 0.15)
+    );
+    --color-success: light-dark(#879a39, #879a39);
+    --color-success-glow: light-dark(
+        rgba(135, 154, 57, 0.2),
+        rgba(135, 154, 57, 0.2)
+    );
+    --color-warning: light-dark(#d0a215, #d0a215);
+    --color-warning-glow: light-dark(
+        rgba(208, 162, 21, 0.2),
+        rgba(208, 162, 21, 0.2)
+    );
+    --color-danger: light-dark(#d14d41, #d14d41);
+    --color-danger-glow: light-dark(
+        rgba(209, 77, 65, 0.2),
+        rgba(209, 77, 65, 0.2)
+    );
+    --color-danger-dark: light-dark(#b83a2f, #af3029);
+    --oauth-google: light-dark(#4385be, #4385be);
+    --oauth-google-hover: light-dark(#3370a5, #3370a5);
+    --oauth-github: light-dark(#1c1b1a, #cecdc3);
+    --oauth-github-hover: light-dark(#282726, #b7b5ac);
+    --oauth-github-text: light-dark(#fffcf0, #100f0f);
+    --oauth-yandex: light-dark(#da702c, #da702c);
+    --oauth-yandex-hover: light-dark(#c45f1f, #c45f1f);
+}
+
+:root[data-scheme="sonokai"] {
+    --rgb-light: 251, 250, 249;
+    --rgb-dark: 45, 42, 46;
+    --bg-primary: light-dark(#fbfaf9, #2d2a2e);
+    --primary: light-dark(#2d2a2e, #e3e1e4);
+    --secondary: light-dark(#69676c, #9f9ca6);
+    --tertiary: light-dark(#939293, #727072);
+    --border: light-dark(#dedcde, #423f46);
+    --outline: light-dark(#f0eff0, #37343a);
+    --accent-primary: #f85e84;
+    --accent-text: #fbfaf9;
+    --accent-border: light-dark(
+        rgba(248, 94, 132, 0.15),
+        rgba(248, 94, 132, 0.15)
+    );
+    --color-success: light-dark(#5c9e1e, #a9dc76);
+    --color-success-glow: light-dark(
+        rgba(92, 158, 30, 0.2),
+        rgba(169, 220, 118, 0.2)
+    );
+    --color-warning: light-dark(#bf8b00, #ffd866);
+    --color-warning-glow: light-dark(
+        rgba(191, 139, 0, 0.2),
+        rgba(255, 216, 102, 0.2)
+    );
+    --color-danger: light-dark(#e0315d, #f85e84);
+    --color-danger-glow: light-dark(
+        rgba(224, 49, 93, 0.2),
+        rgba(248, 94, 132, 0.2)
+    );
+    --color-danger-dark: light-dark(#c42149, #e0466c);
+    --oauth-google: light-dark(#0992a6, #78dce8);
+    --oauth-google-hover: light-dark(#077d8e, #61c6d2);
+    --oauth-github: light-dark(#2d2a2e, #e3e1e4);
+    --oauth-github-hover: light-dark(#3d3a3e, #cfcdd0);
+    --oauth-github-text: light-dark(#fbfaf9, #2d2a2e);
+    --oauth-yandex: light-dark(#e26a2c, #fc9867);
+    --oauth-yandex-hover: light-dark(#c8581e, #e68555);
+}
+
+:root[data-scheme="oxocarbon"] {
+    --rgb-light: 242, 244, 248;
+    --rgb-dark: 22, 22, 22;
+    --bg-primary: light-dark(#f2f4f8, #161616);
+    --primary: light-dark(#161616, #f2f4f8);
+    --secondary: light-dark(#525252, #dde1e6);
+    --tertiary: light-dark(#878d96, #525252);
+    --border: light-dark(#dde1e6, #393939);
+    --outline: light-dark(#e8ecf1, #262626);
+    --accent-primary: #ee5396;
+    --accent-text: #ffffff;
+    --accent-border: light-dark(
+        rgba(238, 83, 150, 0.15),
+        rgba(255, 126, 182, 0.15)
+    );
+    --color-success: light-dark(#198038, #42be65);
+    --color-success-glow: light-dark(
+        rgba(25, 128, 56, 0.2),
+        rgba(66, 190, 101, 0.2)
+    );
+    --color-warning: light-dark(#b25300, #ffab40);
+    --color-warning-glow: light-dark(
+        rgba(178, 83, 0, 0.2),
+        rgba(255, 171, 64, 0.2)
+    );
+    --color-danger: light-dark(#da1e28, #ff7eb6);
+    --color-danger-glow: light-dark(
+        rgba(218, 30, 40, 0.2),
+        rgba(255, 126, 182, 0.2)
+    );
+    --color-danger-dark: light-dark(#b81922, #ee5396);
+    --oauth-google: light-dark(#0f62fe, #78a9ff);
+    --oauth-google-hover: light-dark(#0353e9, #659af0);
+    --oauth-github: light-dark(#161616, #f2f4f8);
+    --oauth-github-hover: light-dark(#262626, #dde1e6);
+    --oauth-github-text: light-dark(#f2f4f8, #161616);
+    --oauth-yandex: light-dark(#da1e28, #ee5396);
+    --oauth-yandex-hover: light-dark(#ba1b23, #d44081);
+}
+
 :root {
     --accent-shadow-primary:
         inset 0 0 0 1px rgba(var(--rgb-light), 0.15),
@@ -693,6 +893,426 @@
             --color-danger: #eb6f92;
             --color-danger-glow: rgba(235, 111, 146, 0.2);
             --color-danger-dark: #d25879;
+            --shadow-primary:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+                0 1px 0 rgba(0, 0, 0, 0.15);
+            --shadow-secondary:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+                0 0.5px 0 rgba(0, 0, 0, 0.08);
+            --shadow-focus:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+                0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
+        }
+    }
+
+    :root[data-scheme="tokyonight"] {
+        --bg-primary: #e1e2e7;
+        --primary: #3760bf;
+        --secondary: #6172b0;
+        --tertiary: #8990b3;
+        --border: #c4c8da;
+        --outline: #d5d8e7;
+        --oauth-github: #3760bf;
+        --oauth-github-hover: #2a4e9e;
+        --oauth-github-text: #e1e2e7;
+        --color-success: #387068;
+        --color-success-glow: rgba(56, 112, 104, 0.2);
+        --color-warning: #8c6c3e;
+        --color-warning-glow: rgba(140, 108, 62, 0.2);
+        --color-danger: #c64343;
+        --color-danger-glow: rgba(198, 67, 67, 0.2);
+        --color-danger-dark: #a83232;
+        --shadow-primary:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(0, 0, 0, 0.03);
+        --shadow-secondary:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.02), 0 0.5px 0 rgba(0, 0, 0, 0.02);
+        --shadow-focus:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04),
+            0 1px 0 rgba(0, 0, 0, 0.03);
+    }
+
+    :root[data-theme="dark"][data-scheme="tokyonight"] {
+        --bg-primary: #1a1b26;
+        --primary: #c0caf5;
+        --secondary: #a9b1d6;
+        --tertiary: #565f89;
+        --border: #292e42;
+        --outline: #1f2335;
+        --oauth-github: #c0caf5;
+        --oauth-github-hover: #a9b1d6;
+        --oauth-github-text: #1a1b26;
+        --color-success: #9ece6a;
+        --color-success-glow: rgba(158, 206, 106, 0.2);
+        --color-warning: #e0af68;
+        --color-warning-glow: rgba(224, 175, 104, 0.2);
+        --color-danger: #f7768e;
+        --color-danger-glow: rgba(247, 118, 142, 0.2);
+        --color-danger-dark: #db4b63;
+        --shadow-primary:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+            0 1px 0 rgba(0, 0, 0, 0.15);
+        --shadow-secondary:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+            0 0.5px 0 rgba(0, 0, 0, 0.08);
+        --shadow-focus:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme])[data-scheme="tokyonight"] {
+            --bg-primary: #1a1b26;
+            --primary: #c0caf5;
+            --secondary: #a9b1d6;
+            --tertiary: #565f89;
+            --border: #292e42;
+            --outline: #1f2335;
+            --oauth-github: #c0caf5;
+            --oauth-github-hover: #a9b1d6;
+            --oauth-github-text: #1a1b26;
+            --color-success: #9ece6a;
+            --color-success-glow: rgba(158, 206, 106, 0.2);
+            --color-warning: #e0af68;
+            --color-warning-glow: rgba(224, 175, 104, 0.2);
+            --color-danger: #f7768e;
+            --color-danger-glow: rgba(247, 118, 142, 0.2);
+            --color-danger-dark: #db4b63;
+            --shadow-primary:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+                0 1px 0 rgba(0, 0, 0, 0.15);
+            --shadow-secondary:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+                0 0.5px 0 rgba(0, 0, 0, 0.08);
+            --shadow-focus:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+                0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
+        }
+    }
+
+    :root[data-scheme="everforest"] {
+        --bg-primary: #fdf6e3;
+        --primary: #5c6a72;
+        --secondary: #829181;
+        --tertiary: #a6b0a0;
+        --border: #e0dcc7;
+        --outline: #f4f0d9;
+        --oauth-github: #5c6a72;
+        --oauth-github-hover: #475359;
+        --oauth-github-text: #fdf6e3;
+        --color-success: #8da101;
+        --color-success-glow: rgba(141, 161, 1, 0.2);
+        --color-warning: #dfa000;
+        --color-warning-glow: rgba(223, 160, 0, 0.2);
+        --color-danger: #f85552;
+        --color-danger-glow: rgba(248, 85, 82, 0.2);
+        --color-danger-dark: #dc3e3b;
+        --shadow-primary:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(0, 0, 0, 0.03);
+        --shadow-secondary:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.02), 0 0.5px 0 rgba(0, 0, 0, 0.02);
+        --shadow-focus:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04),
+            0 1px 0 rgba(0, 0, 0, 0.03);
+    }
+
+    :root[data-theme="dark"][data-scheme="everforest"] {
+        --bg-primary: #2d353b;
+        --primary: #d3c6aa;
+        --secondary: #9da9a0;
+        --tertiary: #7a8478;
+        --border: #475258;
+        --outline: #343f44;
+        --oauth-github: #d3c6aa;
+        --oauth-github-hover: #baa988;
+        --oauth-github-text: #2d353b;
+        --color-success: #a7c080;
+        --color-success-glow: rgba(167, 192, 128, 0.2);
+        --color-warning: #dbbc7f;
+        --color-warning-glow: rgba(219, 188, 127, 0.2);
+        --color-danger: #e67e80;
+        --color-danger-glow: rgba(230, 126, 128, 0.2);
+        --color-danger-dark: #ce6466;
+        --shadow-primary:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+            0 1px 0 rgba(0, 0, 0, 0.15);
+        --shadow-secondary:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+            0 0.5px 0 rgba(0, 0, 0, 0.08);
+        --shadow-focus:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme])[data-scheme="everforest"] {
+            --bg-primary: #2d353b;
+            --primary: #d3c6aa;
+            --secondary: #9da9a0;
+            --tertiary: #7a8478;
+            --border: #475258;
+            --outline: #343f44;
+            --oauth-github: #d3c6aa;
+            --oauth-github-hover: #baa988;
+            --oauth-github-text: #2d353b;
+            --color-success: #a7c080;
+            --color-success-glow: rgba(167, 192, 128, 0.2);
+            --color-warning: #dbbc7f;
+            --color-warning-glow: rgba(219, 188, 127, 0.2);
+            --color-danger: #e67e80;
+            --color-danger-glow: rgba(230, 126, 128, 0.2);
+            --color-danger-dark: #ce6466;
+            --shadow-primary:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+                0 1px 0 rgba(0, 0, 0, 0.15);
+            --shadow-secondary:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+                0 0.5px 0 rgba(0, 0, 0, 0.08);
+            --shadow-focus:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+                0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
+        }
+    }
+
+    :root[data-scheme="flexoki"] {
+        --bg-primary: #fffcf0;
+        --primary: #1c1b1a;
+        --secondary: #6f6e69;
+        --tertiary: #878580;
+        --border: #cecdc3;
+        --outline: #f2f0e5;
+        --oauth-github: #1c1b1a;
+        --oauth-github-hover: #282726;
+        --oauth-github-text: #fffcf0;
+        --color-success: #879a39;
+        --color-success-glow: rgba(135, 154, 57, 0.2);
+        --color-warning: #d0a215;
+        --color-warning-glow: rgba(208, 162, 21, 0.2);
+        --color-danger: #d14d41;
+        --color-danger-glow: rgba(209, 77, 65, 0.2);
+        --color-danger-dark: #b83a2f;
+        --shadow-primary:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(0, 0, 0, 0.03);
+        --shadow-secondary:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.02), 0 0.5px 0 rgba(0, 0, 0, 0.02);
+        --shadow-focus:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04),
+            0 1px 0 rgba(0, 0, 0, 0.03);
+    }
+
+    :root[data-theme="dark"][data-scheme="flexoki"] {
+        --bg-primary: #100f0f;
+        --primary: #cecdc3;
+        --secondary: #878580;
+        --tertiary: #6f6e69;
+        --border: #282726;
+        --outline: #1c1b1a;
+        --oauth-github: #cecdc3;
+        --oauth-github-hover: #b7b5ac;
+        --oauth-github-text: #100f0f;
+        --color-success: #879a39;
+        --color-success-glow: rgba(135, 154, 57, 0.2);
+        --color-warning: #d0a215;
+        --color-warning-glow: rgba(208, 162, 21, 0.2);
+        --color-danger: #d14d41;
+        --color-danger-glow: rgba(209, 77, 65, 0.2);
+        --color-danger-dark: #af3029;
+        --shadow-primary:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+            0 1px 0 rgba(0, 0, 0, 0.15);
+        --shadow-secondary:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+            0 0.5px 0 rgba(0, 0, 0, 0.08);
+        --shadow-focus:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme])[data-scheme="flexoki"] {
+            --bg-primary: #100f0f;
+            --primary: #cecdc3;
+            --secondary: #878580;
+            --tertiary: #6f6e69;
+            --border: #282726;
+            --outline: #1c1b1a;
+            --oauth-github: #cecdc3;
+            --oauth-github-hover: #b7b5ac;
+            --oauth-github-text: #100f0f;
+            --color-success: #879a39;
+            --color-success-glow: rgba(135, 154, 57, 0.2);
+            --color-warning: #d0a215;
+            --color-warning-glow: rgba(208, 162, 21, 0.2);
+            --color-danger: #d14d41;
+            --color-danger-glow: rgba(209, 77, 65, 0.2);
+            --color-danger-dark: #af3029;
+            --shadow-primary:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+                0 1px 0 rgba(0, 0, 0, 0.15);
+            --shadow-secondary:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+                0 0.5px 0 rgba(0, 0, 0, 0.08);
+            --shadow-focus:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+                0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
+        }
+    }
+
+    :root[data-scheme="sonokai"] {
+        --bg-primary: #fbfaf9;
+        --primary: #2d2a2e;
+        --secondary: #69676c;
+        --tertiary: #939293;
+        --border: #dedcde;
+        --outline: #f0eff0;
+        --oauth-github: #2d2a2e;
+        --oauth-github-hover: #3d3a3e;
+        --oauth-github-text: #fbfaf9;
+        --color-success: #5c9e1e;
+        --color-success-glow: rgba(92, 158, 30, 0.2);
+        --color-warning: #bf8b00;
+        --color-warning-glow: rgba(191, 139, 0, 0.2);
+        --color-danger: #e0315d;
+        --color-danger-glow: rgba(224, 49, 93, 0.2);
+        --color-danger-dark: #c42149;
+        --shadow-primary:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(0, 0, 0, 0.03);
+        --shadow-secondary:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.02), 0 0.5px 0 rgba(0, 0, 0, 0.02);
+        --shadow-focus:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04),
+            0 1px 0 rgba(0, 0, 0, 0.03);
+    }
+
+    :root[data-theme="dark"][data-scheme="sonokai"] {
+        --bg-primary: #2d2a2e;
+        --primary: #e3e1e4;
+        --secondary: #9f9ca6;
+        --tertiary: #727072;
+        --border: #423f46;
+        --outline: #37343a;
+        --oauth-github: #e3e1e4;
+        --oauth-github-hover: #cfcdd0;
+        --oauth-github-text: #2d2a2e;
+        --color-success: #a9dc76;
+        --color-success-glow: rgba(169, 220, 118, 0.2);
+        --color-warning: #ffd866;
+        --color-warning-glow: rgba(255, 216, 102, 0.2);
+        --color-danger: #f85e84;
+        --color-danger-glow: rgba(248, 94, 132, 0.2);
+        --color-danger-dark: #e0466c;
+        --shadow-primary:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+            0 1px 0 rgba(0, 0, 0, 0.15);
+        --shadow-secondary:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+            0 0.5px 0 rgba(0, 0, 0, 0.08);
+        --shadow-focus:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme])[data-scheme="sonokai"] {
+            --bg-primary: #2d2a2e;
+            --primary: #e3e1e4;
+            --secondary: #9f9ca6;
+            --tertiary: #727072;
+            --border: #423f46;
+            --outline: #37343a;
+            --oauth-github: #e3e1e4;
+            --oauth-github-hover: #cfcdd0;
+            --oauth-github-text: #2d2a2e;
+            --color-success: #a9dc76;
+            --color-success-glow: rgba(169, 220, 118, 0.2);
+            --color-warning: #ffd866;
+            --color-warning-glow: rgba(255, 216, 102, 0.2);
+            --color-danger: #f85e84;
+            --color-danger-glow: rgba(248, 94, 132, 0.2);
+            --color-danger-dark: #e0466c;
+            --shadow-primary:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+                0 1px 0 rgba(0, 0, 0, 0.15);
+            --shadow-secondary:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+                0 0.5px 0 rgba(0, 0, 0, 0.08);
+            --shadow-focus:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+                0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
+        }
+    }
+
+    :root[data-scheme="oxocarbon"] {
+        --bg-primary: #f2f4f8;
+        --primary: #161616;
+        --secondary: #525252;
+        --tertiary: #878d96;
+        --border: #dde1e6;
+        --outline: #e8ecf1;
+        --oauth-github: #161616;
+        --oauth-github-hover: #262626;
+        --oauth-github-text: #f2f4f8;
+        --color-success: #198038;
+        --color-success-glow: rgba(25, 128, 56, 0.2);
+        --color-warning: #b25300;
+        --color-warning-glow: rgba(178, 83, 0, 0.2);
+        --color-danger: #da1e28;
+        --color-danger-glow: rgba(218, 30, 40, 0.2);
+        --color-danger-dark: #b81922;
+        --shadow-primary:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(0, 0, 0, 0.03);
+        --shadow-secondary:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.02), 0 0.5px 0 rgba(0, 0, 0, 0.02);
+        --shadow-focus:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04),
+            0 1px 0 rgba(0, 0, 0, 0.03);
+    }
+
+    :root[data-theme="dark"][data-scheme="oxocarbon"] {
+        --bg-primary: #161616;
+        --primary: #f2f4f8;
+        --secondary: #dde1e6;
+        --tertiary: #525252;
+        --border: #393939;
+        --outline: #262626;
+        --oauth-github: #f2f4f8;
+        --oauth-github-hover: #dde1e6;
+        --oauth-github-text: #161616;
+        --color-success: #42be65;
+        --color-success-glow: rgba(66, 190, 101, 0.2);
+        --color-warning: #ffab40;
+        --color-warning-glow: rgba(255, 171, 64, 0.2);
+        --color-danger: #ff7eb6;
+        --color-danger-glow: rgba(255, 126, 182, 0.2);
+        --color-danger-dark: #ee5396;
+        --shadow-primary:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+            0 1px 0 rgba(0, 0, 0, 0.15);
+        --shadow-secondary:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+            0 0.5px 0 rgba(0, 0, 0, 0.08);
+        --shadow-focus:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme])[data-scheme="oxocarbon"] {
+            --bg-primary: #161616;
+            --primary: #f2f4f8;
+            --secondary: #dde1e6;
+            --tertiary: #525252;
+            --border: #393939;
+            --outline: #262626;
+            --oauth-github: #f2f4f8;
+            --oauth-github-hover: #dde1e6;
+            --oauth-github-text: #161616;
+            --color-success: #42be65;
+            --color-success-glow: rgba(66, 190, 101, 0.2);
+            --color-warning: #ffab40;
+            --color-warning-glow: rgba(255, 171, 64, 0.2);
+            --color-danger: #ff7eb6;
+            --color-danger-glow: rgba(255, 126, 182, 0.2);
+            --color-danger-dark: #ee5396;
             --shadow-primary:
                 inset 0 0 0 1px rgba(255, 255, 255, 0.06),
                 0 1px 0 rgba(0, 0, 0, 0.15);

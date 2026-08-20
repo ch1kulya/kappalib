@@ -178,6 +178,11 @@ var ColorSchemeOptions = []ColorSchemeOption{
 	{Value: "gruvbox", Label: "Gruvbox"},
 	{Value: "nord", Label: "Nord"},
 	{Value: "rosepine", Label: "Rosé Pine"},
+	{Value: "tokyonight", Label: "Tokyo Night"},
+	{Value: "everforest", Label: "Everforest"},
+	{Value: "flexoki", Label: "Flexoki"},
+	{Value: "sonokai", Label: "Sonokai"},
+	{Value: "oxocarbon", Label: "Oxocarbon"},
 }
 
 var FontURLs = map[string]string{
