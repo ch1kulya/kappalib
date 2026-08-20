@@ -353,5 +353,22 @@ func TestGetReaderSettings(t *testing.T) {
 			t.Errorf("expected ShowComments=true for legacy cookie, got false")
 		}
 	})
+
+	t.Run("cookie with new color schemes", func(t *testing.T) {
+		schemes := []string{"tokyonight", "everforest", "flexoki", "sonokai", "oxocarbon"}
+		for _, s := range schemes {
+			cookieVal := url.QueryEscape(`{"theme":"dark","colorScheme":"` + s + `","fontSize":18,"fontFamily":"default","indent":0,"density":"normal","justify":false,"showComments":true}`)
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.AddCookie(&http.Cookie{
+				Name:  "kappalib_reader_settings",
+				Value: cookieVal,
+			})
+			settings := h.getReaderSettings(req)
+			if settings.ColorScheme != s {
+				t.Errorf("expected ColorScheme=%s, got %s", s, settings.ColorScheme)
+			}
+		}
+	})
 }
+
 

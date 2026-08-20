@@ -6,7 +6,17 @@ const SETTINGS_COOKIE_KEY = "kappalib_reader_settings";
 
 interface ReaderSettings {
   theme: "auto" | "light" | "dark";
-  colorScheme: "default" | "catppuccin" | "gruvbox" | "nord" | "rosepine";
+  colorScheme:
+    | "default"
+    | "catppuccin"
+    | "gruvbox"
+    | "nord"
+    | "rosepine"
+    | "tokyonight"
+    | "everforest"
+    | "flexoki"
+    | "sonokai"
+    | "oxocarbon";
   fontSize: number;
   fontFamily: string;
   indent: number;
@@ -88,6 +98,46 @@ const COLOR_SCHEME_OPTIONS: {
     colors: {
       light: ["#faf4ed", "#575279", "#797593", "#d7827e"],
       dark: ["#232136", "#e0def4", "#908caa", "#ea9a97"],
+    },
+  },
+  {
+    value: "tokyonight",
+    label: "Tokyo Night",
+    colors: {
+      light: ["#e1e2e7", "#3760bf", "#6172b0", "#ff9e64"],
+      dark: ["#1a1b26", "#c0caf5", "#a9b1d6", "#ff9e64"],
+    },
+  },
+  {
+    value: "everforest",
+    label: "Everforest",
+    colors: {
+      light: ["#fdf6e3", "#5c6a72", "#829181", "#e69875"],
+      dark: ["#2d353b", "#d3c6aa", "#9da9a0", "#e69875"],
+    },
+  },
+  {
+    value: "flexoki",
+    label: "Flexoki",
+    colors: {
+      light: ["#fffcf0", "#1c1b1a", "#6f6e69", "#da702c"],
+      dark: ["#100f0f", "#cecdc3", "#878580", "#da702c"],
+    },
+  },
+  {
+    value: "sonokai",
+    label: "Sonokai",
+    colors: {
+      light: ["#fbfaf9", "#2d2a2e", "#69676c", "#f85e84"],
+      dark: ["#2d2a2e", "#e3e1e4", "#9f9ca6", "#f85e84"],
+    },
+  },
+  {
+    value: "oxocarbon",
+    label: "Oxocarbon",
+    colors: {
+      light: ["#f2f4f8", "#161616", "#525252", "#ee5396"],
+      dark: ["#161616", "#f2f4f8", "#dde1e6", "#ee5396"],
     },
   },
 ];
