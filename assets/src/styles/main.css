@@ -4000,7 +4000,13 @@ a.update-log-item:active {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 80px;
+    min-height: 60px;
+    box-shadow: var(--shadow-primary);
+    background: var(--bg-primary);
+    color: var(--primary);
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
 }
 
 .comment-guest-message {

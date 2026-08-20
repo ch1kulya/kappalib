@@ -214,13 +214,14 @@ func (h *Handler) getReaderSettings(r *http.Request) views.ReaderSettings {
 	}
 
 	var parsed struct {
-		Theme       string `json:"theme"`
-		ColorScheme string `json:"colorScheme"`
-		FontSize    int    `json:"fontSize"`
-		FontFamily  string `json:"fontFamily"`
-		Indent      int    `json:"indent"`
-		Density     string `json:"density"`
-		Justify     bool   `json:"justify"`
+		Theme        string `json:"theme"`
+		ColorScheme  string `json:"colorScheme"`
+		FontSize     int    `json:"fontSize"`
+		FontFamily   string `json:"fontFamily"`
+		Indent       int    `json:"indent"`
+		Density      string `json:"density"`
+		Justify      bool   `json:"justify"`
+		ShowComments *bool  `json:"showComments"`
 	}
 
 	if err := json.Unmarshal([]byte(decoded), &parsed); err != nil {
@@ -269,6 +270,10 @@ func (h *Handler) getReaderSettings(r *http.Request) views.ReaderSettings {
 	}
 
 	settings.Justify = parsed.Justify
+
+	if parsed.ShowComments != nil {
+		settings.ShowComments = *parsed.ShowComments
+	}
 
 	logger.Debug("User settings applied successful.")
 

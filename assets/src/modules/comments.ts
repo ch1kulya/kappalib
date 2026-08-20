@@ -1,4 +1,5 @@
 import { profileManager, getAvatarUrl, updateProfileBadges } from "./profile";
+import { getSettings } from "./settings";
 
 const API_URL = process.env.API_URL;
 const TURNSTILE_COMMENTS_SITE_KEY =
@@ -385,7 +386,7 @@ function createCommentHTML(
       : "");
 
   let jumpHTML = "";
-  if (chapterUrl) {
+  if (chapterUrl && getSettings().showComments) {
     jumpHTML = `<a href="${chapterUrl}#${comment.id}" class="comment-jump-link" title="Перейти к комментарию в главе" aria-label="Перейти к комментарию">
       <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>

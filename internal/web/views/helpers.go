@@ -191,13 +191,14 @@ var FontURLs = map[string]string{
 }
 
 var DefaultReaderSettings = ReaderSettings{
-	Theme:       "auto",
-	ColorScheme: "default",
-	FontSize:    18,
-	FontFamily:  "default",
-	Indent:      0,
-	Density:     "normal",
-	Justify:     false,
+	Theme:        "auto",
+	ColorScheme:  "default",
+	FontSize:     18,
+	FontFamily:   "default",
+	Indent:       0,
+	Density:      "normal",
+	Justify:      false,
+	ShowComments: true,
 }
 
 func GetFontFamily(fontKey string) string {
