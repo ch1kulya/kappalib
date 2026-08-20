@@ -73,13 +73,14 @@ type progressCookieSchema struct {
 }
 
 type readerSettingsSchema struct {
-	Theme       string `json:"theme"`
-	ColorScheme string `json:"colorScheme"`
-	FontSize    int    `json:"fontSize"`
-	FontFamily  string `json:"fontFamily"`
-	Indent      int    `json:"indent"`
-	Density     string `json:"density"`
-	Justify     bool   `json:"justify"`
+	Theme        string `json:"theme"`
+	ColorScheme  string `json:"colorScheme"`
+	FontSize     int    `json:"fontSize"`
+	FontFamily   string `json:"fontFamily"`
+	Indent       int    `json:"indent"`
+	Density      string `json:"density"`
+	Justify      bool   `json:"justify"`
+	ShowComments *bool  `json:"showComments"`
 }
 
 var cookieValidators = map[string]func(string) bool{

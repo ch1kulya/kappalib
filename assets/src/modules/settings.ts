@@ -12,6 +12,7 @@ interface ReaderSettings {
   indent: number;
   density: "compact" | "normal" | "relaxed";
   justify: boolean;
+  showComments: boolean;
 }
 
 const DEFAULT_SETTINGS: ReaderSettings = {
@@ -22,6 +23,7 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   indent: 0,
   density: "normal",
   justify: false,
+  showComments: true,
 };
 
 const FONT_OPTIONS: { value: string; label: string; family: string }[] = [
@@ -228,6 +230,19 @@ function applySettings(settings: ReaderSettings): void {
 
     chapterTitle.classList.toggle("justify-text", settings.justify);
   }
+
+  const commentsSection = document.getElementById(
+    "comments-section",
+  ) as HTMLElement | null;
+  if (commentsSection) {
+    commentsSection.style.display = settings.showComments ? "" : "none";
+  }
+
+  document
+    .querySelectorAll<HTMLElement>(".comment-jump-link")
+    .forEach((el) => {
+      el.style.display = settings.showComments ? "" : "none";
+    });
 }
 
 function applyGlobalSettings(): void {
@@ -539,6 +554,16 @@ function renderSettingsView(): void {
     );
   }
 
+  const commentsToggle = document.getElementById("comments-toggle");
+  if (commentsToggle) {
+    commentsToggle.appendChild(
+      createToggleButton("true", "Показывать", settings.showComments),
+    );
+    commentsToggle.appendChild(
+      createToggleButton("false", "Скрывать", !settings.showComments),
+    );
+  }
+
   updateFontSizeButtons(settings.fontSize);
   initSettingsInteractions();
 }
@@ -658,6 +683,17 @@ function initSettingsInteractions(): void {
     const value = btn.dataset.value as "compact" | "normal" | "relaxed";
     settingsManager.updateSetting("density", value);
     updateActiveToggle(densityToggle as HTMLElement, value);
+  });
+
+  const commentsToggle = document.querySelector('[data-setting="showComments"]');
+  commentsToggle?.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest(
+      ".settings-toggle-btn",
+    ) as HTMLElement;
+    if (!btn) return;
+    const value = btn.dataset.value === "true";
+    settingsManager.updateSetting("showComments", value);
+    updateActiveToggle(commentsToggle as HTMLElement, btn.dataset.value!);
   });
 
   const fontDecrease = document.getElementById("font-decrease");

@@ -1,6 +1,9 @@
 package web
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -291,3 +294,64 @@ func TestNovelAdditionAndChaptersMatch(t *testing.T) {
 		t.Errorf("expected ChapterCount 20, got %d", feedItems[0].NovelAdditionChapters.ChapterCount)
 	}
 }
+
+func TestGetReaderSettings(t *testing.T) {
+	h := &Handler{}
+
+	t.Run("default when no cookie", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		settings := h.getReaderSettings(req)
+		if !settings.ShowComments {
+			t.Errorf("expected ShowComments=true by default, got false")
+		}
+		if settings.Theme != "auto" {
+			t.Errorf("expected Theme=auto, got %s", settings.Theme)
+		}
+	})
+
+	t.Run("cookie with showComments false", func(t *testing.T) {
+		cookieVal := url.QueryEscape(`{"theme":"dark","colorScheme":"default","fontSize":18,"fontFamily":"default","indent":0,"density":"normal","justify":false,"showComments":false}`)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{
+			Name:  "kappalib_reader_settings",
+			Value: cookieVal,
+		})
+		settings := h.getReaderSettings(req)
+		if settings.ShowComments {
+			t.Errorf("expected ShowComments=false, got true")
+		}
+		if settings.Theme != "dark" {
+			t.Errorf("expected Theme=dark, got %s", settings.Theme)
+		}
+	})
+
+	t.Run("cookie with showComments true", func(t *testing.T) {
+		cookieVal := url.QueryEscape(`{"theme":"light","colorScheme":"default","fontSize":20,"fontFamily":"default","indent":1,"density":"compact","justify":true,"showComments":true}`)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{
+			Name:  "kappalib_reader_settings",
+			Value: cookieVal,
+		})
+		settings := h.getReaderSettings(req)
+		if !settings.ShowComments {
+			t.Errorf("expected ShowComments=true, got false")
+		}
+		if settings.Theme != "light" {
+			t.Errorf("expected Theme=light, got %s", settings.Theme)
+		}
+	})
+
+	t.Run("legacy cookie without showComments defaults to true", func(t *testing.T) {
+		cookieVal := url.QueryEscape(`{"theme":"light","colorScheme":"default","fontSize":18,"fontFamily":"default","indent":0,"density":"normal","justify":false}`)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{
+			Name:  "kappalib_reader_settings",
+			Value: cookieVal,
+		})
+		settings := h.getReaderSettings(req)
+		if !settings.ShowComments {
+			t.Errorf("expected ShowComments=true for legacy cookie, got false")
+		}
+	})
+}
+
