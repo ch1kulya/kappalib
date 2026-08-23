@@ -22,7 +22,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          script_stop: true
           script: |
             test -d /opt/kappalib || { echo "::error::Directory /opt/kappalib does not exist on VPS"; exit 1; }
             cd /opt/kappalib
