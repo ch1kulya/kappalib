@@ -10,6 +10,7 @@ services:
       - .env
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./ai-bots.caddy:/etc/caddy/ai-bots.caddy:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
