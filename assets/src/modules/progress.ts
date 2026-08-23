@@ -70,7 +70,7 @@ export function saveProgressCookie(data: ProgressCookie): void {
   setKappalibCookie(COOKIE_NAME, trimProgressCookie(data));
 }
 
-function saveProgressCookieQuietly(data: ProgressCookie): void {
+export function saveProgressCookieQuietly(data: ProgressCookie): void {
   updateKappalibCookieQuietly(COOKIE_NAME, trimProgressCookie(data));
 }
 
