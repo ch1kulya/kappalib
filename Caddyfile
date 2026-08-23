@@ -1,8 +1,10 @@
 {$KAPPA_DOMAIN} {
+    import ai-bots.caddy
     reverse_proxy kappalib:1666
 }
 
 www.{$KAPPA_DOMAIN} {
+    import ai-bots.caddy
     reverse_proxy kappalib:1666
 }
 

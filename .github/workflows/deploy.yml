@@ -1,0 +1,31 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://kappalib.rip
+
+    steps:
+      - name: Deploy via SSH on VPS
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            test -d /opt/kappalib || { echo "::error::Directory /opt/kappalib does not exist on VPS"; exit 1; }
+            cd /opt/kappalib
+            git fetch origin main
+            git reset --hard origin/main
+            bash .github/scripts/deploy.sh

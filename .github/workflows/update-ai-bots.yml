@@ -1,0 +1,35 @@
+name: Update AI Bot Blocklists
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-bots:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: dev
+
+      - name: Run update script
+        run: bash .github/scripts/update-ai-bots.sh
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: dev
+          branch: update-ai-bots
+          delete-branch: true
+          commit-message: "chore: update AI bot blocklists"
+          title: "chore: update AI bot blocklists"
+          body: |
+            Automated PR updating AI bot blocklists in Caddy and robots.txt from [ai-robots-txt/ai.robots.txt](https://github.com/ai-robots-txt/ai.robots.txt).
