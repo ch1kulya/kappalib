@@ -262,11 +262,20 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 		SELECT COUNT(*)
 		FROM comment_answers ca
 		JOIN comments c ON ca.comment_id = c.id
-		WHERE c.user_id = $1
-		  AND ca.user_id != $1
+		WHERE ca.user_id != $1
 		  AND c.status = 'approved'
 		  AND ca.status = 'approved'
 		  AND ca.created_at > $2
+		  AND (
+		    c.user_id = $1
+		    OR EXISTS (
+		      SELECT 1
+		      FROM comment_answers my_ca
+		      WHERE my_ca.comment_id = ca.comment_id
+		        AND my_ca.user_id = $1
+		        AND my_ca.status != 'deleted'
+		    )
+		  )
 	`, profileID, threshold).Scan(&unreadCount); err != nil {
 		logger.Warn("Failed to count unread notifications for user %s: %v", profileID, err)
 	}
