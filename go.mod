@@ -1,9 +1,9 @@
 module github.com/ch1kulya/kappalib
 
-go 1.26.0
+go 1.27.0
 
 require (
-	github.com/a-h/templ v0.3.1001
+	github.com/a-h/templ v0.3.1020
 	github.com/ch1kulya/logger v1.0.6
 	github.com/danielgtaylor/huma/v2 v2.37.3
 	github.com/evanw/esbuild v0.28.0
