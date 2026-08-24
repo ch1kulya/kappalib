@@ -45,6 +45,14 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
+      - name: Install templ
+        if: matrix.language == 'go'
+        run: go install github.com/a-h/templ/cmd/templ@$(go list -m -f '{{.Version}}' github.com/a-h/templ)
+
+      - name: Generate templ
+        if: matrix.language == 'go'
+        run: templ generate
+
       - name: Build Go
         if: matrix.build-mode == 'manual'
         shell: bash
