@@ -33,7 +33,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to connect to database: %v", err)
 	}
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	logger.Info("Seeding mock database...")
 	if _, err := conn.Exec(ctx, mock.SeedSQL); err != nil {
