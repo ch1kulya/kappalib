@@ -560,6 +560,7 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 			IsLoggedIn:     h.hasSession(r),
 			Schema:         schema,
 			ReaderSettings: h.getReaderSettings(r),
+			IsHomePage:     true,
 		},
 		Novels:          dataResp.Novels,
 		Page:            page,

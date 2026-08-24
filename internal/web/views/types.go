@@ -9,6 +9,7 @@ type BaseProps struct {
 	Version        string
 	Schema         string
 	OGImage        string
+	IsHomePage     bool
 	IsChapterPage  bool
 	IsAdult        bool
 	IsLoggedIn     bool
