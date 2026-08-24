@@ -47,6 +47,7 @@ var requiredEnvVars = []string{
 	"S3_ACCESS_KEY",
 	"S3_SECRET_KEY",
 	"S3_USE_SSL",
+	"S3_PUBLIC_URL",
 	"INDEX_NOW_KEY",
 	"AUTH_SECRET",
 	"AUTH_URL",

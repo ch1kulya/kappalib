@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: kappalib-dev-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: kappa
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: kappa-db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kappalib"]
+      interval: 2s
+      timeout: 3s
+      retries: 5
+
+  adminer:
+    image: public.ecr.aws/docker/library/adminer:standalone
+    container_name: dev-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - ./adminer.css:/var/www/html/adminer.css:ro
