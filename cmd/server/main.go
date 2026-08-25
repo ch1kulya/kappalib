@@ -119,9 +119,8 @@ func validateEnv() error {
 }
 
 func init() {
-	if os.Getenv("FORCE_COLOR") == "1" {
-		logger.SetForceColor(true)
-		logger.Debug("Forced to use truecolor.")
+	if os.Getenv("SHOW_USER_AGENT") == "true" {
+		logger.SetShowUserAgent(true)
 	}
 	logger.Info("Initializing application...")
 
@@ -162,7 +161,6 @@ func main() {
 
 	r.Use(middleware.RealIP)
 	r.Use(logger.Middleware)
-	r.Use(web.UserAgentMiddleware)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 	r.Use(middleware.Timeout(60 * time.Second))
