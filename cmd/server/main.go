@@ -466,6 +466,15 @@ func main() {
 			Security:    []map[string][]string{{"sessionCookie": {}}},
 			Tags:        []string{"Profile"},
 		}, api.HandleGetCommentStats)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "record-time",
+			Method:      http.MethodPost,
+			Path:        "/stats/time",
+			Summary:     "Record active user time",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Stats"},
+		}, api.HandleRecordTime)
 	})
 
 	go func() {
@@ -476,6 +485,8 @@ func main() {
 			logger.Info("Sitemap cache warmed up.")
 		}
 	}()
+
+	data.TimeTracker.Start(60 * time.Second)
 
 	port := "1666"
 
@@ -499,11 +510,18 @@ func main() {
 	<-quit
 	logger.Info("Shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("Server forced to shutdown: %v", err)
+	}
+
+	flushCtx, flushCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer flushCancel()
+
+	if err := data.TimeTracker.Stop(flushCtx); err != nil {
+		logger.Error("Failed to flush time tracker on shutdown: %v", err)
 	}
 
 	logger.Info("Server exited properly")

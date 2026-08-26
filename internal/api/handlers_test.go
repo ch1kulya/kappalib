@@ -353,3 +353,67 @@ func TestEditCommentAnswerInputValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestRecordTimeInputValidation(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "record-time",
+		Method:      http.MethodPost,
+		Path:        "/stats/time",
+	}, func(ctx context.Context, input *RecordTimeInput) (*EmptyResponse, error) {
+		return &EmptyResponse{Status: http.StatusNoContent}, nil
+	})
+
+	tests := []struct {
+		name       string
+		body       map[string]any
+		wantStatus int
+	}{
+		{
+			name:       "valid seconds",
+			body:       map[string]any{"seconds": 60},
+			wantStatus: http.StatusNoContent,
+		},
+		{
+			name:       "zero seconds",
+			body:       map[string]any{"seconds": 0},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "negative seconds",
+			body:       map[string]any{"seconds": -10},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "seconds exceeds maximum",
+			body:       map[string]any{"seconds": 500},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := humaApi.Post("/stats/time", tt.body)
+			if resp.Code != tt.wantStatus {
+				t.Errorf("POST /stats/time returned status %d, want %d: %s", resp.Code, tt.wantStatus, resp.Body.String())
+			}
+		})
+	}
+}
+
+func TestHandleRecordTime(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "record-time",
+		Method:      http.MethodPost,
+		Path:        "/stats/time",
+	}, HandleRecordTime)
+
+	resp := humaApi.Post("/stats/time", map[string]any{"seconds": 60})
+	if resp.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 Unauthorized for unauthenticated request, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+

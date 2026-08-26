@@ -14,6 +14,7 @@ import { initProfile, initProfileModal } from "./modules/profile";
 import { initComments, initMyCommentsPage } from "./modules/comments";
 import { initSettings, initSettingsModal } from "./modules/settings";
 import { initHistoryPage } from "./modules/history";
+import { initTimeTracker } from "./modules/time";
 
 declare global {
   interface Window {
@@ -54,6 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initComments();
     initHistoryPage();
     initMyCommentsPage();
+    initTimeTracker();
 
     if (document.querySelector(".cr-wrapper")) {
       refreshLastReadTotalChapters();
