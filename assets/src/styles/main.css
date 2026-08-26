@@ -4082,6 +4082,10 @@ a.update-log-item:active {
         background 0.15s;
 }
 
+.vote-btn svg {
+    transition: fill 0.15s;
+}
+
 @media (hover: hover) {
     .vote-btn:hover {
         color: var(--primary);
@@ -4090,6 +4094,10 @@ a.update-log-item:active {
 
 .vote-btn:active {
     color: var(--primary);
+}
+
+.vote-btn.vote-active svg {
+    fill: currentColor;
 }
 
 .vote-btn.vote-active.vote-up {
