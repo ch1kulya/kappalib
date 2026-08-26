@@ -14,10 +14,6 @@ import (
 func main() {
 	_ = godotenv.Load(".env.dev")
 
-	if os.Getenv("FORCE_COLOR") == "1" {
-		logger.SetForceColor(true)
-	}
-
 	databaseURL := os.Getenv("DEV_DATABASE_URL")
 	if databaseURL == "" {
 		logger.Fatal("DEV_DATABASE_URL environment variable is required")

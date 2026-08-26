@@ -45,7 +45,7 @@ services:
       - S3_PUBLIC_URL=${KAPPA_S3_PUBLIC_URL}
       - S3_USE_SSL=${KAPPA_S3_USE_SSL}
       - INDEX_NOW_KEY
-      - FORCE_COLOR
+      - SHOW_USER_AGENT
       - AUTH_SECRET
       - AUTH_URL
       - AUTH_SECURE

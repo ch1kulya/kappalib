@@ -197,7 +197,9 @@ func (h *Handler) getReaderSettings(r *http.Request) views.ReaderSettings {
 
 	cookie, err := r.Cookie("kappalib_reader_settings")
 	if err != nil {
-		logger.Debug("Default settings. Reason: %v", err)
+		logger.With(map[string]any{
+			"reason": err,
+		}).Debug("Default settings")
 		return settings
 	}
 

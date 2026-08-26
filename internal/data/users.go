@@ -326,7 +326,9 @@ func SyncCookies(ctx context.Context, userID string, cookies map[string]models.C
 		return nil, err
 	}
 
-	logger.Debug("Synced cookies for user: %v", userID)
+	logger.With(map[string]any{
+		"user_id": userID,
+	}).Debug("Synced cookies")
 
 	return merged, nil
 }
