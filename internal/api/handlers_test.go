@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/ch1kulya/kappalib/internal/data"
@@ -416,4 +417,101 @@ func TestHandleRecordTime(t *testing.T) {
 		t.Errorf("expected 401 Unauthorized for unauthenticated request, got %d: %s", resp.Code, resp.Body.String())
 	}
 }
+
+func TestCacheMiddleware(t *testing.T) {
+	handler := CacheMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	tests := []struct {
+		name            string
+		method          string
+		path            string
+		headers         map[string]string
+		cookies         []*http.Cookie
+		wantCacheCtrl   string
+		wantVary        string
+		wantPragma      string
+		wantExpires     string
+	}{
+		{
+			name:          "public GET request without auth",
+			method:        http.MethodGet,
+			path:          "/api/chapters/123/comments",
+			wantCacheCtrl: "public, max-age=6000",
+			wantVary:      "Cookie",
+		},
+		{
+			name:          "authenticated GET request with session cookie",
+			method:        http.MethodGet,
+			path:          "/api/chapters/123/comments",
+			cookies:       []*http.Cookie{{Name: SessionCookieName, Value: "valid_session"}},
+			wantCacheCtrl: "private, max-age=60",
+			wantVary:      "Cookie",
+		},
+		{
+			name:          "authenticated GET request with authorization header",
+			method:        http.MethodGet,
+			path:          "/api/chapters/123/comments",
+			headers:       map[string]string{"Authorization": "Bearer token"},
+			wantCacheCtrl: "private, max-age=60",
+			wantVary:      "Cookie",
+		},
+		{
+			name:          "no-cache prefix profile path",
+			method:        http.MethodGet,
+			path:          "/api/profile/me",
+			wantCacheCtrl: "no-store, no-cache, must-revalidate, private",
+			wantPragma:    "no-cache",
+			wantExpires:   "0",
+		},
+		{
+			name:          "no-cache prefix webhook path",
+			method:        http.MethodPost,
+			path:          "/api/webhook/telegram",
+			wantCacheCtrl: "no-store, no-cache, must-revalidate, private",
+			wantPragma:    "no-cache",
+			wantExpires:   "0",
+		},
+		{
+			name:          "POST request without noCache prefix has no public cache header",
+			method:        http.MethodPost,
+			path:          "/api/chapters/123/comments",
+			wantCacheCtrl: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+			for k, v := range tt.headers {
+				req.Header.Set(k, v)
+			}
+			for _, c := range tt.cookies {
+				req.AddCookie(c)
+			}
+
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			if got := rec.Header().Get("Cache-Control"); got != tt.wantCacheCtrl {
+				t.Errorf("Cache-Control = %q, want %q", got, tt.wantCacheCtrl)
+			}
+			if got := rec.Header().Get("Vary"); got != tt.wantVary {
+				t.Errorf("Vary = %q, want %q", got, tt.wantVary)
+			}
+			if tt.wantPragma != "" {
+				if got := rec.Header().Get("Pragma"); got != tt.wantPragma {
+					t.Errorf("Pragma = %q, want %q", got, tt.wantPragma)
+				}
+			}
+			if tt.wantExpires != "" {
+				if got := rec.Header().Get("Expires"); got != tt.wantExpires {
+					t.Errorf("Expires = %q, want %q", got, tt.wantExpires)
+				}
+			}
+		})
+	}
+}
+
 
