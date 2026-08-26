@@ -1,4 +1,5 @@
 import { uiManager } from "./ui";
+import { trackEvent } from "./analytics";
 
 interface NovelSearchResult {
   id: string;
@@ -43,6 +44,7 @@ export function initSearch(): void {
       e.preventDefault();
       const query = input.value.trim();
       if (query.length >= 2) {
+        trackEvent("search", { query });
         window.location.href = `/catalog?search=${encodeURIComponent(query)}`;
       } else if (firstResultUrl) {
         window.location.href = firstResultUrl;
@@ -91,6 +93,8 @@ export function initSearch(): void {
         results.innerHTML = "";
         firstResultUrl = null;
 
+        trackEvent("search", { query });
+
         if (!data.novels || data.novels.length === 0) {
           console.info(`No results found for: "${query}"`);
           const noResultsDiv = document.createElement("div");
@@ -110,6 +114,9 @@ export function initSearch(): void {
           const a = document.createElement("a");
           a.href = `/${novel.id}`;
           a.className = "search-result-card";
+          a.addEventListener("click", () => {
+            trackEvent("search_select", { novel_id: novel.id });
+          });
 
           const img = document.createElement("img");
           img.src = novel.cover_url || PLACEHOLDER_IMG;

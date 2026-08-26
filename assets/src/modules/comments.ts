@@ -1,5 +1,6 @@
 import { profileManager, getAvatarUrl, updateProfileBadges } from "./profile";
 import { getSettings } from "./settings";
+import { trackEvent } from "./analytics";
 
 const API_URL = process.env.API_URL;
 const TURNSTILE_COMMENTS_SITE_KEY =
@@ -1217,6 +1218,8 @@ async function handleVote(
     });
     if (!res.ok) return;
 
+    trackEvent("comment_vote", { value });
+
     const data: { score: number; user_vote: number } = await res.json();
     scoreEl.textContent = String(data.score);
     upBtn.classList.toggle("vote-active", data.user_vote === 1);
@@ -1370,6 +1373,7 @@ async function sendCommentPayload(
     }
   }
 
+  trackEvent("comment_submit", { method });
   return true;
 }
 
@@ -1820,6 +1824,8 @@ async function handleDeleteComment(
 
     if (!res.ok) return;
 
+    trackEvent("comment_delete");
+
     const wrapper = btn.closest(".mc-comment-wrapper") as HTMLElement | null;
     if (wrapper) {
       const separator = wrapper.querySelector(".mc-chapter-separator");
@@ -1885,6 +1891,8 @@ async function handleDeleteAnswer(
 
     if (!res.ok) return;
 
+    trackEvent("comment_answer_delete");
+
     const answerEl = container.querySelector(
       `.comment-answer[data-answer-id="${answerId}"]`,
     );
@@ -1912,6 +1920,8 @@ async function handleDeleteMyAnswer(
     });
 
     if (!res.ok) return;
+
+    trackEvent("comment_answer_delete");
 
     const answerEl = document.querySelector(
       `.comment-answer[data-answer-id="${answerId}"]`,
@@ -2156,6 +2166,7 @@ async function uploadCommentImage(
     }
 
     const data: { url: string } = await res.json();
+    trackEvent("comment_image_upload");
     const markdown = `![${fileName}](${data.url})`;
     const placeholderStart = textarea.value.indexOf(currentPlaceholder);
     if (placeholderStart !== -1) {

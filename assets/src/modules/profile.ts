@@ -3,6 +3,7 @@ import { settingsManager } from "./settings";
 import { initComments } from "./comments";
 import { refreshHistory } from "./history";
 import { refreshLastReadTotalChapters } from "./progress";
+import { trackEvent, identifyUmami } from "./analytics";
 
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
@@ -35,32 +36,6 @@ export function getAvatarUrl(
     return `${S3_URL}/avatars/${userId}.jpg?v=${avatarUpdatedAt}`;
   }
   return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${avatarSeed}&backgroundType=solid,gradientLinear`;
-}
-
-declare global {
-  interface Window {
-    umami?: {
-      identify: (id: string) => void;
-    };
-  }
-}
-
-function identifyUmami(id: string): void {
-  if (typeof window === "undefined" || !id) return;
-  if (window.umami?.identify) {
-    window.umami.identify(id);
-    return;
-  }
-  let attempts = 0;
-  const interval = setInterval(() => {
-    attempts++;
-    if (window.umami?.identify) {
-      window.umami.identify(id);
-      clearInterval(interval);
-    } else if (attempts >= 10) {
-      clearInterval(interval);
-    }
-  }, 500);
 }
 
 class ProfileManager {
@@ -234,6 +209,7 @@ class ProfileManager {
     } catch {
       // ignore errors
     }
+    trackEvent("logout");
     this.clearLocal();
   }
 
@@ -491,6 +467,7 @@ function renderGuestView(): void {
       link.addEventListener("click", () => {
         const provider = href.split("/auth/")[1]?.split("/")[0];
         if (provider) {
+          trackEvent("oauth_login_click", { provider });
           profileManager.setProvider(provider);
         }
       });
@@ -566,6 +543,7 @@ function initProfileInteractions(profile: ProfilePublic): void {
     avatarInput.value = "";
 
     if (result && avatarImg) {
+      trackEvent("avatar_upload");
       avatarImg.src = profileManager.getAvatarUrl(result);
     }
   });
@@ -625,6 +603,7 @@ function initProfileInteractions(profile: ProfilePublic): void {
     }
 
     if (result.profile) {
+      trackEvent("name_change");
       currentProfile.display_name = result.profile.display_name;
       nameText.textContent = result.profile.display_name;
     }

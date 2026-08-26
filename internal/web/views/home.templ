@@ -31,6 +31,8 @@ templ Home(props HomeProps) {
 							<a
 								href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.LastRead.Novel.ID, props.LastRead.LastChapterID)) }
 								class="action-btn btn-primary"
+								data-umami-event="cr_card_continue"
+								data-umami-event-novel={ props.LastRead.Novel.ID }
 							>
 								Продолжить
 							</a>

@@ -1,5 +1,6 @@
 import { loadCatalogPage } from "./catalog";
 import { setKappalibCookie } from "./profile";
+import { trackEvent } from "./analytics";
 
 interface DropdownChangeEventDetail {
   value: string;
@@ -25,6 +26,7 @@ export function initChaptersSort(): void {
 
       sortingInProgress = true;
       setKappalibCookie("chapter_sort", value);
+      trackEvent("chapter_sort", { sort: value });
 
       try {
         chaptersList.classList.add("is-sorting");
@@ -67,6 +69,7 @@ export function initCatalogSort(): void {
 
       console.info(`Changed catalog sort to: ${value}`);
       setKappalibCookie("catalog_sort", value);
+      trackEvent("catalog_sort", { sort: value });
       loadCatalogPage(window.location.href, false);
     });
   }
