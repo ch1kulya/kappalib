@@ -37,6 +37,32 @@ export function getAvatarUrl(
   return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${avatarSeed}&backgroundType=solid,gradientLinear`;
 }
 
+declare global {
+  interface Window {
+    umami?: {
+      identify: (id: string) => void;
+    };
+  }
+}
+
+function identifyUmami(id: string): void {
+  if (typeof window === "undefined" || !id) return;
+  if (window.umami?.identify) {
+    window.umami.identify(id);
+    return;
+  }
+  let attempts = 0;
+  const interval = setInterval(() => {
+    attempts++;
+    if (window.umami?.identify) {
+      window.umami.identify(id);
+      clearInterval(interval);
+    } else if (attempts >= 10) {
+      clearInterval(interval);
+    }
+  }, 500);
+}
+
 class ProfileManager {
   private profileId: string | null = null;
   private cachedProfile: ProfilePublic | null = null;
@@ -82,6 +108,7 @@ class ProfileManager {
         this.cachedProfile = profile;
         localStorage.setItem(PROFILE_ID_KEY, profile.id);
         localStorage.setItem(NOTIFICATIONS_KEY, String(profile.unread_notifications || 0));
+        identifyUmami(profile.id);
         this.notifyLogin();
         return profile;
       }
