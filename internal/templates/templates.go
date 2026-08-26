@@ -3,6 +3,7 @@ package templates
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
 	"text/template"
 )
 
@@ -10,12 +11,9 @@ import (
 var FS embed.FS
 
 var (
-	robotsTmpl        *template.Template
-	sitemapTmpl       *template.Template
-	schemaWebsiteTmpl *template.Template
-	schemaNovelTmpl   *template.Template
-	schemaChapterTmpl *template.Template
-	indexNowKeyTmpl   *template.Template
+	robotsTmpl      *template.Template
+	sitemapTmpl     *template.Template
+	indexNowKeyTmpl *template.Template
 )
 
 func Init() error {
@@ -27,21 +25,6 @@ func Init() error {
 	}
 
 	sitemapTmpl, err = template.ParseFS(FS, "sitemap.xml.tmpl")
-	if err != nil {
-		return err
-	}
-
-	schemaWebsiteTmpl, err = template.ParseFS(FS, "schema_website.html.tmpl")
-	if err != nil {
-		return err
-	}
-
-	schemaNovelTmpl, err = template.ParseFS(FS, "schema_novel.html.tmpl")
-	if err != nil {
-		return err
-	}
-
-	schemaChapterTmpl, err = template.ParseFS(FS, "schema_chapter.html.tmpl")
 	if err != nil {
 		return err
 	}
@@ -97,11 +80,45 @@ type SchemaWebsiteData struct {
 }
 
 func RenderSchemaWebsite(data SchemaWebsiteData) (string, error) {
-	var buf bytes.Buffer
-	if err := schemaWebsiteTmpl.Execute(&buf, data); err != nil {
+	graph := map[string]any{
+		"@context": "https://schema.org",
+		"@graph": []any{
+			map[string]any{
+				"@type":       "WebSite",
+				"url":         data.Domain,
+				"name":        "kappalib",
+				"description": data.Description,
+				"inLanguage":  "ru-RU",
+			},
+			map[string]any{
+				"@type": "Organization",
+				"name":  "kappalib",
+				"url":   data.Domain,
+				"logo": map[string]any{
+					"@type": "ImageObject",
+					"url":   "https://s3.kappalib.rip/favicon.ico",
+				},
+				"contactPoint": map[string]any{
+					"@type":       "ContactPoint",
+					"email":       "support@kappalib.rip",
+					"contactType": "customer service",
+				},
+			},
+			map[string]any{
+				"@type":       "CollectionPage",
+				"@id":         data.Canonical,
+				"url":         data.Canonical,
+				"name":        data.Title,
+				"description": data.Description,
+				"inLanguage":  "ru-RU",
+			},
+		},
+	}
+	b, err := json.Marshal(graph)
+	if err != nil {
 		return "", err
 	}
-	return buf.String(), nil
+	return "<script type=\"application/ld+json\">\n" + string(b) + "\n</script>", nil
 }
 
 type SchemaNovelData struct {
@@ -122,11 +139,62 @@ type SchemaNovel struct {
 }
 
 func RenderSchemaNovel(data SchemaNovelData) (string, error) {
-	var buf bytes.Buffer
-	if err := schemaNovelTmpl.Execute(&buf, data); err != nil {
+	book := map[string]any{
+		"@type":               "Book",
+		"url":                 data.Canonical,
+		"name":                data.Novel.Title,
+		"description":         data.Description,
+		"inLanguage":          "ru-RU",
+		"isAccessibleForFree": true,
+	}
+	if data.Novel.TitleEn != "" {
+		book["alternateName"] = data.Novel.TitleEn
+	}
+	if data.Novel.CoverURL != "" {
+		book["image"] = data.Novel.CoverURL
+	}
+	if data.Novel.Author != "" {
+		book["author"] = map[string]any{
+			"@type": "Person",
+			"name":  data.Novel.Author,
+		}
+	}
+	if data.Novel.Status != "" {
+		book["workExample"] = map[string]any{
+			"@type":       "Book",
+			"bookEdition": "Веб-новелла",
+			"bookFormat":  "https://schema.org/EBook",
+		}
+	}
+
+	graph := map[string]any{
+		"@context": "https://schema.org",
+		"@graph": []any{
+			map[string]any{
+				"@type": "BreadcrumbList",
+				"itemListElement": []any{
+					map[string]any{
+						"@type":    "ListItem",
+						"position": 1,
+						"name":     "Главная",
+						"item":     data.Domain,
+					},
+					map[string]any{
+						"@type":    "ListItem",
+						"position": 2,
+						"name":     data.Novel.Title,
+						"item":     data.Canonical,
+					},
+				},
+			},
+			book,
+		},
+	}
+	b, err := json.Marshal(graph)
+	if err != nil {
 		return "", err
 	}
-	return buf.String(), nil
+	return "<script type=\"application/ld+json\">\n" + string(b) + "\n</script>", nil
 }
 
 type SchemaChapterData struct {
@@ -139,11 +207,52 @@ type SchemaChapterData struct {
 }
 
 func RenderSchemaChapter(data SchemaChapterData) (string, error) {
-	var buf bytes.Buffer
-	if err := schemaChapterTmpl.Execute(&buf, data); err != nil {
+	graph := map[string]any{
+		"@context": "https://schema.org",
+		"@graph": []any{
+			map[string]any{
+				"@type": "BreadcrumbList",
+				"itemListElement": []any{
+					map[string]any{
+						"@type":    "ListItem",
+						"position": 1,
+						"name":     "Главная",
+						"item":     data.Domain,
+					},
+					map[string]any{
+						"@type":    "ListItem",
+						"position": 2,
+						"name":     data.Novel.Title,
+						"item":     data.Domain + "/" + data.Novel.ID,
+					},
+					map[string]any{
+						"@type":    "ListItem",
+						"position": 3,
+						"name":     data.ChapterTitle,
+						"item":     data.Canonical,
+					},
+				},
+			},
+			map[string]any{
+				"@type":       "Chapter",
+				"url":         data.Canonical,
+				"name":        data.ChapterTitle,
+				"description": data.Description,
+				"position":    data.ChapterNum,
+				"isPartOf": map[string]any{
+					"@type": "Book",
+					"name":  data.Novel.Title,
+				},
+				"inLanguage":          "ru-RU",
+				"isAccessibleForFree": true,
+			},
+		},
+	}
+	b, err := json.Marshal(graph)
+	if err != nil {
 		return "", err
 	}
-	return buf.String(), nil
+	return "<script type=\"application/ld+json\">\n" + string(b) + "\n</script>", nil
 }
 
 type IndexNowKeyData struct {

@@ -716,22 +716,30 @@ func (h *Handler) StaticPage(name, title string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const DOCS_URL = "https://s3.kappalib.rip"
 
-		resp, err := http.Get(fmt.Sprintf("%s/%s.html", DOCS_URL, name))
 		var content string
-
-		if err != nil || resp.StatusCode != 200 {
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, fmt.Sprintf("%s/%s.html", DOCS_URL, name), nil)
+		if err != nil {
 			content = "<div class='error'>Не удалось загрузить документ с сервера.</div>"
 		} else {
-			defer func() { _ = resp.Body.Close() }()
-			bodyBytes, _ := io.ReadAll(resp.Body)
-
-			bodyStr := string(bodyBytes)
-			if start := strings.Index(bodyStr, "<body>"); start != -1 {
-				if end := strings.Index(bodyStr, "</body>"); end != -1 {
-					bodyStr = bodyStr[start+6 : end]
+			client := &http.Client{Timeout: 5 * time.Second}
+			resp, err := client.Do(req)
+			if err != nil || resp.StatusCode != http.StatusOK {
+				content = "<div class='error'>Не удалось загрузить документ с сервера.</div>"
+				if resp != nil {
+					_ = resp.Body.Close()
 				}
+			} else {
+				defer func() { _ = resp.Body.Close() }()
+				bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+
+				bodyStr := string(bodyBytes)
+				if start := strings.Index(bodyStr, "<body>"); start != -1 {
+					if end := strings.Index(bodyStr, "</body>"); end != -1 {
+						bodyStr = bodyStr[start+6 : end]
+					}
+				}
+				content = bodyStr
 			}
-			content = bodyStr
 		}
 
 		props := views.DocumentProps{

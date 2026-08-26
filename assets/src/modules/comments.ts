@@ -1257,18 +1257,24 @@ function initToolbarHandlers(
   imageInput: HTMLInputElement | null,
   container: HTMLElement,
 ): void {
-  imageInput?.addEventListener("change", async () => {
-    const file = imageInput.files?.[0];
-    if (!file || !textarea) return;
-    imageInput.value = "";
-    initTurnstileForComments(container);
-    await uploadCommentImage(file, textarea);
-  });
+  if (imageInput && !imageInput.dataset.bound) {
+    imageInput.dataset.bound = "true";
+    imageInput.addEventListener("change", async () => {
+      const file = imageInput.files?.[0];
+      if (!file || !textarea || isUploadingImage) return;
+      imageInput.value = "";
+      initTurnstileForComments(container);
+      await uploadCommentImage(file, textarea);
+    });
+  }
 
   toolbar.querySelectorAll(".toolbar-btn").forEach((btn) => {
-    btn.addEventListener("mousedown", (e) => {
+    const btnEl = btn as HTMLElement;
+    if (btnEl.dataset.bound) return;
+    btnEl.dataset.bound = "true";
+    btnEl.addEventListener("mousedown", (e) => {
       e.preventDefault();
-      const action = (btn as HTMLElement).dataset.action;
+      const action = btnEl.dataset.action;
       switch (action) {
         case "bold":
           wrapSelection(textarea, "**", "**");
@@ -1283,7 +1289,10 @@ function initToolbarHandlers(
           insertLinePrefix(textarea, "> ");
           break;
         case "image":
-          if (!isUploadingImage) imageInput?.click();
+          if (!isUploadingImage && imageInput) {
+            imageInput.value = "";
+            imageInput.click();
+          }
           break;
       }
       updateCharCounter(textarea);
@@ -2101,6 +2110,19 @@ let isUploadingImage = false;
 let uploadAbortController: AbortController | null = null;
 let uploadAnimationInterval: ReturnType<typeof setInterval> | null = null;
 
+function setImageButtonsState(disabled: boolean): void {
+  document
+    .querySelectorAll<HTMLButtonElement>('.toolbar-btn[data-action="image"]')
+    .forEach((btn) => {
+      btn.disabled = disabled;
+    });
+  document
+    .querySelectorAll<HTMLInputElement>('input[type="file"][accept*="image"]')
+    .forEach((inp) => {
+      inp.disabled = disabled;
+    });
+}
+
 async function uploadCommentImage(
   file: File,
   textarea: HTMLTextAreaElement,
@@ -2113,10 +2135,7 @@ async function uploadCommentImage(
   }
 
   isUploadingImage = true;
-  const imageBtn = document.querySelector(
-    '.toolbar-btn[data-action="image"]',
-  ) as HTMLButtonElement | null;
-  if (imageBtn) imageBtn.disabled = true;
+  setImageButtonsState(true);
 
   const base64 = await fileToBase64(file);
   const fileName = file.name.replace(/\.[^.]+$/, "");
@@ -2212,7 +2231,7 @@ async function uploadCommentImage(
     }
     isUploadingImage = false;
     uploadAbortController = null;
-    if (imageBtn) imageBtn.disabled = false;
+    setImageButtonsState(false);
   }
 
   updateCharCounter(textarea);
