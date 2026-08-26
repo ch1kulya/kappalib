@@ -9,6 +9,9 @@ class ActiveTimeTracker {
   private activeSeconds = 0;
   private lastActivityTime = Date.now();
   private lastFlushTime = 0;
+  private lastUnloadFlushTime = 0;
+  private backoffUntil = 0;
+  private isFlushing = false;
   private intervalId: number | null = null;
 
   start(): void {
@@ -60,43 +63,70 @@ class ActiveTimeTracker {
   private tick(): void {
     if (document.visibilityState !== "visible") return;
 
-    const isUserActive = Date.now() - this.lastActivityTime < INACTIVITY_TIMEOUT_MS;
+    const isUserActive =
+      Date.now() - this.lastActivityTime < INACTIVITY_TIMEOUT_MS;
     if (isUserActive) {
-      this.activeSeconds++;
+      this.activeSeconds = Math.min(this.activeSeconds + 1, 300);
       if (this.activeSeconds >= FLUSH_INTERVAL_SECONDS) {
         this.flush();
       }
     }
   }
 
-  flush(isUnload = false): void {
-    if (this.activeSeconds <= 0) return;
+  async flush(isUnload = false): Promise<void> {
+    if (this.activeSeconds <= 0 || this.isFlushing) return;
 
-    if (!isUnload && this.activeSeconds < MIN_FLUSH_SECONDS) return;
+    const now = Date.now();
+    if (now < this.backoffUntil) return;
+
+    if (isUnload) {
+      if (now - this.lastUnloadFlushTime < 2000) return;
+      this.lastUnloadFlushTime = now;
+    } else {
+      if (this.activeSeconds < MIN_FLUSH_SECONDS) return;
+      if (now - this.lastFlushTime < 10000) return;
+    }
 
     if (!profileManager.isLoggedIn()) {
       this.activeSeconds = 0;
       return;
     }
 
-    const now = Date.now();
-    if (!isUnload && now - this.lastFlushTime < 10000) return;
-
     const secondsToSend = this.activeSeconds;
     this.activeSeconds = 0;
     this.lastFlushTime = now;
+    this.isFlushing = true;
 
     try {
-      fetch(`${API_URL}/stats/time`, {
+      const res = await fetch(`${API_URL}/stats/time`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ seconds: secondsToSend }),
         credentials: "include",
-        keepalive: true,
-      }).catch(() => {});
-    } catch {}
+        keepalive: isUnload,
+      });
+
+      if (res.status === 429) {
+        this.backoffUntil = Date.now() + 60000;
+        if (!isUnload) {
+          this.activeSeconds = Math.min(this.activeSeconds + secondsToSend, 300);
+        }
+      } else if (res.status >= 500) {
+        this.backoffUntil = Date.now() + 30000;
+        if (!isUnload) {
+          this.activeSeconds = Math.min(this.activeSeconds + secondsToSend, 300);
+        }
+      }
+    } catch {
+      this.backoffUntil = Date.now() + 30000;
+      if (!isUnload) {
+        this.activeSeconds = Math.min(this.activeSeconds + secondsToSend, 300);
+      }
+    } finally {
+      this.isFlushing = false;
+    }
   }
 }
 
