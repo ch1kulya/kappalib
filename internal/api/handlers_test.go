@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/ch1kulya/kappalib/internal/data"
@@ -353,3 +354,164 @@ func TestEditCommentAnswerInputValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestRecordTimeInputValidation(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "record-time",
+		Method:      http.MethodPost,
+		Path:        "/stats/time",
+	}, func(ctx context.Context, input *RecordTimeInput) (*EmptyResponse, error) {
+		return &EmptyResponse{Status: http.StatusNoContent}, nil
+	})
+
+	tests := []struct {
+		name       string
+		body       map[string]any
+		wantStatus int
+	}{
+		{
+			name:       "valid seconds",
+			body:       map[string]any{"seconds": 60},
+			wantStatus: http.StatusNoContent,
+		},
+		{
+			name:       "zero seconds",
+			body:       map[string]any{"seconds": 0},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "negative seconds",
+			body:       map[string]any{"seconds": -10},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "seconds exceeds maximum",
+			body:       map[string]any{"seconds": 500},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := humaApi.Post("/stats/time", tt.body)
+			if resp.Code != tt.wantStatus {
+				t.Errorf("POST /stats/time returned status %d, want %d: %s", resp.Code, tt.wantStatus, resp.Body.String())
+			}
+		})
+	}
+}
+
+func TestHandleRecordTime(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "record-time",
+		Method:      http.MethodPost,
+		Path:        "/stats/time",
+	}, HandleRecordTime)
+
+	resp := humaApi.Post("/stats/time", map[string]any{"seconds": 60})
+	if resp.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 Unauthorized for unauthenticated request, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+
+func TestCacheMiddleware(t *testing.T) {
+	handler := CacheMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	tests := []struct {
+		name            string
+		method          string
+		path            string
+		headers         map[string]string
+		cookies         []*http.Cookie
+		wantCacheCtrl   string
+		wantVary        string
+		wantPragma      string
+		wantExpires     string
+	}{
+		{
+			name:          "public GET request without auth",
+			method:        http.MethodGet,
+			path:          "/api/chapters/123/comments",
+			wantCacheCtrl: "public, max-age=6000",
+			wantVary:      "Cookie",
+		},
+		{
+			name:          "authenticated GET request with session cookie",
+			method:        http.MethodGet,
+			path:          "/api/chapters/123/comments",
+			cookies:       []*http.Cookie{{Name: SessionCookieName, Value: "valid_session"}},
+			wantCacheCtrl: "private, max-age=60",
+			wantVary:      "Cookie",
+		},
+		{
+			name:          "authenticated GET request with authorization header",
+			method:        http.MethodGet,
+			path:          "/api/chapters/123/comments",
+			headers:       map[string]string{"Authorization": "Bearer token"},
+			wantCacheCtrl: "private, max-age=60",
+			wantVary:      "Cookie",
+		},
+		{
+			name:          "no-cache prefix profile path",
+			method:        http.MethodGet,
+			path:          "/api/profile/me",
+			wantCacheCtrl: "no-store, no-cache, must-revalidate, private",
+			wantPragma:    "no-cache",
+			wantExpires:   "0",
+		},
+		{
+			name:          "no-cache prefix webhook path",
+			method:        http.MethodPost,
+			path:          "/api/webhook/telegram",
+			wantCacheCtrl: "no-store, no-cache, must-revalidate, private",
+			wantPragma:    "no-cache",
+			wantExpires:   "0",
+		},
+		{
+			name:          "POST request without noCache prefix has no public cache header",
+			method:        http.MethodPost,
+			path:          "/api/chapters/123/comments",
+			wantCacheCtrl: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+			for k, v := range tt.headers {
+				req.Header.Set(k, v)
+			}
+			for _, c := range tt.cookies {
+				req.AddCookie(c)
+			}
+
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			if got := rec.Header().Get("Cache-Control"); got != tt.wantCacheCtrl {
+				t.Errorf("Cache-Control = %q, want %q", got, tt.wantCacheCtrl)
+			}
+			if got := rec.Header().Get("Vary"); got != tt.wantVary {
+				t.Errorf("Vary = %q, want %q", got, tt.wantVary)
+			}
+			if tt.wantPragma != "" {
+				if got := rec.Header().Get("Pragma"); got != tt.wantPragma {
+					t.Errorf("Pragma = %q, want %q", got, tt.wantPragma)
+				}
+			}
+			if tt.wantExpires != "" {
+				if got := rec.Header().Get("Expires"); got != tt.wantExpires {
+					t.Errorf("Expires = %q, want %q", got, tt.wantExpires)
+				}
+			}
+		})
+	}
+}
+
+

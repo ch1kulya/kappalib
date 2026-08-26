@@ -1,3 +1,5 @@
+import { trackEvent } from "./analytics";
+
 declare global {
   interface Window {
     isAdultContent?: boolean;
@@ -39,6 +41,7 @@ export function initAgeGate(): void {
 
   confirmBtn.onclick = () => {
     console.info(`Age confirmed. Remember: ${rememberChk.checked}`);
+    trackEvent("age_gate_confirm", { remember: rememberChk.checked });
     if (rememberChk.checked) {
       localStorage.setItem("ageConfirmed", "true");
     } else {
@@ -50,6 +53,7 @@ export function initAgeGate(): void {
 
   backBtn.onclick = () => {
     console.warn("Age verification declined, redirecting home");
+    trackEvent("age_gate_decline");
     window.location.href = "/";
   };
 }

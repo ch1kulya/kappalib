@@ -26,6 +26,8 @@ templ Novel(props NovelProps) {
 									href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.LastChapterID)) }
 									class="action-btn btn-continue btn-primary js-reading-btn"
 									data-novel-id={ props.Novel.ID }
+									data-umami-event="read_continue"
+									data-umami-event-novel={ props.Novel.ID }
 								>
 									Продолжить
 								</a>
@@ -35,6 +37,8 @@ templ Novel(props NovelProps) {
 									class="action-btn btn-start js-reading-btn"
 									data-novel-id={ props.Novel.ID }
 									data-first-chapter={ props.FirstChapterID }
+									data-umami-event="read_start"
+									data-umami-event-novel={ props.Novel.ID }
 								>
 									Начать читать
 								</a>
@@ -86,6 +90,8 @@ templ Novel(props NovelProps) {
 									href={ templ.SafeURL(fmt.Sprintf("/%s/chapter/%s", props.Novel.ID, props.LastChapterID)) }
 									class="action-btn btn-continue btn-primary js-reading-btn"
 									data-novel-id={ props.Novel.ID }
+									data-umami-event="read_continue"
+									data-umami-event-novel={ props.Novel.ID }
 								>
 									Продолжить
 								</a>
@@ -95,6 +101,8 @@ templ Novel(props NovelProps) {
 									class="action-btn btn-start js-reading-btn"
 									data-novel-id={ props.Novel.ID }
 									data-first-chapter={ props.FirstChapterID }
+									data-umami-event="read_start"
+									data-umami-event-novel={ props.Novel.ID }
 								>
 									Начать читать
 								</a>

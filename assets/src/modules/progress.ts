@@ -1,4 +1,5 @@
 import { setKappalibCookie, updateKappalibCookieQuietly } from "./profile";
+import { trackEvent } from "./analytics";
 
 const API_URL = process.env.API_URL;
 
@@ -139,6 +140,10 @@ export function initReadingProgressSaver(): void {
       };
 
       saveProgressCookie(data);
+      trackEvent("chapter_read", {
+        novel_id: novelId,
+        chapter_num: targetChapterNum,
+      });
       console.info(`Progress saved: Novel ${novelId}, Ch ${targetChapterNum}`);
     } catch (e) {
       console.error("Failed to save reading progress", e);
@@ -250,6 +255,8 @@ function updateCRCard(lastRead: LastReadData): void {
   }
   if (continueBtn) {
     continueBtn.href = `/${lastRead.novelId}/chapter/${lastRead.chapterId}`;
+    continueBtn.setAttribute("data-umami-event", "cr_card_continue");
+    continueBtn.setAttribute("data-umami-event-novel", lastRead.novelId);
   }
 
   const totalChapters = lastRead.totalChapters;

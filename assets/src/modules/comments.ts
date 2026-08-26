@@ -1,5 +1,6 @@
 import { profileManager, getAvatarUrl, updateProfileBadges } from "./profile";
 import { getSettings } from "./settings";
+import { trackEvent } from "./analytics";
 
 const API_URL = process.env.API_URL;
 const TURNSTILE_COMMENTS_SITE_KEY =
@@ -1217,6 +1218,8 @@ async function handleVote(
     });
     if (!res.ok) return;
 
+    trackEvent("comment_vote", { value });
+
     const data: { score: number; user_vote: number } = await res.json();
     scoreEl.textContent = String(data.score);
     upBtn.classList.toggle("vote-active", data.user_vote === 1);
@@ -1254,18 +1257,24 @@ function initToolbarHandlers(
   imageInput: HTMLInputElement | null,
   container: HTMLElement,
 ): void {
-  imageInput?.addEventListener("change", async () => {
-    const file = imageInput.files?.[0];
-    if (!file || !textarea) return;
-    imageInput.value = "";
-    initTurnstileForComments(container);
-    await uploadCommentImage(file, textarea);
-  });
+  if (imageInput && !imageInput.dataset.bound) {
+    imageInput.dataset.bound = "true";
+    imageInput.addEventListener("change", async () => {
+      const file = imageInput.files?.[0];
+      if (!file || !textarea || isUploadingImage) return;
+      imageInput.value = "";
+      initTurnstileForComments(container);
+      await uploadCommentImage(file, textarea);
+    });
+  }
 
   toolbar.querySelectorAll(".toolbar-btn").forEach((btn) => {
-    btn.addEventListener("mousedown", (e) => {
+    const btnEl = btn as HTMLElement;
+    if (btnEl.dataset.bound) return;
+    btnEl.dataset.bound = "true";
+    btnEl.addEventListener("mousedown", (e) => {
       e.preventDefault();
-      const action = (btn as HTMLElement).dataset.action;
+      const action = btnEl.dataset.action;
       switch (action) {
         case "bold":
           wrapSelection(textarea, "**", "**");
@@ -1280,7 +1289,10 @@ function initToolbarHandlers(
           insertLinePrefix(textarea, "> ");
           break;
         case "image":
-          if (!isUploadingImage) imageInput?.click();
+          if (!isUploadingImage && imageInput) {
+            imageInput.value = "";
+            imageInput.click();
+          }
           break;
       }
       updateCharCounter(textarea);
@@ -1370,6 +1382,7 @@ async function sendCommentPayload(
     }
   }
 
+  trackEvent("comment_submit", { method });
   return true;
 }
 
@@ -1820,6 +1833,8 @@ async function handleDeleteComment(
 
     if (!res.ok) return;
 
+    trackEvent("comment_delete");
+
     const wrapper = btn.closest(".mc-comment-wrapper") as HTMLElement | null;
     if (wrapper) {
       const separator = wrapper.querySelector(".mc-chapter-separator");
@@ -1885,6 +1900,8 @@ async function handleDeleteAnswer(
 
     if (!res.ok) return;
 
+    trackEvent("comment_answer_delete");
+
     const answerEl = container.querySelector(
       `.comment-answer[data-answer-id="${answerId}"]`,
     );
@@ -1912,6 +1929,8 @@ async function handleDeleteMyAnswer(
     });
 
     if (!res.ok) return;
+
+    trackEvent("comment_answer_delete");
 
     const answerEl = document.querySelector(
       `.comment-answer[data-answer-id="${answerId}"]`,
@@ -2091,6 +2110,19 @@ let isUploadingImage = false;
 let uploadAbortController: AbortController | null = null;
 let uploadAnimationInterval: ReturnType<typeof setInterval> | null = null;
 
+function setImageButtonsState(disabled: boolean): void {
+  document
+    .querySelectorAll<HTMLButtonElement>('.toolbar-btn[data-action="image"]')
+    .forEach((btn) => {
+      btn.disabled = disabled;
+    });
+  document
+    .querySelectorAll<HTMLInputElement>('input[type="file"][accept*="image"]')
+    .forEach((inp) => {
+      inp.disabled = disabled;
+    });
+}
+
 async function uploadCommentImage(
   file: File,
   textarea: HTMLTextAreaElement,
@@ -2103,10 +2135,7 @@ async function uploadCommentImage(
   }
 
   isUploadingImage = true;
-  const imageBtn = document.querySelector(
-    '.toolbar-btn[data-action="image"]',
-  ) as HTMLButtonElement | null;
-  if (imageBtn) imageBtn.disabled = true;
+  setImageButtonsState(true);
 
   const base64 = await fileToBase64(file);
   const fileName = file.name.replace(/\.[^.]+$/, "");
@@ -2156,6 +2185,7 @@ async function uploadCommentImage(
     }
 
     const data: { url: string } = await res.json();
+    trackEvent("comment_image_upload");
     const markdown = `![${fileName}](${data.url})`;
     const placeholderStart = textarea.value.indexOf(currentPlaceholder);
     if (placeholderStart !== -1) {
@@ -2201,7 +2231,7 @@ async function uploadCommentImage(
     }
     isUploadingImage = false;
     uploadAbortController = null;
-    if (imageBtn) imageBtn.disabled = false;
+    setImageButtonsState(false);
   }
 
   updateCharCounter(textarea);

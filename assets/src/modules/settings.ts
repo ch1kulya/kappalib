@@ -1,6 +1,7 @@
 import Dropdown from "./dropdown";
 import { setKappalibCookie } from "./profile";
 import { uiManager } from "./ui";
+import { trackEvent } from "./analytics";
 
 const SETTINGS_COOKIE_KEY = "kappalib_reader_settings";
 
@@ -212,8 +213,17 @@ function enableThemeTransition(): void {
   }, 100);
 }
 
+function updateUmamiSchemeTag(scheme: string): void {
+  const script = document.querySelector('script[src*="stats.kappalib.rip/script.js"]');
+  if (script) {
+    script.setAttribute("data-tag", scheme);
+  }
+}
+
 function applySettings(settings: ReaderSettings): void {
   const root = document.documentElement;
+
+  updateUmamiSchemeTag(settings.colorScheme);
 
   if (settings.theme === "auto") {
     root.removeAttribute("data-theme");
@@ -299,6 +309,8 @@ function applyGlobalSettings(): void {
   const settings = getSettings();
   const root = document.documentElement;
 
+  updateUmamiSchemeTag(settings.colorScheme);
+
   if (settings.theme === "auto") {
     root.removeAttribute("data-theme");
   } else {
@@ -356,6 +368,10 @@ class SettingsManager {
   ): void {
     this.settings[key] = value;
     saveSettings(this.settings);
+    trackEvent("settings_change", {
+      setting: key,
+      value: String(value),
+    });
   }
 
   applyAll(): void {

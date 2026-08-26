@@ -157,6 +157,14 @@ func init() {
 				}
 			}
 			userCommentLimiter.Unlock()
+
+			imageUploadLimiter.Lock()
+			for userID, last := range imageUploadLimiter.lastUpload {
+				if now.Sub(last) > 5*time.Minute {
+					delete(imageUploadLimiter.lastUpload, userID)
+				}
+			}
+			imageUploadLimiter.Unlock()
 		}
 	}()
 	endpoint := os.Getenv("S3_ENDPOINT")
@@ -1571,7 +1579,7 @@ var imageUploadLimiter = struct {
 
 const imageUploadCooldown = 3 * time.Second
 
-func checkImageUploadRateLimit(userID string) bool {
+func acquireImageUploadSlot(userID string) bool {
 	imageUploadLimiter.Lock()
 	defer imageUploadLimiter.Unlock()
 	if last, exists := imageUploadLimiter.lastUpload[userID]; exists {
@@ -1579,13 +1587,8 @@ func checkImageUploadRateLimit(userID string) bool {
 			return false
 		}
 	}
-	return true
-}
-
-func recordImageUploadTime(userID string) {
-	imageUploadLimiter.Lock()
-	defer imageUploadLimiter.Unlock()
 	imageUploadLimiter.lastUpload[userID] = time.Now()
+	return true
 }
 
 func detectImageFormat(data []byte) (string, string, error) {
@@ -1614,11 +1617,9 @@ func UploadCommentImage(ctx context.Context, userID string, imageData []byte) (s
 		return "", ErrS3NotConfigured
 	}
 
-	if !checkImageUploadRateLimit(userID) {
+	if !acquireImageUploadSlot(userID) {
 		return "", ErrRateLimitExceeded
 	}
-
-	recordImageUploadTime(userID)
 
 	contentType, ext, err := detectImageFormat(imageData)
 	if err != nil {
@@ -1628,7 +1629,10 @@ func UploadCommentImage(ctx context.Context, userID string, imageData []byte) (s
 	hash := hashImageData(imageData)
 	key := fmt.Sprintf("comments/%s_%s.%s", userID, hash, ext)
 
-	_, statErr := minioClient.StatObject(ctx, s3Bucket, key, minio.StatObjectOptions{})
+	s3Ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	_, statErr := minioClient.StatObject(s3Ctx, s3Bucket, key, minio.StatObjectOptions{})
 	if statErr == nil {
 		s3PublicURL := os.Getenv("S3_PUBLIC_URL")
 		logger.Debug("Comment image already exists, skipping upload: %s", key)
@@ -1636,7 +1640,7 @@ func UploadCommentImage(ctx context.Context, userID string, imageData []byte) (s
 	}
 
 	reader := bytes.NewReader(imageData)
-	_, err = minioClient.PutObject(ctx, s3Bucket, key, reader, int64(len(imageData)), minio.PutObjectOptions{
+	_, err = minioClient.PutObject(s3Ctx, s3Bucket, key, reader, int64(len(imageData)), minio.PutObjectOptions{
 		ContentType:  contentType,
 		CacheControl: "public, max-age=31536000, immutable",
 	})

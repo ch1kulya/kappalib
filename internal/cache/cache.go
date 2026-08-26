@@ -3,6 +3,8 @@ package cache
 import (
 	"sync"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 )
 
 type item struct {
@@ -13,6 +15,7 @@ type item struct {
 type Cache struct {
 	items map[string]item
 	mutex sync.RWMutex
+	sf    singleflight.Group
 }
 
 var C = &Cache{
@@ -74,6 +77,7 @@ func (c *Cache) Delete(key string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	delete(c.items, key)
+	c.sf.Forget(key)
 }
 
 func (c *Cache) GetOrFetch(key string, duration time.Duration, fetch func() (any, error)) (any, error) {
@@ -81,11 +85,22 @@ func (c *Cache) GetOrFetch(key string, duration time.Duration, fetch func() (any
 		return value, nil
 	}
 
-	value, err := fetch()
+	value, err, _ := c.sf.Do(key, func() (any, error) {
+		if value, found := c.Get(key); found {
+			return value, nil
+		}
+
+		value, err := fetch()
+		if err != nil {
+			return nil, err
+		}
+
+		c.Set(key, value, duration)
+		return value, nil
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	c.Set(key, value, duration)
 	return value, nil
 }

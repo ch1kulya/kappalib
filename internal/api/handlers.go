@@ -278,6 +278,12 @@ type DeleteProfileResponse struct {
 	SetCookies []http.Cookie `header:"Set-Cookie"`
 }
 
+type RecordTimeInput struct {
+	Body struct {
+		Seconds int `json:"seconds" minimum:"1" maximum:"300"`
+	}
+}
+
 type EmptyResponse struct {
 	Status int `json:"-" default:"204"`
 }
@@ -885,4 +891,15 @@ func HandleGetCommentStats(ctx context.Context, input *struct{}) (*CommentStatsR
 	}
 
 	return &CommentStatsResponse{Body: *stats}, nil
+}
+
+func HandleRecordTime(ctx context.Context, input *RecordTimeInput) (*EmptyResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	data.TimeTracker.RecordTime(userID, input.Body.Seconds)
+
+	return &EmptyResponse{Status: http.StatusNoContent}, nil
 }

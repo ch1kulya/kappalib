@@ -3,6 +3,7 @@ import { settingsManager } from "./settings";
 import { initComments } from "./comments";
 import { refreshHistory } from "./history";
 import { refreshLastReadTotalChapters } from "./progress";
+import { trackEvent, identifyUmami } from "./analytics";
 
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
@@ -82,6 +83,7 @@ class ProfileManager {
         this.cachedProfile = profile;
         localStorage.setItem(PROFILE_ID_KEY, profile.id);
         localStorage.setItem(NOTIFICATIONS_KEY, String(profile.unread_notifications || 0));
+        identifyUmami(profile.id);
         this.notifyLogin();
         return profile;
       }
@@ -207,6 +209,7 @@ class ProfileManager {
     } catch {
       // ignore errors
     }
+    trackEvent("logout");
     this.clearLocal();
   }
 
@@ -464,6 +467,7 @@ function renderGuestView(): void {
       link.addEventListener("click", () => {
         const provider = href.split("/auth/")[1]?.split("/")[0];
         if (provider) {
+          trackEvent("oauth_login_click", { provider });
           profileManager.setProvider(provider);
         }
       });
@@ -539,6 +543,7 @@ function initProfileInteractions(profile: ProfilePublic): void {
     avatarInput.value = "";
 
     if (result && avatarImg) {
+      trackEvent("avatar_upload");
       avatarImg.src = profileManager.getAvatarUrl(result);
     }
   });
@@ -598,6 +603,7 @@ function initProfileInteractions(profile: ProfilePublic): void {
     }
 
     if (result.profile) {
+      trackEvent("name_change");
       currentProfile.display_name = result.profile.display_name;
       nameText.textContent = result.profile.display_name;
     }

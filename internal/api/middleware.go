@@ -155,6 +155,16 @@ var noCachePrefixes = []string{
 	"/api/webhook/",
 }
 
+func hasAuth(r *http.Request) bool {
+	if _, err := r.Cookie(SessionCookieName); err == nil {
+		return true
+	}
+	if r.Header.Get("Authorization") != "" {
+		return true
+	}
+	return false
+}
+
 func CacheMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -172,9 +182,15 @@ func CacheMiddleware(next http.Handler) http.Handler {
 			w.Header().Set("Pragma", "no-cache")
 			w.Header().Set("Expires", "0")
 		} else if r.Method == http.MethodGet {
-			w.Header().Set("Cache-Control", "public, max-age=6000")
+			w.Header().Set("Vary", "Cookie")
+			if hasAuth(r) {
+				w.Header().Set("Cache-Control", "private, max-age=60")
+			} else {
+				w.Header().Set("Cache-Control", "public, max-age=6000")
+			}
 		}
 
 		next.ServeHTTP(w, r)
 	})
 }
+
