@@ -177,24 +177,136 @@ export function initReadingProgressSaver(): void {
   });
 
   setupKeyboardNavigation();
+  setupSwipeNavigation();
+}
+
+let isNavigatingChapter = false;
+
+function navigateToChapter(link: HTMLAnchorElement | null): void {
+  if (!link || isNavigatingChapter) return;
+  link.click();
 }
 
 function setupKeyboardNavigation(): void {
   const nav = document.querySelector<HTMLElement>(".chapter-navigation");
   if (!nav) return;
 
+  nav.querySelectorAll<HTMLAnchorElement>("a").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      if (isNavigatingChapter) {
+        e.preventDefault();
+        return;
+      }
+      isNavigatingChapter = true;
+    });
+  });
+
+  window.addEventListener("pageshow", () => {
+    isNavigatingChapter = false;
+  });
+
   document.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (e.repeat) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
     const prevLink = nav.querySelector<HTMLAnchorElement>("a:not(.js-next-chapter)");
     const nextLink = nav.querySelector<HTMLAnchorElement>("a.js-next-chapter");
 
     if (e.key === "ArrowLeft" && prevLink) {
-      prevLink.click();
+      navigateToChapter(prevLink);
     } else if (e.key === "ArrowRight" && nextLink) {
-      nextLink.click();
+      navigateToChapter(nextLink);
     }
   });
+}
+
+function setupSwipeNavigation(): void {
+  const nav = document.querySelector<HTMLElement>(".chapter-navigation");
+  if (!nav) return;
+
+  const MIN_DISTANCE = 60;
+  const MAX_TIME = 600;
+  const EDGE_MARGIN = 44;
+
+  let startX = 0;
+  let startY = 0;
+  let startTime = 0;
+  let tracking = false;
+
+  document.addEventListener(
+    "touchstart",
+    (e: TouchEvent) => {
+      if (isNavigatingChapter || e.touches.length !== 1) {
+        tracking = false;
+        return;
+      }
+
+      const target = e.target as HTMLElement | null;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable ||
+        target?.closest(
+          "button, a, input, textarea, select, iframe, .dropdown-menu, pre, code",
+        )
+      ) {
+        tracking = false;
+        return;
+      }
+
+      const touch = e.touches[0];
+      if (touch.clientX < EDGE_MARGIN || touch.clientX > window.innerWidth - EDGE_MARGIN) {
+        tracking = false;
+        return;
+      }
+
+      startX = touch.clientX;
+      startY = touch.clientY;
+      startTime = Date.now();
+      tracking = true;
+    },
+    { passive: true },
+  );
+
+  document.addEventListener(
+    "touchend",
+    (e: TouchEvent) => {
+      if (!tracking || e.changedTouches.length !== 1) return;
+      tracking = false;
+
+      const duration = Date.now() - startTime;
+      if (duration > MAX_TIME) return;
+
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim().length > 0) return;
+
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+
+      if (Math.abs(deltaX) < MIN_DISTANCE || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) {
+        return;
+      }
+
+      const prevLink = nav.querySelector<HTMLAnchorElement>("a:not(.js-next-chapter)");
+      const nextLink = nav.querySelector<HTMLAnchorElement>("a.js-next-chapter");
+
+      if (deltaX < 0 && nextLink) {
+        navigateToChapter(nextLink);
+      } else if (deltaX > 0 && prevLink) {
+        navigateToChapter(prevLink);
+      }
+    },
+    { passive: true },
+  );
+
+  document.addEventListener(
+    "touchcancel",
+    () => {
+      tracking = false;
+    },
+    { passive: true },
+  );
 }
 
 export async function refreshLastReadTotalChapters(): Promise<void> {

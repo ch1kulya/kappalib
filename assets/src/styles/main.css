@@ -3238,6 +3238,9 @@ a.update-log-item:active {
 }
 
 .update-log-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     font-size: 0.75rem;
     color: var(--tertiary);
     font-weight: 500;
@@ -3247,6 +3250,8 @@ a.update-log-item:active {
 
 .pin-icon {
     color: var(--accent-primary);
+    fill: currentColor;
+    flex-shrink: 0;
 }
 
 @media (max-width: 500px) {
