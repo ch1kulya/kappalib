@@ -180,20 +180,42 @@ export function initReadingProgressSaver(): void {
   setupSwipeNavigation();
 }
 
+let isNavigatingChapter = false;
+
+function navigateToChapter(link: HTMLAnchorElement | null): void {
+  if (!link || isNavigatingChapter) return;
+  link.click();
+}
+
 function setupKeyboardNavigation(): void {
   const nav = document.querySelector<HTMLElement>(".chapter-navigation");
   if (!nav) return;
 
+  nav.querySelectorAll<HTMLAnchorElement>("a").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      if (isNavigatingChapter) {
+        e.preventDefault();
+        return;
+      }
+      isNavigatingChapter = true;
+    });
+  });
+
+  window.addEventListener("pageshow", () => {
+    isNavigatingChapter = false;
+  });
+
   document.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (e.repeat) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
     const prevLink = nav.querySelector<HTMLAnchorElement>("a:not(.js-next-chapter)");
     const nextLink = nav.querySelector<HTMLAnchorElement>("a.js-next-chapter");
 
     if (e.key === "ArrowLeft" && prevLink) {
-      prevLink.click();
+      navigateToChapter(prevLink);
     } else if (e.key === "ArrowRight" && nextLink) {
-      nextLink.click();
+      navigateToChapter(nextLink);
     }
   });
 }
@@ -214,7 +236,7 @@ function setupSwipeNavigation(): void {
   document.addEventListener(
     "touchstart",
     (e: TouchEvent) => {
-      if (e.touches.length !== 1) {
+      if (isNavigatingChapter || e.touches.length !== 1) {
         tracking = false;
         return;
       }
@@ -270,9 +292,9 @@ function setupSwipeNavigation(): void {
       const nextLink = nav.querySelector<HTMLAnchorElement>("a.js-next-chapter");
 
       if (deltaX < 0 && nextLink) {
-        nextLink.click();
+        navigateToChapter(nextLink);
       } else if (deltaX > 0 && prevLink) {
-        prevLink.click();
+        navigateToChapter(prevLink);
       }
     },
     { passive: true },
