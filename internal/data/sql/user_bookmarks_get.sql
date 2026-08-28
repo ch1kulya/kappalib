@@ -1,1 +1,6 @@
-SELECT bookmarks FROM users WHERE id = $1
+SELECT
+    bookmarks
+FROM
+    users
+WHERE
+    id = $1

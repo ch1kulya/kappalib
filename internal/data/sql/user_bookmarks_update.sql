@@ -1,1 +1,6 @@
-UPDATE users SET bookmarks = $1 WHERE id = $2
+UPDATE
+    users
+SET
+    bookmarks = $1
+WHERE
+    id = $2

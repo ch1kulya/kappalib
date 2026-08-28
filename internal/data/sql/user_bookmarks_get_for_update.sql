@@ -1,1 +1,7 @@
-SELECT bookmarks FROM users WHERE id = $1 FOR UPDATE
+SELECT
+    bookmarks
+FROM
+    users
+WHERE
+    id = $1
+FOR UPDATE
