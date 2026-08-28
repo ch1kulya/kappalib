@@ -312,3 +312,19 @@ type Announcement struct {
 	ActionLabel *string `json:"action_label"`
 	ActionURL   *string `json:"action_url"`
 }
+
+type Bookmark struct {
+	ID            string `json:"id"`
+	NovelID       string `json:"novelId"`
+	ChapterID     string `json:"chapterId"`
+	ChapterNum    int    `json:"chapterNum"`
+	NovelTitle    string `json:"novelTitle"`
+	NovelCoverURL string `json:"novelCoverUrl"`
+	Name          string `json:"name"`
+	CreatedAt     int64  `json:"createdAt"`
+}
+
+type BookmarkCategory struct {
+	Name      string     `json:"name"`
+	Bookmarks []Bookmark `json:"bookmarks"`
+}
