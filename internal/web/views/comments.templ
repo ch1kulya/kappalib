@@ -15,18 +15,20 @@ templ CommentsSection(chapterId string) {
 
 templ MyComments(props BaseProps) {
 	@Base(props) {
-		<div class="chapters-header" style="margin-bottom: 1.5rem;">
-			<h2 style="margin: 0;">Мои комментарии <span class="mc-count" id="mc-count"></span></h2>
-		</div>
-		<div id="mc-stats" class="mc-stats"></div>
-		<div id="mc-content">
-			<div class="mc-empty" id="mc-empty" style="display: none;">
-				<p>У вас пока нет комментариев</p>
+		<div class="my-comments-page">
+			<div class="chapters-header" style="margin-bottom: 1.5rem;">
+				<h2 style="margin: 0;">Мои комментарии <span class="mc-count" id="mc-count"></span></h2>
 			</div>
-			<div class="mc-loading" id="mc-loading" style="display: none;">Загрузка комментариев...</div>
-			<div class="mc-list" id="mc-list"></div>
-			<div class="comments-loader" id="mc-loader" style="display: none;">
-				<span>Загрузка...</span>
+			<div id="mc-stats" class="mc-stats"></div>
+			<div id="mc-content">
+				<div class="mc-empty" id="mc-empty" style="display: none;">
+					<p>У вас пока нет комментариев</p>
+				</div>
+				<div class="mc-loading" id="mc-loading" style="display: none;">Загрузка комментариев...</div>
+				<div class="mc-list" id="mc-list"></div>
+				<div class="comments-loader" id="mc-loader" style="display: none;">
+					<span>Загрузка...</span>
+				</div>
 			</div>
 		</div>
 	}

@@ -2316,6 +2316,11 @@ html {
 }
 
 /* History Page */
+.history-page {
+  min-height: 65vh;
+  min-height: 65dvh;
+}
+
 .history-list {
   display: flex;
   flex-direction: column;
@@ -2431,6 +2436,28 @@ html {
   &:active {
     color: var(--color-danger);
     background: color-mix(in srgb, var(--color-danger), transparent 90%);
+  }
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  @media (hover: hover) {
+    &:hover {
+      color: var(--primary);
+      background: var(--bg-secondary);
+    }
+  }
+  &:active {
+    color: var(--primary);
+    background: var(--bg-secondary);
   }
 }
 
@@ -3546,6 +3573,10 @@ a.update-log-item:active {
 }
 
 /* Bookmarks page */
+.bookmarks-page {
+  min-height: 65vh;
+  min-height: 65dvh;
+}
 
 .bm-categories {
   display: flex;
@@ -3581,6 +3612,32 @@ a.update-log-item:active {
 }
 
 .bm-category-summary:active {
+  border-color: var(--tertiary);
+  box-shadow: var(--shadow-focus);
+}
+
+.bm-category-edit-wrap {
+  width: 100%;
+}
+
+.bm-category-edit-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-primary);
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.2;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.bm-category-edit-input:focus {
   border-color: var(--tertiary);
   box-shadow: var(--shadow-focus);
 }
@@ -3752,6 +3809,11 @@ a.update-log-item:active {
 }
 
 /* My Comments Page */
+.my-comments-page {
+  min-height: 65vh;
+  min-height: 65dvh;
+}
+
 .mc-empty {
   text-align: center;
   padding: 3rem 1rem;

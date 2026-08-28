@@ -2,27 +2,35 @@ package views
 
 templ Bookmarks(props BaseProps) {
 	@Base(props) {
-		<div class="chapters-header" style="margin-bottom: 1.5rem;">
-			<h2 style="margin: 0;">Мои закладки</h2>
-		</div>
-		<div id="bm-content">
-			<div class="mc-empty" id="bm-empty" style="display: none;">
-				<p>У вас пока нет закладок</p>
+		<div class="bookmarks-page">
+			<div class="chapters-header" style="margin-bottom: 1.5rem;">
+				<h2 style="margin: 0;">Мои закладки</h2>
+				<button class="btn-text" id="bm-edit-categories-btn" style="display: none;">Переименовать</button>
 			</div>
-			<div class="mc-loading" id="bm-loading">Загрузка закладок...</div>
-			<div class="bm-categories" id="bm-categories"></div>
+			<div id="bm-content">
+				<div class="mc-empty" id="bm-empty" style="display: none;">
+					<p>У вас пока нет закладок</p>
+				</div>
+				<div class="mc-loading" id="bm-loading">Загрузка закладок...</div>
+				<div class="bm-categories" id="bm-categories"></div>
+			</div>
 		</div>
 		<template id="tpl-bm-category">
-			<details class="bm-category">
-				<summary class="bm-category-summary">
-					<span class="bm-category-title-group">
-						<span class="bm-category-name" data-field="name"></span>
-						<span class="bm-category-count" data-field="count"></span>
-					</span>
-					<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
-				</summary>
-				<div class="bm-items"></div>
-			</details>
+			<div class="bm-category-wrapper">
+				<details class="bm-category">
+					<summary class="bm-category-summary">
+						<span class="bm-category-title-group">
+							<span class="bm-category-name" data-field="name"></span>
+							<span class="bm-category-count" data-field="count"></span>
+						</span>
+						<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+					</summary>
+					<div class="bm-items"></div>
+				</details>
+				<div class="bm-category-edit-wrap" style="display: none;">
+					<input type="text" class="bm-category-edit-input" maxlength="15" data-field="edit-input"/>
+				</div>
+			</div>
 		</template>
 		<template id="tpl-bm-item">
 			<div class="bm-item">

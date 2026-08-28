@@ -2,16 +2,18 @@ package views
 
 templ History(props BaseProps) {
 	@Base(props) {
-		<div class="chapters-header" style="margin-bottom: 1.5rem;">
-			<h2 style="margin: 0;">История</h2>
-			<button class="btn-text-danger" id="history-clear-all" style="display: none;">Очистить</button>
-		</div>
-		<div id="history-content">
-			<div class="history-empty" id="history-empty" style="display: none;">
-				<p>История чтения пуста</p>
+		<div class="history-page">
+			<div class="chapters-header" style="margin-bottom: 1.5rem;">
+				<h2 style="margin: 0;">История</h2>
+				<button class="btn-text-danger" id="history-clear-all" style="display: none;">Очистить</button>
 			</div>
-			<div class="history-list" id="history-list"></div>
-			<div class="history-skeleton" id="history-skeleton" style="display: none;"></div>
+			<div id="history-content">
+				<div class="history-empty" id="history-empty" style="display: none;">
+					<p>История чтения пуста</p>
+				</div>
+				<div class="history-list" id="history-list"></div>
+				<div class="history-skeleton" id="history-skeleton" style="display: none;"></div>
+			</div>
 		</div>
 		<template id="tpl-history-skeleton">
 			<div class="history-item">

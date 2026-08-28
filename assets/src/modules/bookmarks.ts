@@ -420,12 +420,54 @@ export function initBookmarkButton(): void {
   });
 }
 
+let isEditingCategories = false;
+
+async function saveCategoriesEdit(
+  container: HTMLElement,
+  empty: HTMLElement | null,
+  loading: HTMLElement | null,
+  btn: HTMLButtonElement,
+): Promise<void> {
+  btn.disabled = true;
+  const inputs = container.querySelectorAll<HTMLInputElement>(
+    ".bm-category-edit-input",
+  );
+  const promises: Promise<Response>[] = [];
+
+  inputs.forEach((input) => {
+    const oldName = input.dataset.originalName || "";
+    const newName = input.value.trim();
+    if (newName && newName !== oldName) {
+      promises.push(
+        fetch(`${API_URL}/bookmarks/category/${encodeURIComponent(oldName)}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newName }),
+        }),
+      );
+    }
+  });
+
+  if (promises.length > 0) {
+    await Promise.all(promises);
+  }
+
+  isEditingCategories = false;
+  btn.disabled = false;
+  btn.textContent = "Переименовать";
+  await loadBookmarksPage(container, empty, loading);
+}
+
 export function initBookmarksPage(): void {
   const container = document.getElementById("bm-categories");
   if (!container) return;
 
   const empty = document.getElementById("bm-empty");
   const loading = document.getElementById("bm-loading");
+  const editCategoriesBtn = document.getElementById(
+    "bm-edit-categories-btn",
+  ) as HTMLButtonElement | null;
 
   if (!profileManager.isLoggedIn()) {
     if (loading) loading.style.display = "none";
@@ -433,7 +475,36 @@ export function initBookmarksPage(): void {
       empty.style.display = "block";
       empty.querySelector("p")!.textContent = "Войдите в аккаунт, чтобы видеть свои закладки";
     }
+    if (editCategoriesBtn) editCategoriesBtn.style.display = "none";
     return;
+  }
+
+  isEditingCategories = false;
+
+  if (editCategoriesBtn) {
+    editCategoriesBtn.addEventListener("click", async () => {
+      if (!isEditingCategories) {
+        isEditingCategories = true;
+        editCategoriesBtn.textContent = "Сохранить";
+        container.querySelectorAll(".bm-category-wrapper").forEach((wrap, i) => {
+          const details = wrap.querySelector("details.bm-category") as HTMLDetailsElement | null;
+          const editWrap = wrap.querySelector(".bm-category-edit-wrap") as HTMLElement | null;
+          const input = wrap.querySelector(".bm-category-edit-input") as HTMLInputElement | null;
+          if (details) {
+            details.open = false;
+            details.style.display = "none";
+          }
+          if (editWrap) {
+            editWrap.style.display = "block";
+          }
+          if (i === 0 && input) {
+            input.focus();
+          }
+        });
+      } else {
+        await saveCategoriesEdit(container, empty, loading, editCategoriesBtn);
+      }
+    });
   }
 
   loadBookmarksPage(container, empty, loading);
@@ -473,6 +544,10 @@ async function loadBookmarksPage(
   loading: HTMLElement | null,
   keepOpenCategoryNames?: Set<string>,
 ): Promise<void> {
+  const editCategoriesBtn = document.getElementById(
+    "bm-edit-categories-btn",
+  ) as HTMLButtonElement | null;
+
   const openCategoryNames = keepOpenCategoryNames || new Set<string>();
   if (!keepOpenCategoryNames) {
     container.querySelectorAll("details.bm-category[open]").forEach((d) => {
@@ -490,9 +565,14 @@ async function loadBookmarksPage(
 
   if (categoryEntries.length === 0) {
     if (empty) empty.style.display = "block";
+    if (editCategoriesBtn) editCategoriesBtn.style.display = "none";
     return;
   }
   if (empty) empty.style.display = "none";
+  if (editCategoriesBtn) {
+    editCategoriesBtn.style.display = "inline-flex";
+    editCategoriesBtn.textContent = "Переименовать";
+  }
 
   const catTemplate = document.getElementById(
     "tpl-bm-category",
@@ -515,11 +595,27 @@ async function loadBookmarksPage(
     const countEl = catNode.querySelector(
       "[data-field=\"count\"]",
     ) as HTMLElement;
+    const editInput = catNode.querySelector(
+      "[data-field=\"edit-input\"]",
+    ) as HTMLInputElement | null;
     const itemsWrap = catNode.querySelector(".bm-items") as HTMLElement;
 
     nameEl.textContent = catName;
     nameEl.title = catName;
     countEl.textContent = `(${cat.bookmarks.length})`;
+
+    if (editInput) {
+      editInput.value = catName;
+      editInput.dataset.originalName = catName;
+      editInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (editCategoriesBtn) {
+            saveCategoriesEdit(container, empty, loading, editCategoriesBtn);
+          }
+        }
+      });
+    }
 
     if (openCategoryNames.size > 0) {
       if (openCategoryNames.has(catName)) {
