@@ -77,7 +77,7 @@ func withBookmarkTx(ctx context.Context, userID string, fn func(bookmarks map[st
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	var raw []byte
 	err = tx.QueryRow(ctx, `SELECT bookmarks FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&raw)
