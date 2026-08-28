@@ -112,12 +112,16 @@ function setupBookmarkFormInstance(
   const initialCategory = selectedCategory;
 
   const getFinalCategory = (): string => {
+    const inputRow = rootEl.querySelector(
+      ".bm-category-input-row",
+    ) as HTMLElement | null;
     const inlineInput = rootEl.querySelector(
       ".bm-category-input",
     ) as HTMLInputElement | null;
     if (
-      inlineInput
-      && inlineInput.style.display !== "none"
+      inputRow
+      && inputRow.style.display !== "none"
+      && inlineInput
       && inlineInput.value.trim()
     ) {
       return inlineInput.value.trim();
@@ -428,39 +432,55 @@ async function saveCategoriesEdit(
   btn: HTMLButtonElement,
 ): Promise<void> {
   btn.disabled = true;
-  const inputs = container.querySelectorAll<HTMLInputElement>(
-    ".bm-category-edit-input",
-  );
-  const promises: Promise<Response>[] = [];
+  try {
+    const inputs = container.querySelectorAll<HTMLInputElement>(
+      ".bm-category-edit-input",
+    );
+    const promises: Promise<Response>[] = [];
 
-  inputs.forEach((input) => {
-    const oldName = input.dataset.originalName || "";
-    const newName = input.value.trim();
-    if (newName && newName !== oldName) {
-      promises.push(
-        fetch(`${API_URL}/bookmarks/category/${encodeURIComponent(oldName)}`, {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ newName }),
-        }),
-      );
+    inputs.forEach((input) => {
+      const oldName = input.dataset.originalName || "";
+      const newName = input.value.trim();
+      if (newName && newName !== oldName) {
+        promises.push(
+          fetch(`${API_URL}/bookmarks/category/${encodeURIComponent(oldName)}`, {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ newName }),
+          }),
+        );
+      }
+    });
+
+    if (promises.length > 0) {
+      const results = await Promise.all(promises);
+      const failed = results.filter((res) => !res.ok);
+      if (failed.length > 0) {
+        alert("Не удалось переименовать некоторые категории");
+      }
     }
-  });
-
-  if (promises.length > 0) {
-    await Promise.all(promises);
+  } catch (err) {
+    console.error("Failed to save categories:", err);
+    alert("Ошибка сети при сохранении категорий");
+  } finally {
+    isEditingCategories = false;
+    btn.disabled = false;
+    btn.textContent = "Переименовать";
+    await loadBookmarksPage(container, empty, loading);
   }
-
-  isEditingCategories = false;
-  btn.disabled = false;
-  btn.textContent = "Переименовать";
-  await loadBookmarksPage(container, empty, loading);
 }
 
 export function initBookmarksPage(): void {
   const container = document.getElementById("bm-categories");
   if (!container) return;
+
+  container.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest(".comment-menu")) {
+      closeAllMenus(container);
+    }
+  });
 
   const empty = document.getElementById("bm-empty");
   const loading = document.getElementById("bm-loading");
@@ -580,13 +600,6 @@ async function loadBookmarksPage(
     "tpl-bm-item",
   ) as HTMLTemplateElement;
 
-  container.addEventListener("click", (e) => {
-    const target = e.target as HTMLElement;
-    if (!target.closest(".comment-menu")) {
-      closeAllMenus(container);
-    }
-  });
-
   categoryEntries.forEach(([catName, cat], index) => {
     const catNode = catTemplate.content.cloneNode(true) as HTMLElement;
     const detailsEl = catNode.querySelector("details.bm-category") as HTMLDetailsElement;
@@ -660,7 +673,9 @@ async function loadBookmarksPage(
       chapterSpan.textContent = String(bm.chapterNum);
       sourceEl.title = `${nvTitle}, глава ${bm.chapterNum}`;
       nameEl.textContent = bm.value;
-      link.href = `/${bm.novelId}/chapter/${bm.chapterId}`;
+      link.href = bm.novelId && bm.chapterId
+        ? `/${encodeURIComponent(bm.novelId)}/chapter/${encodeURIComponent(bm.chapterId)}`
+        : "#";
 
       itemMenuBtn.addEventListener("click", (e) => {
         e.preventDefault();

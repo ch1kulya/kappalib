@@ -771,6 +771,8 @@ func HandleAddBookmark(ctx context.Context, input *AddBookmarkInput) (*BookmarkR
 	})
 	if err != nil {
 		switch {
+		case errors.Is(err, data.ErrChapterNotFound):
+			return nil, huma.Error404NotFound("Chapter not found")
 		case errors.Is(err, data.ErrBookmarkDuplicate):
 			return nil, huma.Error409Conflict("Bookmark already exists for this chapter")
 		case errors.Is(err, data.ErrTooManyCategories):
@@ -834,6 +836,8 @@ func HandleUpdateBookmark(ctx context.Context, input *UpdateBookmarkInput) (*Boo
 			return nil, huma.Error404NotFound("Bookmark not found")
 		case errors.Is(err, data.ErrTooManyCategories):
 			return nil, huma.Error422UnprocessableEntity("Too many bookmark categories")
+		case errors.Is(err, data.ErrTooManyBookmarks):
+			return nil, huma.Error422UnprocessableEntity("Too many bookmarks in category")
 		default:
 			return nil, huma.Error500InternalServerError("Failed to update bookmark")
 		}
@@ -856,10 +860,14 @@ func HandleRenameBookmarkCategory(ctx context.Context, input *RenameCategoryInpu
 	}
 
 	if err := data.RenameCategory(ctx, userID, input.Name, input.Body.NewName); err != nil {
-		if errors.Is(err, data.ErrBookmarkNotFound) {
+		switch {
+		case errors.Is(err, data.ErrBookmarkNotFound):
 			return nil, huma.Error404NotFound("Category not found")
+		case errors.Is(err, data.ErrTooManyBookmarks):
+			return nil, huma.Error422UnprocessableEntity("Too many bookmarks in category")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to rename category")
 		}
-		return nil, huma.Error500InternalServerError("Failed to rename category")
 	}
 
 	return nil, nil

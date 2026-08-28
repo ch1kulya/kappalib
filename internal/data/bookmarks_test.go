@@ -107,3 +107,31 @@ func TestFindBookmark(t *testing.T) {
 		t.Errorf("expected nil for unknown bookmark, got %v, %s", notFound, catNotFound)
 	}
 }
+
+func TestSanitizeCategoryName(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		fallback string
+		want     string
+	}{
+		{"empty uses fallback", "", "Избранное", "Избранное"},
+		{"whitespace uses fallback", "   \t\n  ", "Избранное", "Избранное"},
+		{"slashes converted to spaces", "Sci/Fi\\Fantasy", "Избранное", "Sci Fi Fantasy"},
+		{"multiple slashes normalized", "a///b\\\\\\c", "Избранное", "a b c"},
+		{"only slashes uses fallback", "///\\\\\\", "Избранное", "Избранное"},
+		{"control characters stripped", "Cat\x00\x07\x1bName", "Избранное", "Cat Name"},
+		{"html stripped", "<b>Reading</b>", "Избранное", "Reading"},
+		{"truncated to maxCategoryNameLen", "ОченьДлинноеНазваниеКатегории", "Избранное", "ОченьДлинноеНаз"},
+		{"unicode with spaces and slashes", "Лайт / Новеллы", "Избранное", "Лайт Новеллы"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeCategoryName(tt.value, tt.fallback)
+			if got != tt.want {
+				t.Errorf("sanitizeCategoryName(%q, %q) = %q, want %q", tt.value, tt.fallback, got, tt.want)
+			}
+		})
+	}
+}

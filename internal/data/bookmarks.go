@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/models"
@@ -20,6 +21,15 @@ var queryBookmarkChapterInfo string
 
 //go:embed sql/bookmarks_enrich.sql
 var queryBookmarksEnrich string
+
+//go:embed sql/user_bookmarks_get.sql
+var queryUserBookmarksGet string
+
+//go:embed sql/user_bookmarks_get_for_update.sql
+var queryUserBookmarksGetForUpdate string
+
+//go:embed sql/user_bookmarks_update.sql
+var queryUserBookmarksUpdate string
 
 const (
 	defaultBookmarkCategory = "Избранное"
@@ -37,6 +47,12 @@ func randomBookmarkID() string {
 
 func sanitizeBookmarkField(value, fallback string, maxLen int) string {
 	value = strictPolicy.Sanitize(value)
+	value = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) && !unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, value)
 	value = multiSpaceRegex.ReplaceAllString(value, " ")
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -48,9 +64,20 @@ func sanitizeBookmarkField(value, fallback string, maxLen int) string {
 	return value
 }
 
+func sanitizeCategoryName(value, fallback string) string {
+	value = strictPolicy.Sanitize(value)
+	value = strings.Map(func(r rune) rune {
+		if r == '/' || r == '\\' || (unicode.IsControl(r) && !unicode.IsSpace(r)) {
+			return ' '
+		}
+		return r
+	}, value)
+	return sanitizeBookmarkField(value, fallback, maxCategoryNameLen)
+}
+
 func loadBookmarks(ctx context.Context, userID string) (map[string]models.BookmarkCategory, error) {
 	var raw []byte
-	err := database.DB.QueryRow(ctx, `SELECT bookmarks FROM users WHERE id = $1`, userID).Scan(&raw)
+	err := database.DB.QueryRow(ctx, queryUserBookmarksGet, userID).Scan(&raw)
 	if err != nil {
 		return nil, ErrProfileNotFound
 	}
@@ -67,7 +94,7 @@ func loadBookmarks(ctx context.Context, userID string) (map[string]models.Bookma
 func getBookmarkChapterInfo(ctx context.Context, chapterID string) (novelID, novelTitle, chapterTitle string, chapterNum int, err error) {
 	err = database.DB.QueryRow(ctx, queryBookmarkChapterInfo, chapterID).Scan(&novelID, &novelTitle, &chapterNum, &chapterTitle)
 	if err != nil {
-		return "", "", "", 0, fmt.Errorf("chapter not found: %w", err)
+		return "", "", "", 0, ErrChapterNotFound
 	}
 	return
 }
@@ -80,7 +107,7 @@ func withBookmarkTx(ctx context.Context, userID string, fn func(bookmarks map[st
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var raw []byte
-	err = tx.QueryRow(ctx, `SELECT bookmarks FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&raw)
+	err = tx.QueryRow(ctx, queryUserBookmarksGetForUpdate, userID).Scan(&raw)
 	if err != nil {
 		return ErrProfileNotFound
 	}
@@ -103,7 +130,7 @@ func withBookmarkTx(ctx context.Context, userID string, fn func(bookmarks map[st
 		return err
 	}
 
-	_, err = tx.Exec(ctx, `UPDATE users SET bookmarks = $1 WHERE id = $2`, data, userID)
+	_, err = tx.Exec(ctx, queryUserBookmarksUpdate, data, userID)
 	if err != nil {
 		logger.Error("Failed to save bookmarks: %v", err)
 		return err
@@ -269,6 +296,7 @@ func GetUserBookmarks(ctx context.Context, userID string) (map[string]models.Enr
 	enriched, err := enrichBookmarksWithDB(dbCtx, bookmarks)
 	if err != nil {
 		logger.Error("Failed to enrich bookmarks: %v", err)
+		return nil, err
 	}
 
 	return enriched, nil
@@ -288,7 +316,7 @@ func AddBookmark(ctx context.Context, userID string, input AddBookmarkInput) (*m
 	if defaultValue == "" {
 		defaultValue = fmt.Sprintf("Глава %d", chapterNum)
 	}
-	category := sanitizeBookmarkField(input.Category, defaultBookmarkCategory, maxCategoryNameLen)
+	category := sanitizeCategoryName(input.Category, defaultBookmarkCategory)
 	value := sanitizeBookmarkField(input.Value, defaultValue, maxBookmarkValueLen)
 
 	bookmark := models.Bookmark{
@@ -366,7 +394,7 @@ func UpdateBookmark(ctx context.Context, userID, bookmarkID, newValue, newCatego
 		}
 		targetCategory := currentCategory
 		if newCategory != "" {
-			targetCategory = sanitizeBookmarkField(newCategory, currentCategory, maxCategoryNameLen)
+			targetCategory = sanitizeCategoryName(newCategory, currentCategory)
 		}
 
 		if targetCategory == currentCategory {
@@ -379,10 +407,13 @@ func UpdateBookmark(ctx context.Context, userID, bookmarkID, newValue, newCatego
 			}
 			bookmarks[currentCategory] = cat
 		} else {
-			if _, exists := bookmarks[targetCategory]; !exists && len(bookmarks) >= maxCategories {
+			_, remaining := removeBookmarkByID(bookmarks, bookmarkID)
+			if _, exists := remaining[targetCategory]; !exists && len(remaining) >= maxCategories {
 				return nil, ErrTooManyCategories
 			}
-			_, remaining := removeBookmarkByID(bookmarks, bookmarkID)
+			if targetCat, exists := remaining[targetCategory]; exists && len(targetCat.Bookmarks) >= maxBookmarksPerCategory {
+				return nil, ErrTooManyBookmarks
+			}
 			bookmarks = insertBookmark(remaining, targetCategory, updated)
 		}
 
@@ -432,20 +463,22 @@ func RenameCategory(ctx context.Context, userID, oldName, newName string) error 
 			return nil, ErrBookmarkNotFound
 		}
 
-		sanitized := sanitizeBookmarkField(newName, oldName, maxCategoryNameLen)
+		sanitized := sanitizeCategoryName(newName, oldName)
 		if sanitized == oldName {
 			return bookmarks, nil
 		}
 
 		now := time.Now().Unix()
-		cat.UpdatedAt = now
-
 		delete(bookmarks, oldName)
 		if existingTarget, ok := bookmarks[sanitized]; ok {
+			if len(existingTarget.Bookmarks)+len(cat.Bookmarks) > maxBookmarksPerCategory {
+				return nil, ErrTooManyBookmarks
+			}
 			existingTarget.UpdatedAt = now
 			existingTarget.Bookmarks = append(existingTarget.Bookmarks, cat.Bookmarks...)
 			bookmarks[sanitized] = existingTarget
 		} else {
+			cat.UpdatedAt = now
 			bookmarks[sanitized] = cat
 		}
 
