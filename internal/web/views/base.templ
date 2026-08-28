@@ -25,6 +25,9 @@ templ Base(props BaseProps) {
 			if props.PrefetchURL != "" {
 				<link rel="prefetch" href={ props.PrefetchURL } as="document"/>
 			}
+			if props.NoIndex {
+				<meta name="robots" content="noindex, nofollow"/>
+			}
 			<link rel="preconnect" href="https://s3.kappalib.rip"/>
 			<link rel="preconnect" href="https://cdn.jsdelivr.net"/>
 			<link rel="preconnect" href="https://challenges.cloudflare.com"/>
@@ -70,6 +73,11 @@ templ Base(props BaseProps) {
 				@Settings()
 				@ProfileTemplates()
 				@SettingsTemplates()
+				@Settings()
+				@BookmarkModal()
+				@ProfileTemplates()
+				@SettingsTemplates()
+				@BookmarkModalTemplates()
 				<div class="container">
 					{ children... }
 				</div>
@@ -87,6 +95,9 @@ templ Header(props BaseProps) {
 			if props.IsChapterPage && props.Novel != nil {
 				<a href={ templ.SafeURL("/" + props.Novel.ID) } class="header-left"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="header-logo back"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"></path></svg></a>
 				<div class="header-buttons">
+					<button class="header-right js-bookmark-toggle" id="header-bookmark-btn" aria-label="Добавить закладку">
+						@IconBookmark("header-profile-icon")
+					</button>
 					<button class="header-right" id="header-settings-btn" aria-label="Настройки">
 						@IconSettings("header-profile-icon")
 					</button>
