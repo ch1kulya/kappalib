@@ -322,9 +322,11 @@ type Bookmark struct {
 	NovelCoverURL string `json:"novelCoverUrl"`
 	Name          string `json:"name"`
 	CreatedAt     int64  `json:"createdAt"`
+	UpdatedAt     int64  `json:"updatedAt"`
 }
 
 type BookmarkCategory struct {
-	Name      string     `json:"name"`
+	CreatedAt int64      `json:"createdAt"`
+	UpdatedAt int64      `json:"updatedAt"`
 	Bookmarks []Bookmark `json:"bookmarks"`
 }

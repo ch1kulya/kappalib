@@ -14,37 +14,41 @@ interface Bookmark {
   novelCoverUrl: string;
   name: string;
   createdAt: number;
+  updatedAt: number;
 }
 
 interface BookmarkCategory {
-  name: string;
+  createdAt: number;
+  updatedAt: number;
   bookmarks: Bookmark[];
 }
 
-let cachedCategories: BookmarkCategory[] | null = null;
+type BookmarkCategories = Record<string, BookmarkCategory>;
+
+let cachedCategories: BookmarkCategories | null = null;
 
 async function fetchBookmarkCategories(
   force = false,
-): Promise<BookmarkCategory[]> {
+): Promise<BookmarkCategories> {
   if (cachedCategories && !force) return cachedCategories;
   try {
     const res = await fetch(`${API_URL}/profile/me/bookmarks`, {
       credentials: "include",
     });
-    if (!res.ok) return [];
-    const data: { categories: BookmarkCategory[] } = await res.json();
-    cachedCategories = data.categories;
+    if (!res.ok) return {};
+    const data: BookmarkCategories = await res.json();
+    cachedCategories = data;
     return cachedCategories;
   } catch {
-    return [];
+    return {};
   }
 }
 
 function findBookmarkForChapter(
-  categories: BookmarkCategory[],
+  categories: BookmarkCategories,
   chapterId: string,
 ): Bookmark | null {
-  for (const cat of categories) {
+  for (const cat of Object.values(categories)) {
     const found = cat.bookmarks.find((b) => b.chapterId === chapterId);
     if (found) return found;
   }
@@ -52,11 +56,11 @@ function findBookmarkForChapter(
 }
 
 function findCategoryOfBookmark(
-  categories: BookmarkCategory[],
+  categories: BookmarkCategories,
   bookmarkId: string,
 ): string {
-  for (const cat of categories) {
-    if (cat.bookmarks.some((b) => b.id === bookmarkId)) return cat.name;
+  for (const [name, cat] of Object.entries(categories)) {
+    if (cat.bookmarks.some((b) => b.id === bookmarkId)) return name;
   }
   return "";
 }
@@ -89,7 +93,7 @@ function getFinalCategoryValue(): string {
 }
 
 function populateCategoryDropdown(
-  categories: BookmarkCategory[],
+  categories: BookmarkCategories,
   preselected: string,
 ): void {
   const dropdownEl = document.getElementById(
@@ -109,7 +113,7 @@ function populateCategoryDropdown(
   newInput.value = "";
   selectedCategory = "";
 
-  const names = categories.map((c) => c.name);
+  const names = Object.keys(categories);
   const initial = names.includes(preselected) ? preselected : names[0] || "";
 
   names.forEach((name) => {
@@ -387,9 +391,9 @@ async function loadBookmarksPage(
   const categories = await fetchBookmarkCategories(true);
   if (loading) loading.style.display = "none";
 
-  const visibleCategories = categories.filter((c) => c.bookmarks.length >= 0);
+  const categoryEntries = Object.entries(categories);
 
-  if (visibleCategories.length === 0) {
+  if (categoryEntries.length === 0) {
     if (empty) empty.style.display = "block";
     return;
   }
@@ -411,7 +415,7 @@ async function loadBookmarksPage(
     }
   });
 
-  visibleCategories.forEach((cat) => {
+  categoryEntries.forEach(([catName, cat]) => {
     const catNode = catTemplate.content.cloneNode(true) as HTMLElement;
     const nameEl = catNode.querySelector("[data-field=\"name\"]") as HTMLElement;
     const countEl = catNode.querySelector(
@@ -427,8 +431,8 @@ async function loadBookmarksPage(
     ) as HTMLButtonElement;
     const itemsWrap = catNode.querySelector(".bm-items") as HTMLElement;
 
-    nameEl.textContent = cat.name;
-    nameEl.title = cat.name;
+    nameEl.textContent = catName;
+    nameEl.title = catName;
     countEl.textContent = String(cat.bookmarks.length);
 
     menuBtn.addEventListener("click", (e) => {
@@ -444,7 +448,7 @@ async function loadBookmarksPage(
 
       editInline(nameEl, async (newValue) => {
         const res = await fetch(
-          `${API_URL}/bookmarks/category/${encodeURIComponent(cat.name)}`,
+          `${API_URL}/bookmarks/category/${encodeURIComponent(catName)}`,
           {
             method: "PATCH",
             credentials: "include",
@@ -473,12 +477,12 @@ async function loadBookmarksPage(
       closeAllMenus(container);
 
       const confirmed = confirm(
-        `Удалить категорию "${cat.name}" и все закладки в ней (${cat.bookmarks.length})?`,
+        `Удалить категорию "${catName}" и все закладки в ней (${cat.bookmarks.length})?`,
       );
       if (!confirmed) return;
 
       const res = await fetch(
-        `${API_URL}/bookmarks/category/${encodeURIComponent(cat.name)}`,
+        `${API_URL}/bookmarks/category/${encodeURIComponent(catName)}`,
         { method: "DELETE", credentials: "include" },
       );
 
@@ -528,7 +532,7 @@ async function loadBookmarksPage(
       sourceEl.innerHTML = `${nvTitle}, глава <span class="chapter-num-highlight">${bm.chapterNum}</span>`;
       sourceEl.title = `${nvTitle}, глава ${bm.chapterNum}`;
       dateEl.textContent = formatRelativeTime(
-        new Date(bm.createdAt * 1000).toISOString(),
+        new Date((bm.updatedAt || bm.createdAt) * 1000).toISOString(),
       );
       nameEl.textContent = bm.name;
       nameEl.title = bm.name;

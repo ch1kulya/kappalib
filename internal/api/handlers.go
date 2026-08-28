@@ -203,9 +203,7 @@ type BookmarkResponse struct {
 }
 
 type UserBookmarksResponse struct {
-	Body struct {
-		Categories []models.BookmarkCategory `json:"categories"`
-	}
+	Body map[string]models.BookmarkCategory
 }
 
 type VoteCommentResponse struct {
@@ -756,14 +754,12 @@ func HandleGetUserBookmarks(ctx context.Context, input *struct{}) (*UserBookmark
 		return nil, err
 	}
 
-	categories, err := data.GetUserBookmarks(ctx, userID)
+	bookmarks, err := data.GetUserBookmarks(ctx, userID)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to load bookmarks")
 	}
 
-	resp := &UserBookmarksResponse{}
-	resp.Body.Categories = categories
-	return resp, nil
+	return &UserBookmarksResponse{Body: bookmarks}, nil
 }
 
 func HandleAddBookmark(ctx context.Context, input *AddBookmarkInput) (*BookmarkResponse, error) {

@@ -39,21 +39,24 @@ func sanitizeBookmarkField(value, fallback string, maxLen int) string {
 	return value
 }
 
-func loadBookmarks(ctx context.Context, userID string) ([]models.BookmarkCategory, error) {
+func loadBookmarks(ctx context.Context, userID string) (map[string]models.BookmarkCategory, error) {
 	var raw []byte
 	err := database.DB.QueryRow(ctx, `SELECT bookmarks FROM users WHERE id = $1`, userID).Scan(&raw)
 	if err != nil {
 		return nil, ErrProfileNotFound
 	}
-	var categories []models.BookmarkCategory
-	if err := json.Unmarshal(raw, &categories); err != nil {
-		return []models.BookmarkCategory{}, nil
+	var bookmarks map[string]models.BookmarkCategory
+	if err := json.Unmarshal(raw, &bookmarks); err != nil {
+		return make(map[string]models.BookmarkCategory), nil
 	}
-	return categories, nil
+	if bookmarks == nil {
+		bookmarks = make(map[string]models.BookmarkCategory)
+	}
+	return bookmarks, nil
 }
 
-func saveBookmarks(ctx context.Context, userID string, categories []models.BookmarkCategory) error {
-	data, err := json.Marshal(categories)
+func saveBookmarks(ctx context.Context, userID string, bookmarks map[string]models.BookmarkCategory) error {
+	data, err := json.Marshal(bookmarks)
 	if err != nil {
 		return err
 	}
@@ -64,41 +67,53 @@ func saveBookmarks(ctx context.Context, userID string, categories []models.Bookm
 	return err
 }
 
-func insertBookmark(categories []models.BookmarkCategory, categoryName string, bookmark models.Bookmark) []models.BookmarkCategory {
-	for i := range categories {
-		if categories[i].Name == categoryName {
-			categories[i].Bookmarks = append([]models.Bookmark{bookmark}, categories[i].Bookmarks...)
-			return categories
+func insertBookmark(bookmarks map[string]models.BookmarkCategory, categoryName string, bookmark models.Bookmark) map[string]models.BookmarkCategory {
+	now := time.Now().Unix()
+	cat, exists := bookmarks[categoryName]
+	if !exists {
+		cat = models.BookmarkCategory{
+			CreatedAt: now,
+			UpdatedAt: now,
+			Bookmarks: []models.Bookmark{bookmark},
 		}
+	} else {
+		cat.UpdatedAt = now
+		cat.Bookmarks = append([]models.Bookmark{bookmark}, cat.Bookmarks...)
 	}
-	return append([]models.BookmarkCategory{{Name: categoryName, Bookmarks: []models.Bookmark{bookmark}}}, categories...)
+	bookmarks[categoryName] = cat
+	return bookmarks
 }
 
-func removeBookmarkByID(categories []models.BookmarkCategory, bookmarkID string) (*models.Bookmark, []models.BookmarkCategory) {
+func removeBookmarkByID(bookmarks map[string]models.BookmarkCategory, bookmarkID string) (*models.Bookmark, map[string]models.BookmarkCategory) {
+	now := time.Now().Unix()
 	var removed *models.Bookmark
-	result := make([]models.BookmarkCategory, 0, len(categories))
-	for _, cat := range categories {
+	for catName, cat := range bookmarks {
 		kept := make([]models.Bookmark, 0, len(cat.Bookmarks))
+		var modified bool
 		for _, b := range cat.Bookmarks {
 			if b.ID == bookmarkID {
 				bCopy := b
 				removed = &bCopy
+				modified = true
 				continue
 			}
 			kept = append(kept, b)
 		}
-		cat.Bookmarks = kept
-		result = append(result, cat)
+		if modified {
+			cat.UpdatedAt = now
+			cat.Bookmarks = kept
+			bookmarks[catName] = cat
+		}
 	}
-	return removed, result
+	return removed, bookmarks
 }
 
-func findBookmark(categories []models.BookmarkCategory, bookmarkID string) (*models.Bookmark, string) {
-	for _, cat := range categories {
+func findBookmark(bookmarks map[string]models.BookmarkCategory, bookmarkID string) (*models.Bookmark, string) {
+	for catName, cat := range bookmarks {
 		for _, b := range cat.Bookmarks {
 			if b.ID == bookmarkID {
 				bCopy := b
-				return &bCopy, cat.Name
+				return &bCopy, catName
 			}
 		}
 	}
@@ -115,7 +130,7 @@ type AddBookmarkInput struct {
 	Name          string
 }
 
-func GetUserBookmarks(ctx context.Context, userID string) ([]models.BookmarkCategory, error) {
+func GetUserBookmarks(ctx context.Context, userID string) (map[string]models.BookmarkCategory, error) {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	return loadBookmarks(dbCtx, userID)
@@ -125,11 +140,12 @@ func AddBookmark(ctx context.Context, userID string, input AddBookmarkInput) (*m
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	categories, err := loadBookmarks(dbCtx, userID)
+	bookmarks, err := loadBookmarks(dbCtx, userID)
 	if err != nil {
 		return nil, err
 	}
 
+	now := time.Now().Unix()
 	defaultName := fmt.Sprintf("Глава %d — %s", input.ChapterNum, input.NovelTitle)
 	category := sanitizeBookmarkField(input.Category, defaultBookmarkCategory, maxCategoryNameLen)
 	name := sanitizeBookmarkField(input.Name, defaultName, maxBookmarkNameLen)
@@ -142,12 +158,13 @@ func AddBookmark(ctx context.Context, userID string, input AddBookmarkInput) (*m
 		NovelTitle:    input.NovelTitle,
 		NovelCoverURL: input.NovelCoverURL,
 		Name:          name,
-		CreatedAt:     time.Now().Unix(),
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	categories = insertBookmark(categories, category, bookmark)
+	bookmarks = insertBookmark(bookmarks, category, bookmark)
 
-	if err := saveBookmarks(dbCtx, userID, categories); err != nil {
+	if err := saveBookmarks(dbCtx, userID, bookmarks); err != nil {
 		return nil, err
 	}
 	return &bookmark, nil
@@ -157,12 +174,12 @@ func DeleteBookmark(ctx context.Context, userID, bookmarkID string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	categories, err := loadBookmarks(dbCtx, userID)
+	bookmarks, err := loadBookmarks(dbCtx, userID)
 	if err != nil {
 		return err
 	}
 
-	removed, remaining := removeBookmarkByID(categories, bookmarkID)
+	removed, remaining := removeBookmarkByID(bookmarks, bookmarkID)
 	if removed == nil {
 		return ErrBookmarkNotFound
 	}
@@ -174,17 +191,19 @@ func UpdateBookmark(ctx context.Context, userID, bookmarkID, newName, newCategor
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	categories, err := loadBookmarks(dbCtx, userID)
+	bookmarks, err := loadBookmarks(dbCtx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	existing, currentCategory := findBookmark(categories, bookmarkID)
+	existing, currentCategory := findBookmark(bookmarks, bookmarkID)
 	if existing == nil {
 		return nil, ErrBookmarkNotFound
 	}
 
+	now := time.Now().Unix()
 	updated := *existing
+	updated.UpdatedAt = now
 	if newName != "" {
 		updated.Name = sanitizeBookmarkField(newName, existing.Name, maxBookmarkNameLen)
 	}
@@ -194,22 +213,20 @@ func UpdateBookmark(ctx context.Context, userID, bookmarkID, newName, newCategor
 	}
 
 	if targetCategory == currentCategory {
-		for i := range categories {
-			if categories[i].Name != currentCategory {
-				continue
-			}
-			for j := range categories[i].Bookmarks {
-				if categories[i].Bookmarks[j].ID == bookmarkID {
-					categories[i].Bookmarks[j] = updated
-				}
+		cat := bookmarks[currentCategory]
+		cat.UpdatedAt = now
+		for j := range cat.Bookmarks {
+			if cat.Bookmarks[j].ID == bookmarkID {
+				cat.Bookmarks[j] = updated
 			}
 		}
+		bookmarks[currentCategory] = cat
 	} else {
-		_, remaining := removeBookmarkByID(categories, bookmarkID)
-		categories = insertBookmark(remaining, targetCategory, updated)
+		_, remaining := removeBookmarkByID(bookmarks, bookmarkID)
+		bookmarks = insertBookmark(remaining, targetCategory, updated)
 	}
 
-	if err := saveBookmarks(dbCtx, userID, categories); err != nil {
+	if err := saveBookmarks(dbCtx, userID, bookmarks); err != nil {
 		return nil, err
 	}
 	return &updated, nil
@@ -219,59 +236,50 @@ func DeleteCategory(ctx context.Context, userID, categoryName string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	categories, err := loadBookmarks(dbCtx, userID)
+	bookmarks, err := loadBookmarks(dbCtx, userID)
 	if err != nil {
 		return err
 	}
 
-	found := false
-	result := make([]models.BookmarkCategory, 0, len(categories))
-	for _, cat := range categories {
-		if cat.Name == categoryName {
-			found = true
-			continue
-		}
-		result = append(result, cat)
-	}
-
-	if !found {
+	if _, exists := bookmarks[categoryName]; !exists {
 		return ErrBookmarkNotFound
 	}
 
-	return saveBookmarks(dbCtx, userID, result)
+	delete(bookmarks, categoryName)
+
+	return saveBookmarks(dbCtx, userID, bookmarks)
 }
 
 func RenameCategory(ctx context.Context, userID, oldName, newName string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	categories, err := loadBookmarks(dbCtx, userID)
+	bookmarks, err := loadBookmarks(dbCtx, userID)
 	if err != nil {
 		return err
 	}
 
-	sanitized := sanitizeBookmarkField(newName, oldName, maxCategoryNameLen)
-
-	targetIdx := -1
-	for i := range categories {
-		if categories[i].Name == oldName {
-			targetIdx = i
-			break
-		}
-	}
-	if targetIdx == -1 {
+	cat, exists := bookmarks[oldName]
+	if !exists {
 		return ErrBookmarkNotFound
 	}
 
-	for i := range categories {
-		if i == targetIdx || categories[i].Name != sanitized {
-			continue
-		}
-		categories[i].Bookmarks = append(categories[i].Bookmarks, categories[targetIdx].Bookmarks...)
-		categories = append(categories[:targetIdx], categories[targetIdx+1:]...)
-		return saveBookmarks(dbCtx, userID, categories)
+	sanitized := sanitizeBookmarkField(newName, oldName, maxCategoryNameLen)
+	if sanitized == oldName {
+		return nil
 	}
 
-	categories[targetIdx].Name = sanitized
-	return saveBookmarks(dbCtx, userID, categories)
+	now := time.Now().Unix()
+	cat.UpdatedAt = now
+
+	delete(bookmarks, oldName)
+	if existingTarget, ok := bookmarks[sanitized]; ok {
+		existingTarget.UpdatedAt = now
+		existingTarget.Bookmarks = append(existingTarget.Bookmarks, cat.Bookmarks...)
+		bookmarks[sanitized] = existingTarget
+	} else {
+		bookmarks[sanitized] = cat
+	}
+
+	return saveBookmarks(dbCtx, userID, bookmarks)
 }
