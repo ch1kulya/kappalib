@@ -11,3 +11,4 @@ ALTER TABLE chapters
 
 ALTER TABLE chapters
     ALTER COLUMN created_at SET DEFAULT now();
+

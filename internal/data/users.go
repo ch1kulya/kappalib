@@ -320,7 +320,6 @@ func SyncCookies(ctx context.Context, userID string, cookies map[string]models.C
 	_, err = database.DB.Exec(dbCtx,
 		`UPDATE users SET cookies = $1, last_active_at = now() WHERE id = $2`,
 		mergedJSON, userID)
-
 	if err != nil {
 		logger.Error("Failed to sync cookies: %v", err)
 		return nil, err
@@ -371,6 +370,7 @@ func ValidateDisplayName(name string) (string, error) {
 
 	return name, nil
 }
+
 func UpdateDisplayName(ctx context.Context, userID, newName string) (*models.ProfilePublic, error) {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

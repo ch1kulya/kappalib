@@ -1,6 +1,6 @@
+import { trackEvent } from "./analytics";
 import { loadCatalogPage } from "./catalog";
 import { setKappalibCookie } from "./profile";
-import { trackEvent } from "./analytics";
 
 interface DropdownChangeEventDetail {
   value: string;

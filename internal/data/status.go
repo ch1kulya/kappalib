@@ -69,7 +69,6 @@ func GetSystemStatus() (SystemStatus, error) {
 			UpdatedAt:    phareResponse.UpdatedAt,
 		}, nil
 	})
-
 	if err != nil {
 		return SystemStatus{Impact: "unknown"}, err
 	}

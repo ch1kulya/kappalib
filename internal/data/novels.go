@@ -72,7 +72,6 @@ func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 
 		return &n, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +223,6 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 			TotalPages: totalPages,
 		}, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +288,6 @@ func GetSitemapData(ctx context.Context) ([]models.SitemapItem, error) {
 
 		return items, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

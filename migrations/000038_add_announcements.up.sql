@@ -1,9 +1,10 @@
 CREATE TABLE announcements (
-    id SERIAL PRIMARY KEY,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    action_label TEXT,
-    action_url TEXT,
-    is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    id serial PRIMARY KEY,
+    title text NOT NULL,
+    description text NOT NULL,
+    action_label text,
+    action_url text,
+    is_active boolean NOT NULL DEFAULT TRUE,
+    created_at timestamptz NOT NULL DEFAULT now()
 );
+

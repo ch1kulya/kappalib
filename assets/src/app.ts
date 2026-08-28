@@ -1,20 +1,17 @@
-import { initSearch } from "./modules/search";
 import { initAgeGate } from "./modules/age";
-import {
-  initReadingProgressSaver,
-  refreshLastReadTotalChapters,
-} from "./modules/progress";
-import { initStatusBadge } from "./modules/status";
-import { initCatalogPagination, initCatalogPage } from "./modules/catalog";
-import Dropdown from "./modules/dropdown";
-import { initChaptersSort, initCatalogSort } from "./modules/sort";
-import { initTocFilter } from "./modules/toc";
-import { initDescription } from "./modules/description";
-import { initProfile, initProfileModal } from "./modules/profile";
+import { initCatalogPage, initCatalogPagination } from "./modules/catalog";
 import { initComments, initMyCommentsPage } from "./modules/comments";
-import { initSettings, initSettingsModal } from "./modules/settings";
+import { initDescription } from "./modules/description";
+import Dropdown from "./modules/dropdown";
 import { initHistoryPage } from "./modules/history";
+import { initProfile, initProfileModal } from "./modules/profile";
+import { initReadingProgressSaver, refreshLastReadTotalChapters } from "./modules/progress";
+import { initSearch } from "./modules/search";
+import { initSettings, initSettingsModal } from "./modules/settings";
+import { initCatalogSort, initChaptersSort } from "./modules/sort";
+import { initStatusBadge } from "./modules/status";
 import { initTimeTracker } from "./modules/time";
+import { initTocFilter } from "./modules/toc";
 
 declare global {
   interface Window {

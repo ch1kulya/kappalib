@@ -1,1 +1,3 @@
-ALTER TABLE sources DROP COLUMN is_translator;
+ALTER TABLE sources
+    DROP COLUMN is_translator;
+

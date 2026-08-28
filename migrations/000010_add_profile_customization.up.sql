@@ -1,1 +1,3 @@
-ALTER TABLE users ADD COLUMN IF NOT EXISTS has_custom_avatar BOOLEAN DEFAULT false;
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS has_custom_avatar boolean DEFAULT FALSE;
+

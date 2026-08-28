@@ -54,7 +54,6 @@ func GetChapters(ctx context.Context, novelID string) (*models.ChaptersList, err
 			Count:    len(chapters),
 		}, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +89,6 @@ func GetChapter(ctx context.Context, id string) (*models.Chapter, error) {
 
 		return &c, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +136,6 @@ func GetLatestUpdates(ctx context.Context, limit int) ([]models.NovelUpdate, err
 
 		return updates, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +180,6 @@ func GetRecentlyAddedNovels(ctx context.Context, limit int) ([]models.NovelAddit
 
 		return novels, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

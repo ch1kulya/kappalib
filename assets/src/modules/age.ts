@@ -27,9 +27,8 @@ export function initAgeGate(): void {
   }
   modal.addEventListener("click", (e) => e.stopPropagation());
 
-  const isConfirmed =
-    localStorage.getItem("ageConfirmed") === "true" ||
-    sessionStorage.getItem("ageConfirmed") === "true";
+  const isConfirmed = localStorage.getItem("ageConfirmed") === "true"
+    || sessionStorage.getItem("ageConfirmed") === "true";
 
   if (!isConfirmed) {
     console.info("Age verification required, showing modal");

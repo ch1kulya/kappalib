@@ -1,10 +1,9 @@
-import { profileManager, getAvatarUrl, updateProfileBadges } from "./profile";
-import { getSettings } from "./settings";
 import { trackEvent } from "./analytics";
+import { getAvatarUrl, profileManager, updateProfileBadges } from "./profile";
+import { getSettings } from "./settings";
 
 const API_URL = process.env.API_URL;
-const TURNSTILE_COMMENTS_SITE_KEY =
-  process.env.TURNSTILE_COMMENTS_SITE_KEY || "";
+const TURNSTILE_COMMENTS_SITE_KEY = process.env.TURNSTILE_COMMENTS_SITE_KEY || "";
 const SMARTCAPTCHA_SITE_KEY = process.env.SMARTCAPTCHA_SITE_KEY || "";
 const COMMENT_COOLDOWN = 30 * 1000;
 const LAST_COMMENT_TIME_KEY = "kappalib_last_comment_time";
@@ -269,12 +268,15 @@ function formatRelativeTime(dateStr: string): string {
   const days = Math.floor(hours / 24);
 
   if (seconds < 60) return "только что";
-  if (minutes < 60)
+  if (minutes < 60) {
     return `${minutes} ${pluralize(minutes, "минуту", "минуты", "минут")} назад`;
-  if (hours < 24)
+  }
+  if (hours < 24) {
     return `${hours} ${pluralize(hours, "час", "часа", "часов")} назад`;
-  if (days < 30)
+  }
+  if (days < 30) {
     return `${days} ${pluralize(days, "день", "дня", "дней")} назад`;
+  }
   if (days < 365) {
     const months = Math.floor(days / 30);
     return `${months} ${pluralize(months, "месяц", "месяца", "месяцев")} назад`;
@@ -299,16 +301,15 @@ function createCommentHTML(
 
   switch (comment.status) {
     case "pending":
-      statusBadge =
-        '<span class="comment-moderation-badge">На модерации</span>';
+      statusBadge = "<span class=\"comment-moderation-badge\">На модерации</span>";
       extraClass = " comment-pending";
       break;
     case "rejected":
-      statusBadge = '<span class="comment-rejected-badge">Отклонено</span>';
+      statusBadge = "<span class=\"comment-rejected-badge\">Отклонено</span>";
       extraClass = " comment-rejected";
       break;
     case "deleted":
-      statusBadge = '<span class="comment-deleted-badge">Удалено</span>';
+      statusBadge = "<span class=\"comment-deleted-badge\">Удалено</span>";
       extraClass = " comment-rejected";
       break;
     default:
@@ -316,7 +317,7 @@ function createCommentHTML(
   }
 
   const editedBadge = comment.edited_at
-    ? ' <span class="comment-edited">(ред.)</span>'
+    ? " <span class=\"comment-edited\">(ред.)</span>"
     : "";
 
   const isApproved = comment.status === "approved";
@@ -375,20 +376,19 @@ function createCommentHTML(
       </button>`
     : "";
 
-  const footerHTML =
-    voteHTML || replyHTML
-      ? `<div class="comment-footer">${voteHTML}${replyHTML}</div>`
-      : "";
+  const footerHTML = voteHTML || replyHTML
+    ? `<div class="comment-footer">${voteHTML}${replyHTML}</div>`
+    : "";
 
-  const chapterUrl =
-    options?.chapterUrl ||
-    (comment.novel_id && comment.chapter_id
+  const chapterUrl = options?.chapterUrl
+    || (comment.novel_id && comment.chapter_id
       ? `/${comment.novel_id}/chapter/${comment.chapter_id}`
       : "");
 
   let jumpHTML = "";
   if (chapterUrl && getSettings().showComments) {
-    jumpHTML = `<a href="${chapterUrl}#${comment.id}" class="comment-jump-link" title="Перейти к комментарию в главе" aria-label="Перейти к комментарию">
+    jumpHTML =
+      `<a href="${chapterUrl}#${comment.id}" class="comment-jump-link" title="Перейти к комментарию в главе" aria-label="Перейти к комментарию">
       <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/>
         <path d="m21 3-9 9"/>
@@ -397,10 +397,9 @@ function createCommentHTML(
     </a>`;
   }
 
-  const actionsHTML =
-    jumpHTML || actionHTML
-      ? `<div class="comment-header-actions">${jumpHTML}${actionHTML}</div>`
-      : "";
+  const actionsHTML = jumpHTML || actionHTML
+    ? `<div class="comment-header-actions">${jumpHTML}${actionHTML}</div>`
+    : "";
 
   let answersHTML = "";
   if (comment.answers && comment.answers.length > 0) {
@@ -444,12 +443,11 @@ function createAnswerHTML(answer: CommentAnswer): string {
 
   switch (answer.status) {
     case "pending":
-      statusBadge =
-        '<span class="comment-moderation-badge">На модерации</span>';
+      statusBadge = "<span class=\"comment-moderation-badge\">На модерации</span>";
       extraClass = " comment-pending";
       break;
     case "rejected":
-      statusBadge = '<span class="comment-rejected-badge">Отклонено</span>';
+      statusBadge = "<span class=\"comment-rejected-badge\">Отклонено</span>";
       extraClass = " comment-rejected";
       break;
     default:
@@ -457,7 +455,7 @@ function createAnswerHTML(answer: CommentAnswer): string {
   }
 
   const editedBadge = answer.edited_at
-    ? ' <span class="comment-edited">(ред.)</span>'
+    ? " <span class=\"comment-edited\">(ред.)</span>"
     : "";
 
   if (answer.is_new) {
@@ -495,7 +493,7 @@ function createAnswerHTML(answer: CommentAnswer): string {
       </div>`;
   }
 
-  const newBadge = answer.is_new ? ' <span class="comment-new-badge">Новый ответ</span>' : '';
+  const newBadge = answer.is_new ? " <span class=\"comment-new-badge\">Новый ответ</span>" : "";
 
   return `
     <div class="comment-answer${extraClass}" id="${answer.id}" data-answer-id="${answer.id}" tabindex="0">
@@ -521,8 +519,7 @@ function renderComments(
 
   if (!append) {
     if (comments.length === 0) {
-      listEl.innerHTML =
-        '<div class="comments-empty">Комментариев пока нет. Будьте первым!</div>';
+      listEl.innerHTML = "<div class=\"comments-empty\">Комментариев пока нет. Будьте первым!</div>";
       return;
     }
     listEl.innerHTML = "";
@@ -564,8 +561,7 @@ async function loadComments(
   const loader = container.querySelector<HTMLElement>("#comments-loader");
 
   if (page === 1 && showLoader && listEl) {
-    listEl.innerHTML =
-      '<div class="comments-loading">Загрузка комментариев...</div>';
+    listEl.innerHTML = "<div class=\"comments-loading\">Загрузка комментариев...</div>";
   }
 
   if (page > 1 && loader) {
@@ -598,8 +594,7 @@ async function loadComments(
     }
 
     if (loader) {
-      loader.style.display =
-        commentsCurrentPage < commentsTotalPages ? "flex" : "none";
+      loader.style.display = commentsCurrentPage < commentsTotalPages ? "flex" : "none";
     }
 
     if (page === 1 && window.location.hash && window.location.hash !== "#comments-section") {
@@ -619,8 +614,7 @@ async function loadComments(
   } catch (err) {
     console.error("Failed to load comments", err);
     if (listEl && page === 1 && showLoader) {
-      listEl.innerHTML =
-        '<div class="comments-error">Не удалось загрузить комментарии</div>';
+      listEl.innerHTML = "<div class=\"comments-error\">Не удалось загрузить комментарии</div>";
     }
   } finally {
     isCommentsLoading = false;
@@ -712,10 +706,9 @@ function smoothScrollToTarget(
     const elapsed = timestamp - startTime;
     const progress = Math.min(elapsed / duration, 1);
 
-    const ease =
-      progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+    const ease = progress < 0.5
+      ? 4 * progress * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
     const currentTargetY = getTargetY();
     window.scrollTo(0, startY + (currentTargetY - startY) * ease);
@@ -783,7 +776,7 @@ function loadTurnstileScript(): Promise<void> {
     }, 4000);
 
     const existing = document.querySelector(
-      'script[src*="challenges.cloudflare.com/turnstile"]',
+      "script[src*=\"challenges.cloudflare.com/turnstile\"]",
     );
     if (existing) {
       const checkLoaded = setInterval(() => {
@@ -797,8 +790,7 @@ function loadTurnstileScript(): Promise<void> {
     }
 
     const script = document.createElement("script");
-    script.src =
-      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
     script.async = true;
     script.onerror = () => {
       clearTimeout(timeout);
@@ -825,9 +817,8 @@ async function initTurnstileForComments(container: HTMLElement): Promise<void> {
 
   await loadTurnstileScript();
 
-  let turnstileContainer =
-    container.querySelector<HTMLElement>("#comments-turnstile-container") ||
-    document.getElementById("comments-turnstile-container");
+  let turnstileContainer = container.querySelector<HTMLElement>("#comments-turnstile-container")
+    || document.getElementById("comments-turnstile-container");
   if (!turnstileContainer) {
     turnstileContainer = document.createElement("div");
     turnstileContainer.id = "comments-turnstile-container";
@@ -929,7 +920,7 @@ function loadSmartCaptchaScript(): Promise<void> {
     }, 4000);
 
     const existing = document.querySelector(
-      'script[src*="smartcaptcha.yandexcloud.net/captcha.js"]',
+      "script[src*=\"smartcaptcha.yandexcloud.net/captcha.js\"]",
     );
     if (existing) {
       const checkLoaded = setInterval(() => {
@@ -943,8 +934,7 @@ function loadSmartCaptchaScript(): Promise<void> {
     }
 
     const script = document.createElement("script");
-    script.src =
-      "https://smartcaptcha.yandexcloud.net/captcha.js?render=onload&onload=kappalibSmartCaptchaOnload";
+    script.src = "https://smartcaptcha.yandexcloud.net/captcha.js?render=onload&onload=kappalibSmartCaptchaOnload";
     script.async = true;
     script.defer = true;
     (window as any).kappalibSmartCaptchaOnload = () => {
@@ -1059,8 +1049,7 @@ function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
   const maxHeight = lineHeight * 8;
   const newHeight = Math.min(textarea.scrollHeight, maxHeight);
   textarea.style.height = newHeight + "px";
-  textarea.style.overflowY =
-    textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
 }
 
 function getTargetCommentIdFromHash(): string | undefined {
@@ -1089,9 +1078,9 @@ export function initComments(): void {
       (entries) => {
         entries.forEach((entry) => {
           if (
-            entry.isIntersecting &&
-            !isCommentsLoading &&
-            commentsCurrentPage < commentsTotalPages
+            entry.isIntersecting
+            && !isCommentsLoading
+            && commentsCurrentPage < commentsTotalPages
           ) {
             loadMoreComments(container, chapterId);
           }
@@ -1201,8 +1190,8 @@ async function handleVote(
   const commentItem = btn.closest(".comment-item") as HTMLElement;
   if (!commentItem) return;
 
-  const upBtn = commentItem.querySelector('.vote-btn[data-vote="1"]');
-  const downBtn = commentItem.querySelector('.vote-btn[data-vote="-1"]');
+  const upBtn = commentItem.querySelector(".vote-btn[data-vote=\"1\"]");
+  const downBtn = commentItem.querySelector(".vote-btn[data-vote=\"-1\"]");
   const scoreEl = commentItem.querySelector(".vote-score");
   if (!upBtn || !downBtn || !scoreEl) return;
 
@@ -1351,10 +1340,10 @@ async function sendCommentPayload(
   if (!res.ok) {
     const err = await res.json();
     if (
-      res.status === 400 &&
-      err.detail === "Captcha verification failed" &&
-      turnstileTok &&
-      !smartCaptchaTok
+      res.status === 400
+      && err.detail === "Captcha verification failed"
+      && turnstileTok
+      && !smartCaptchaTok
     ) {
       submitBtn.textContent = "Проверка...";
       smartCaptchaTok = await getSmartCaptchaToken();
@@ -1416,7 +1405,7 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
   formWrapper.className = "comment-reply-form-wrapper";
   formWrapper.innerHTML = `
     <div class="comment-form comment-reply-form">
-      ${renderToolbarHTML('class="comment-reply-image-input"')}
+      ${renderToolbarHTML("class=\"comment-reply-image-input\"")}
       <textarea
         class="comment-textarea comment-reply-textarea"
         placeholder="Ответ пользователю ${author}..."
@@ -1481,7 +1470,7 @@ function handleEditComment(btn: HTMLElement, container: HTMLElement, chapterId?:
   formWrapper.className = "comment-edit-form-wrapper";
   formWrapper.innerHTML = `
     <div class="comment-form comment-edit-form">
-      ${renderToolbarHTML('class="comment-edit-image-input"')}
+      ${renderToolbarHTML("class=\"comment-edit-image-input\"")}
       <textarea
         class="comment-textarea comment-edit-textarea"
         placeholder="Ваш комментарий..."
@@ -1572,12 +1561,11 @@ function handleEditComment(btn: HTMLElement, container: HTMLElement, chapterId?:
       console.error("Failed to edit comment", err);
       bodyEl.style.display = "";
       formWrapper.remove();
-      const msg =
-        err && typeof err === "object" && "message" in err && err.message
-          ? err.message === "Failed to submit"
-            ? "Не удалось сохранить. Попробуйте ещё раз."
-            : err.message
-          : "Не удалось сохранить. Попробуйте ещё раз.";
+      const msg = err && typeof err === "object" && "message" in err && err.message
+        ? err.message === "Failed to submit"
+          ? "Не удалось сохранить. Попробуйте ещё раз."
+          : err.message
+        : "Не удалось сохранить. Попробуйте ещё раз.";
       alert(msg);
     }
   });
@@ -1620,7 +1608,7 @@ function handleEditAnswer(btn: HTMLElement, container: HTMLElement, chapterId?: 
   formWrapper.className = "comment-edit-form-wrapper";
   formWrapper.innerHTML = `
     <div class="comment-form comment-edit-form">
-      ${renderToolbarHTML('class="comment-edit-image-input"')}
+      ${renderToolbarHTML("class=\"comment-edit-image-input\"")}
       <textarea
         class="comment-textarea comment-edit-textarea comment-reply-textarea"
         placeholder="Ваш ответ..."
@@ -1711,12 +1699,11 @@ function handleEditAnswer(btn: HTMLElement, container: HTMLElement, chapterId?: 
       console.error("Failed to edit answer", err);
       bodyEl.style.display = "";
       formWrapper.remove();
-      const msg =
-        err && typeof err === "object" && "message" in err && err.message
-          ? err.message === "Failed to submit"
-            ? "Не удалось сохранить. Попробуйте ещё раз."
-            : err.message
-          : "Не удалось сохранить. Попробуйте ещё раз.";
+      const msg = err && typeof err === "object" && "message" in err && err.message
+        ? err.message === "Failed to submit"
+          ? "Не удалось сохранить. Попробуйте ещё раз."
+          : err.message
+        : "Не удалось сохранить. Попробуйте ещё раз.";
       alert(msg);
     }
   });
@@ -1802,12 +1789,11 @@ function initReplyFormHandlers(
       }
     } catch (err: any) {
       console.error("Failed to submit answer", err);
-      const msg =
-        err && typeof err === "object" && "message" in err && err.message
-          ? err.message === "Failed to submit"
-            ? "Не удалось отправить. Попробуйте ещё раз."
-            : err.message
-          : "Не удалось отправить. Попробуйте ещё раз.";
+      const msg = err && typeof err === "object" && "message" in err && err.message
+        ? err.message === "Failed to submit"
+          ? "Не удалось отправить. Попробуйте ещё раз."
+          : err.message
+        : "Не удалось отправить. Попробуйте ещё раз.";
       alert(msg);
       submitBtn.disabled = false;
       submitBtn.textContent = "Отправить";
@@ -1840,9 +1826,9 @@ async function handleDeleteComment(
       const separator = wrapper.querySelector(".mc-chapter-separator");
       const nextWrapper = wrapper.nextElementSibling as HTMLElement | null;
       if (
-        separator &&
-        nextWrapper &&
-        nextWrapper.classList.contains("mc-comment-wrapper")
+        separator
+        && nextWrapper
+        && nextWrapper.classList.contains("mc-comment-wrapper")
       ) {
         const nextSeparator = nextWrapper.querySelector(".mc-chapter-separator");
         if (!nextSeparator) {
@@ -1863,8 +1849,7 @@ async function handleDeleteComment(
       }
       const listEl = container.querySelector(".comments-list");
       if (listEl && listEl.querySelectorAll(".comment-item").length === 0) {
-        listEl.innerHTML =
-          '<div class="comments-empty">Комментариев пока нет. Будьте первым!</div>';
+        listEl.innerHTML = "<div class=\"comments-empty\">Комментариев пока нет. Будьте первым!</div>";
       }
     } else {
       const countEl = document.getElementById("mc-count");
@@ -1956,7 +1941,7 @@ function renderCommentForm(container: HTMLElement): void {
   if (profileManager.isLoggedIn()) {
     formWrapper.innerHTML = `
       <div class="comment-form">
-        ${renderToolbarHTML('id="comment-image-input"')}
+        ${renderToolbarHTML("id=\"comment-image-input\"")}
         <textarea
           id="comment-textarea"
           class="comment-textarea"
@@ -1993,9 +1978,9 @@ function wrapSelection(
   const value = textarea.value;
 
   if (
-    start >= before.length &&
-    value.substring(start - before.length, start) === before &&
-    value.substring(end, end + after.length) === after
+    start >= before.length
+    && value.substring(start - before.length, start) === before
+    && value.substring(end, end + after.length) === after
   ) {
     textarea.setRangeText(
       selected,
@@ -2010,9 +1995,9 @@ function wrapSelection(
   }
 
   if (
-    selected.startsWith(before) &&
-    selected.endsWith(after) &&
-    selected.length >= before.length + after.length
+    selected.startsWith(before)
+    && selected.endsWith(after)
+    && selected.length >= before.length + after.length
   ) {
     const unwrapped = selected.slice(before.length, -after.length);
     textarea.setRangeText(unwrapped, start, end, "select");
@@ -2041,8 +2026,9 @@ function wrapSelection(
             start + closeIndex + after.length,
             "end",
           );
-          textarea.selectionStart = textarea.selectionEnd =
-            lastOpenIndex + between.length;
+          textarea.selectionStart =
+            textarea.selectionEnd =
+              lastOpenIndex + between.length;
           textarea.focus();
           updateCharCounter(textarea);
           autoResizeTextarea(textarea);
@@ -2112,12 +2098,12 @@ let uploadAnimationInterval: ReturnType<typeof setInterval> | null = null;
 
 function setImageButtonsState(disabled: boolean): void {
   document
-    .querySelectorAll<HTMLButtonElement>('.toolbar-btn[data-action="image"]')
+    .querySelectorAll<HTMLButtonElement>(".toolbar-btn[data-action=\"image\"]")
     .forEach((btn) => {
       btn.disabled = disabled;
     });
   document
-    .querySelectorAll<HTMLInputElement>('input[type="file"][accept*="image"]')
+    .querySelectorAll<HTMLInputElement>("input[type=\"file\"][accept*=\"image\"]")
     .forEach((inp) => {
       inp.disabled = disabled;
     });
@@ -2204,8 +2190,7 @@ async function uploadCommentImage(
 
     const placeholderStart = textarea.value.indexOf(currentPlaceholder);
     if (placeholderStart !== -1) {
-      const needsNewlineBefore =
-        start > 0 && textarea.value[start - 1] !== "\n";
+      const needsNewlineBefore = start > 0 && textarea.value[start - 1] !== "\n";
       const removeStart = needsNewlineBefore
         ? placeholderStart - 1
         : placeholderStart;
@@ -2220,8 +2205,7 @@ async function uploadCommentImage(
     if (err instanceof DOMException && err.name === "AbortError") {
     } else {
       console.error("Failed to upload image:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : "Не удалось загрузить изображение";
+      const errorMessage = err instanceof Error ? err.message : "Не удалось загрузить изображение";
       alert(errorMessage);
     }
   } finally {
@@ -2396,23 +2380,21 @@ async function loadCommentStats(): Promise<void> {
     const repliesValues = data.days.map((d) => d.replies);
 
     const ratingPrefix = data.rating > 0 ? "+" : "";
-    const ratingColor =
-      data.rating === 0
-        ? "var(--secondary)"
-        : data.rating > 0
-          ? "var(--accent-primary)"
-          : "var(--color-danger)";
+    const ratingColor = data.rating === 0
+      ? "var(--secondary)"
+      : data.rating > 0
+      ? "var(--accent-primary)"
+      : "var(--color-danger)";
 
-    container.innerHTML =
-      renderStatCard(
-        "Рейтинг",
-        data.rating,
-        ratingValues,
-        ratingColor,
-        ratingPrefix,
-        "rating",
-      ) +
-      renderStatCard(
+    container.innerHTML = renderStatCard(
+      "Рейтинг",
+      data.rating,
+      ratingValues,
+      ratingColor,
+      ratingPrefix,
+      "rating",
+    )
+      + renderStatCard(
         "Ответы",
         data.replies,
         repliesValues,
@@ -2466,8 +2448,7 @@ async function loadMyComments(page: number = 1): Promise<void> {
     if (res.status === 401) {
       if (loadingEl) loadingEl.style.display = "none";
       emptyEl.style.display = "block";
-      emptyEl.querySelector("p")!.textContent =
-        "Войдите в аккаунт, чтобы видеть свои комментарии";
+      emptyEl.querySelector("p")!.textContent = "Войдите в аккаунт, чтобы видеть свои комментарии";
       return;
     }
 
@@ -2497,15 +2478,13 @@ async function loadMyComments(page: number = 1): Promise<void> {
     renderMyComments(listEl, data.comments, page > 1);
 
     if (loader) {
-      loader.style.display =
-        myCommentsCurrentPage < myCommentsTotalPages ? "flex" : "none";
+      loader.style.display = myCommentsCurrentPage < myCommentsTotalPages ? "flex" : "none";
     }
   } catch (err) {
     console.error("Failed to load user comments", err);
     if (loadingEl) loadingEl.style.display = "none";
     if (page === 1) {
-      listEl.innerHTML =
-        '<div class="comments-error">Не удалось загрузить комментарии</div>';
+      listEl.innerHTML = "<div class=\"comments-error\">Не удалось загрузить комментарии</div>";
     }
   } finally {
     isMyCommentsLoading = false;
@@ -2536,8 +2515,7 @@ export function initMyCommentsPage(): void {
     const emptyEl = document.getElementById("mc-empty");
     if (emptyEl) {
       emptyEl.style.display = "block";
-      emptyEl.querySelector("p")!.textContent =
-        "Войдите в аккаунт, чтобы видеть свои комментарии";
+      emptyEl.querySelector("p")!.textContent = "Войдите в аккаунт, чтобы видеть свои комментарии";
     }
     return;
   }
@@ -2549,9 +2527,9 @@ export function initMyCommentsPage(): void {
       (entries) => {
         entries.forEach((entry) => {
           if (
-            entry.isIntersecting &&
-            !isMyCommentsLoading &&
-            myCommentsCurrentPage < myCommentsTotalPages
+            entry.isIntersecting
+            && !isMyCommentsLoading
+            && myCommentsCurrentPage < myCommentsTotalPages
           ) {
             loadMoreMyComments();
           }
@@ -2712,12 +2690,11 @@ function initFormHandlers(container: HTMLElement): void {
         await loadComments(container, chapterId, 1, true, false);
       } catch (err: any) {
         console.error("Failed to submit", err);
-        const msg =
-          err && typeof err === "object" && "message" in err && err.message
-            ? err.message === "Failed to submit"
-              ? "Не удалось отправить. Попробуйте ещё раз."
-              : err.message
-            : "Не удалось отправить. Попробуйте ещё раз.";
+        const msg = err && typeof err === "object" && "message" in err && err.message
+          ? err.message === "Failed to submit"
+            ? "Не удалось отправить. Попробуйте ещё раз."
+            : err.message
+          : "Не удалось отправить. Попробуйте ещё раз.";
         alert(msg);
         submitBtn.disabled = false;
         submitBtn.textContent = "Отправить";

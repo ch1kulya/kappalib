@@ -5,5 +5,8 @@ SELECT
     has_custom_avatar,
     avatar_updated_at,
     created_at
-FROM users
-WHERE id = $1;
+FROM
+    users
+WHERE
+    id = $1;
+
