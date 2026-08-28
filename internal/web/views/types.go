@@ -17,7 +17,6 @@ type BaseProps struct {
 	PrefetchURL    string
 	ReaderSettings ReaderSettings
 	IsSevere       bool
-	NoIndex        bool
 }
 
 type LastReadWidgetData struct {
