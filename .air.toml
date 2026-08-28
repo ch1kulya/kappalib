@@ -4,7 +4,7 @@ tmp_dir = "tmp"
 env_files = [".env.dev"]
 
 [build]
-pre_cmd = ["dprint fmt", "templ generate"]
+pre_cmd = ["templ fmt .", "templ generate"]
 cmd = "go build -o ./tmp/main ./cmd/server"
 entrypoint = ["./tmp/main"]
 exclude_dir = ["tmp", "assets/static/dist", "assets\\static\\dist"]
