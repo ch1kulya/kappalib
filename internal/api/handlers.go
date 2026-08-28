@@ -174,6 +174,40 @@ type VoteCommentInput struct {
 	}
 }
 
+type AddBookmarkInput struct {
+	Body struct {
+		NovelID       string `json:"novelId" pattern:"^nvl_[a-z0-9]{8}$"`
+		ChapterID     string `json:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
+		ChapterNum    int    `json:"chapterNum" minimum:"1"`
+		NovelTitle    string `json:"novelTitle" minLength:"1" maxLength:"200"`
+		NovelCoverURL string `json:"novelCoverUrl" maxLength:"500"`
+		Category      string `json:"category" maxLength:"50"`
+		Name          string `json:"name" maxLength:"100"`
+	}
+}
+
+type DeleteBookmarkInput struct {
+	BookmarkID string `path:"id" pattern:"^bkm_[a-z0-9]{8}$"`
+}
+
+type UpdateBookmarkInput struct {
+	BookmarkID string `path:"id" pattern:"^bkm_[a-z0-9]{8}$"`
+	Body       struct {
+		Name     string `json:"name,omitempty" maxLength:"100"`
+		Category string `json:"category,omitempty" maxLength:"50"`
+	}
+}
+
+type BookmarkResponse struct {
+	Body models.Bookmark
+}
+
+type UserBookmarksResponse struct {
+	Body struct {
+		Categories []models.BookmarkCategory `json:"categories"`
+	}
+}
+
 type VoteCommentResponse struct {
 	Body struct {
 		Score    int `json:"score"`
@@ -714,6 +748,120 @@ func HandleUploadCommentImage(ctx context.Context, input *UploadCommentImageInpu
 			URL string `json:"url"`
 		}{URL: imageURL},
 	}, nil
+}
+
+func HandleGetUserBookmarks(ctx context.Context, input *struct{}) (*UserBookmarksResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	categories, err := data.GetUserBookmarks(ctx, userID)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to load bookmarks")
+	}
+
+	resp := &UserBookmarksResponse{}
+	resp.Body.Categories = categories
+	return resp, nil
+}
+
+func HandleAddBookmark(ctx context.Context, input *AddBookmarkInput) (*BookmarkResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	bookmark, err := data.AddBookmark(ctx, userID, data.AddBookmarkInput{
+		NovelID:       input.Body.NovelID,
+		ChapterID:     input.Body.ChapterID,
+		ChapterNum:    input.Body.ChapterNum,
+		NovelTitle:    input.Body.NovelTitle,
+		NovelCoverURL: input.Body.NovelCoverURL,
+		Category:      input.Body.Category,
+		Name:          input.Body.Name,
+	})
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to add bookmark")
+	}
+
+	return &BookmarkResponse{Body: *bookmark}, nil
+}
+
+func HandleDeleteBookmark(ctx context.Context, input *DeleteBookmarkInput) (*struct{}, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := data.DeleteBookmark(ctx, userID, input.BookmarkID); err != nil {
+		if errors.Is(err, data.ErrBookmarkNotFound) {
+			return nil, huma.Error404NotFound("Bookmark not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to delete bookmark")
+	}
+
+	return nil, nil
+}
+
+type DeleteCategoryInput struct {
+	Name string `path:"name" minLength:"1" maxLength:"50"`
+}
+
+func HandleDeleteBookmarkCategory(ctx context.Context, input *DeleteCategoryInput) (*struct{}, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := data.DeleteCategory(ctx, userID, input.Name); err != nil {
+		if errors.Is(err, data.ErrBookmarkNotFound) {
+			return nil, huma.Error404NotFound("Category not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to delete category")
+	}
+
+	return nil, nil
+}
+
+func HandleUpdateBookmark(ctx context.Context, input *UpdateBookmarkInput) (*BookmarkResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	bookmark, err := data.UpdateBookmark(ctx, userID, input.BookmarkID, input.Body.Name, input.Body.Category)
+	if err != nil {
+		if errors.Is(err, data.ErrBookmarkNotFound) {
+			return nil, huma.Error404NotFound("Bookmark not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to update bookmark")
+	}
+
+	return &BookmarkResponse{Body: *bookmark}, nil
+}
+
+type RenameCategoryInput struct {
+	Name string `path:"name" minLength:"1" maxLength:"50"`
+	Body struct {
+		NewName string `json:"newName" minLength:"1" maxLength:"50"`
+	}
+}
+
+func HandleRenameBookmarkCategory(ctx context.Context, input *RenameCategoryInput) (*struct{}, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := data.RenameCategory(ctx, userID, input.Name, input.Body.NewName); err != nil {
+		if errors.Is(err, data.ErrBookmarkNotFound) {
+			return nil, huma.Error404NotFound("Category not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to rename category")
+	}
+
+	return nil, nil
 }
 
 func HandleVoteComment(ctx context.Context, input *VoteCommentInput) (*VoteCommentResponse, error) {
