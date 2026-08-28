@@ -25,4 +25,5 @@ var (
 	ErrCommentNotApproved    = errors.New("comment must be approved to answer")
 	ErrCannotEditComment     = errors.New("cannot edit comment with current status")
 	ErrCannotEditAnswer      = errors.New("cannot edit answer with current status")
+	ErrBookmarkNotFound      = errors.New("bookmark not found")
 )
