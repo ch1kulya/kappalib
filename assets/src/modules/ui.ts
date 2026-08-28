@@ -88,16 +88,14 @@ class UIManager {
     document.body.style.overflow = isIdle ? "" : "hidden";
 
     if (this.profileCard) {
-      this.profileCard.style.display =
-        this.state === "profile" ? "block" : "none";
+      this.profileCard.style.display = this.state === "profile" ? "block" : "none";
     }
     if (this.profileBtn) {
       this.profileBtn.classList.toggle("active", this.state === "profile");
     }
 
     if (this.settingsCard) {
-      this.settingsCard.style.display =
-        this.state === "settings" ? "block" : "none";
+      this.settingsCard.style.display = this.state === "settings" ? "block" : "none";
     }
     if (this.settingsBtn) {
       this.settingsBtn.classList.toggle("active", this.state === "settings");

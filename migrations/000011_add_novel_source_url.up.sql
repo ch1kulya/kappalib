@@ -1,2 +1,6 @@
-ALTER TABLE novels ADD COLUMN IF NOT EXISTS source_url TEXT;
-ALTER TABLE novels ADD COLUMN IF NOT EXISTS last_parsed_at TIMESTAMPTZ;
+ALTER TABLE novels
+    ADD COLUMN IF NOT EXISTS source_url text;
+
+ALTER TABLE novels
+    ADD COLUMN IF NOT EXISTS last_parsed_at timestamptz;
+

@@ -1,1 +1,3 @@
-ALTER TABLE novels ADD COLUMN parsing_flags JSONB DEFAULT '{}';
+ALTER TABLE novels
+    ADD COLUMN parsing_flags jsonb DEFAULT '{}';
+

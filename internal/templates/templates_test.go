@@ -111,4 +111,3 @@ func TestInitAndTextTemplates(t *testing.T) {
 		t.Errorf("RenderIndexNowKey failed: %v, %s", err, key)
 	}
 }
-

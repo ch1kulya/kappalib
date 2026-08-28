@@ -9,6 +9,9 @@ SELECT
     s.name,
     s.logo_url,
     s.label
-FROM chapters AS c
-LEFT JOIN sources AS s ON c.source_id = s.id
-WHERE c.id = $1;
+FROM
+    chapters AS c
+    LEFT JOIN sources AS s ON c.source_id = s.id
+WHERE
+    c.id = $1;
+

@@ -31,8 +31,10 @@ var querySessionValidate string
 //go:embed sql/session_delete.sql
 var querySessionDelete string
 
-const KplUserIDKey = "kpl_user_id"
-const SessionIDKey = "session_id"
+const (
+	KplUserIDKey = "kpl_user_id"
+	SessionIDKey = "session_id"
+)
 
 var (
 	adjectives = []string{

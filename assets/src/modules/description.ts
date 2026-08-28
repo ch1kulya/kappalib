@@ -25,7 +25,7 @@ export function initDescription(): void {
 
   checkIfNeedsToggle();
 
-  desc.addEventListener("click", function (e: MouseEvent) {
+  desc.addEventListener("click", function(e: MouseEvent) {
     if (e.target === desc && desc.classList.contains("visible")) {
       desc.classList.toggle("expanded");
     }

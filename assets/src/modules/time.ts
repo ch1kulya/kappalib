@@ -63,8 +63,7 @@ class ActiveTimeTracker {
   private tick(): void {
     if (document.visibilityState !== "visible") return;
 
-    const isUserActive =
-      Date.now() - this.lastActivityTime < INACTIVITY_TIMEOUT_MS;
+    const isUserActive = Date.now() - this.lastActivityTime < INACTIVITY_TIMEOUT_MS;
     if (isUserActive) {
       this.activeSeconds = Math.min(this.activeSeconds + 1, 300);
       if (this.activeSeconds >= FLUSH_INTERVAL_SECONDS) {

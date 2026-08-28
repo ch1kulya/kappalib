@@ -7,6 +7,9 @@ SELECT
     description,
     cover_url,
     created_at
-FROM novels
-ORDER BY created_at DESC
-LIMIT NULLIF($1, 0);
+FROM
+    novels
+ORDER BY
+    created_at DESC
+LIMIT NULLIF ($1, 0);
+

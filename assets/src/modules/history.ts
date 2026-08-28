@@ -1,9 +1,4 @@
-import {
-  getProgressCookie,
-  saveProgressCookie,
-  saveProgressCookieQuietly,
-  NovelProgress,
-} from "./progress";
+import { getProgressCookie, NovelProgress, saveProgressCookie, saveProgressCookieQuietly } from "./progress";
 
 const API_URL = process.env.API_URL;
 const NOVEL_CACHE_PREFIX = "kappalib_novel_cache_";
@@ -127,19 +122,19 @@ function updateItemElement(itemEl: HTMLElement, item: HistoryItem): void {
   ) as HTMLAnchorElement;
   const img = itemEl.querySelector("img") as HTMLImageElement;
   const titleEl = itemEl.querySelector(
-    '[data-field="title"]',
+    "[data-field=\"title\"]",
   ) as HTMLElement;
   const authorEl = itemEl.querySelector(
-    '[data-field="author"]',
+    "[data-field=\"author\"]",
   ) as HTMLElement;
   const progressTextEl = itemEl.querySelector(
-    '[data-field="progress"]',
+    "[data-field=\"progress\"]",
   ) as HTMLElement;
   const percentEl = itemEl.querySelector(
-    '[data-field="percent"]',
+    "[data-field=\"percent\"]",
   ) as HTMLElement;
   const progressBar = itemEl.querySelector(
-    '[data-field="progressBar"]',
+    "[data-field=\"progressBar\"]",
   ) as HTMLElement;
 
   const novelUrl = `/${item.novelId}`;
@@ -295,9 +290,11 @@ export function initHistoryPage(): void {
   const items: HistoryItem[] = [];
   let allCached = true;
 
-  for (const [novelId, novelProgress] of Object.entries(
-    progress.novels as Record<string, NovelProgress>,
-  )) {
+  for (
+    const [novelId, novelProgress] of Object.entries(
+      progress.novels as Record<string, NovelProgress>,
+    )
+  ) {
     const cached = getCachedNovel(novelId);
     if (cached) {
       items.push({
@@ -392,9 +389,11 @@ export function initHistoryPage(): void {
 
     let progressUpdated = false;
     const updatedItems: HistoryItem[] = [];
-    for (const [novelId, novelProgress] of Object.entries(
-      currentProgress.novels as Record<string, NovelProgress>,
-    )) {
+    for (
+      const [novelId, novelProgress] of Object.entries(
+        currentProgress.novels as Record<string, NovelProgress>,
+      )
+    ) {
       const novelData = novelDataMap.get(novelId) || getCachedNovel(novelId);
       updatedItems.push({
         novelId,
@@ -407,9 +406,9 @@ export function initHistoryPage(): void {
       });
 
       if (
-        currentProgress.lastRead?.novelId === novelId &&
-        novelData?.chapter_count &&
-        novelData.chapter_count > currentProgress.lastRead.totalChapters
+        currentProgress.lastRead?.novelId === novelId
+        && novelData?.chapter_count
+        && novelData.chapter_count > currentProgress.lastRead.totalChapters
       ) {
         currentProgress.lastRead.totalChapters = novelData.chapter_count;
         progressUpdated = true;
@@ -442,7 +441,7 @@ export function initHistoryPage(): void {
 
     let previousEl: HTMLElement | null = null;
     for (const item of updatedItems) {
-      let el = currentMap.get(item.novelId);
+      let el: HTMLElement | null | undefined = currentMap.get(item.novelId);
       if (el) {
         updateItemElement(el, item);
       } else {

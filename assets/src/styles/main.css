@@ -198,9 +198,7 @@ a:hover {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition:
-    opacity 0.25s ease,
-    visibility 0.25s ease;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
   &.active {
     opacity: 1;
     visibility: visible;
@@ -249,9 +247,7 @@ a:hover {
   border-radius: 10px;
   min-width: 24px;
   text-decoration: none;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   &:active {
     cursor: pointer;
     border-color: var(--tertiary);
@@ -295,9 +291,7 @@ a:hover {
   overflow: hidden;
   border-radius: 10px;
   min-width: 34px;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   &:hover {
     cursor: pointer;
   }
@@ -1699,9 +1693,7 @@ html {
   text-decoration: none;
   font-weight: 600;
   font-size: 1rem;
-  transition:
-    transform 0.1s,
-    opacity 0.2s;
+  transition: transform 0.1s, opacity 0.2s;
   margin-top: 1rem;
   cursor: pointer;
   border: 1px solid var(--border);
@@ -2429,7 +2421,11 @@ html {
   @media (hover: hover) {
     &:hover {
       color: var(--color-danger);
-      background: color-mix(in srgb, var(--color-danger), transparent 90%);
+      background: color-mix(
+        in srgb,
+        var(--color-danger),
+        transparent 90%
+      );
     }
   }
   &:active {
@@ -2451,7 +2447,11 @@ html {
   @media (hover: hover) {
     &:hover {
       color: var(--color-danger);
-      background: color-mix(in srgb, var(--color-danger), transparent 90%);
+      background: color-mix(
+        in srgb,
+        var(--color-danger),
+        transparent 90%
+      );
     }
   }
   &:active {
@@ -2636,7 +2636,11 @@ html {
       }
       &:hover {
         color: var(--color-danger);
-        background: color-mix(in srgb, var(--color-danger), transparent 90%);
+        background: color-mix(
+          in srgb,
+          var(--color-danger),
+          transparent 90%
+        );
       }
     }
     &.pc-btn-danger-text {
@@ -2654,12 +2658,20 @@ html {
       @media (hover: hover) {
         &:hover {
           color: var(--color-danger);
-          background: color-mix(in srgb, var(--color-danger), transparent 90%);
+          background: color-mix(
+            in srgb,
+            var(--color-danger),
+            transparent 90%
+          );
         }
       }
       &:active {
         color: var(--color-danger);
-        background: color-mix(in srgb, var(--color-danger), transparent 90%);
+        background: color-mix(
+          in srgb,
+          var(--color-danger),
+          transparent 90%
+        );
       }
     }
     &.pc-btn-action {
@@ -3243,15 +3255,6 @@ a.update-log-item:active {
   color: var(--accent-primary);
   fill: currentColor;
   flex-shrink: 0;
-  font-size: 0.75rem;
-  color: var(--tertiary);
-  font-weight: 500;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.pin-icon {
-  color: var(--accent-primary);
 }
 
 @media (max-width: 500px) {
@@ -3602,6 +3605,143 @@ a.update-log-item:active {
   .bm-item-actions,
   .bm-category-delete {
     opacity: 1;
+}
+
+/* Novel Update Items */
+.update-novel-item {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.update-novel-item:last-child {
+  border-bottom: none;
+}
+
+.update-novel-item:active {
+  opacity: 0.6;
+}
+
+.update-novel-item .update-log-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.update-novel-content {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  align-items: flex-start;
+}
+
+.update-novel-content > img {
+  width: 56px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 7px;
+  flex-shrink: 0;
+  background: var(--outline);
+}
+
+.update-novel-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.update-novel-info h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0;
+  overflow: hidden;
+  color: var(--primary);
+  line-height: 1.3;
+  display: -webkit-box;
+  line-clamp: 1;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.update-novel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.update-novel-meta .badge {
+  font-size: 0.7rem;
+  padding: 1px 5px;
+  background: var(--outline);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--secondary);
+  font-weight: 500;
+}
+
+.update-novel-desc {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  line-height: 1.35;
+  margin: 0;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.update-body-list {
+  margin: 0;
+  padding-left: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.update-body-list li {
+  font-size: 0.85rem;
+  color: var(--primary);
+  line-height: 1.4;
+}
+
+@media (max-width: 500px) {
+  .update-novel-item {
+    padding: 0.4rem 0;
+  }
+
+  .update-novel-item .update-log-row {
+    gap: 0.75rem;
+  }
+
+  .update-novel-content {
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+  }
+
+  .update-novel-content > img {
+    width: 48px;
+    height: 72px;
+    border-radius: 6px;
+  }
+
+  .update-novel-info h3 {
+    font-size: 0.85rem;
+  }
+
+  .update-novel-meta .badge {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+  }
+
+  .update-novel-desc {
+    font-size: 0.75rem;
   }
 }
 
@@ -3800,9 +3940,7 @@ a.update-log-item:active {
   background: transparent;
   color: var(--secondary);
   cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
+  transition: background 0.15s, color 0.15s;
   padding: 0;
   flex-shrink: 0;
 }
@@ -3840,9 +3978,7 @@ a.update-log-item:active {
   line-height: 1.5;
   resize: none;
   overflow-y: hidden;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .comment-textarea:focus {
@@ -4055,9 +4191,7 @@ a.update-log-item:active {
   cursor: pointer;
   padding: 0;
   text-decoration: none;
-  transition:
-    color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 @media (hover: hover) {
@@ -4077,24 +4211,16 @@ a.update-log-item:active {
 
 @keyframes commentGlow {
   0% {
-    box-shadow:
-      0 0 0 0 transparent,
-      0 0 0 transparent;
+    box-shadow: 0 0 0 0 transparent, 0 0 0 transparent;
   }
   15% {
-    box-shadow:
-      0 0 0 2px var(--accent-primary),
-      0 0 14px var(--accent-border);
+    box-shadow: 0 0 0 2px var(--accent-primary), 0 0 14px var(--accent-border);
   }
   65% {
-    box-shadow:
-      0 0 0 2px var(--accent-primary),
-      0 0 14px var(--accent-border);
+    box-shadow: 0 0 0 2px var(--accent-primary), 0 0 14px var(--accent-border);
   }
   100% {
-    box-shadow:
-      0 0 0 0 transparent,
-      0 0 0 transparent;
+    box-shadow: 0 0 0 0 transparent, 0 0 0 transparent;
   }
 }
 
@@ -4203,9 +4329,7 @@ a.update-log-item:active {
   border-radius: 4px;
   padding: 0 0.2rem;
   cursor: pointer;
-  transition:
-    background 0.2s,
-    color 0.2s;
+  transition: background 0.2s, color 0.2s;
   user-select: none;
 }
 
@@ -4279,9 +4403,7 @@ a.update-log-item:active {
   color: var(--tertiary);
   cursor: pointer;
   padding: 0;
-  transition:
-    color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 .vote-btn svg {
@@ -4342,9 +4464,7 @@ a.update-log-item:active {
   font-size: 0.8rem;
   font-weight: 500;
   font-family: inherit;
-  transition:
-    color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 @media (hover: hover) {
@@ -4373,9 +4493,7 @@ a.update-log-item:active {
   color: var(--tertiary);
   cursor: pointer;
   padding: 0;
-  transition:
-    color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 @media (hover: hover) {
@@ -4432,9 +4550,7 @@ a.update-log-item:active {
   border-radius: 6px;
   cursor: pointer;
   text-align: left;
-  transition:
-    color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 @media (hover: hover) {
@@ -4535,9 +4651,7 @@ a.update-log-item:active {
   font-size: 0.8rem;
   font-weight: 500;
   font-family: inherit;
-  transition:
-    color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 @media (hover: hover) {
@@ -4579,9 +4693,7 @@ a.update-log-item:active {
   font-size: 0.8rem;
   font-weight: 500;
   font-family: inherit;
-  transition:
-    color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 @media (hover: hover) {
@@ -4665,9 +4777,7 @@ td:first-child {
   border-radius: 4px;
   padding: 0 0.2rem;
   cursor: pointer;
-  transition:
-    background 0.2s,
-    color 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .markdown-help .spoiler.revealed {

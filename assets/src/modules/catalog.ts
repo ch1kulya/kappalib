@@ -54,17 +54,15 @@ export async function loadCatalogPage(
 
       console.info("Catalog page updated successfully");
 
-      const titleElement =
-        document.getElementById("catalog-title") ||
-        document.querySelector("h2");
+      const titleElement = document.getElementById("catalog-title")
+        || document.querySelector("h2");
 
       if (titleElement) {
         const header = document.getElementById("main-header");
         const headerHeight = header ? header.offsetHeight : 0;
         const extraMargin = 24;
         const elementPosition = titleElement.getBoundingClientRect().top;
-        const offsetPosition =
-          elementPosition + window.scrollY - headerHeight - extraMargin;
+        const offsetPosition = elementPosition + window.scrollY - headerHeight - extraMargin;
 
         window.scrollTo({
           top: offsetPosition,
@@ -92,10 +90,10 @@ export function initCatalogPagination(): void {
     const link = target.closest(".page-link") as HTMLAnchorElement | null;
 
     if (
-      !link ||
-      !link.href ||
-      link.classList.contains("active") ||
-      link.classList.contains("disabled")
+      !link
+      || !link.href
+      || link.classList.contains("active")
+      || link.classList.contains("disabled")
     ) {
       return;
     }

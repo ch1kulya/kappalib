@@ -1,5 +1,5 @@
-import { uiManager } from "./ui";
 import { trackEvent } from "./analytics";
+import { uiManager } from "./ui";
 
 interface NovelSearchResult {
   id: string;
@@ -184,8 +184,8 @@ export function initSearch(): void {
   document.addEventListener("click", (e: Event) => {
     if (!uiManager.isSearchActive()) return;
     if (
-      !input.contains(e.target as Node) &&
-      !results.contains(e.target as Node)
+      !input.contains(e.target as Node)
+      && !results.contains(e.target as Node)
     ) {
       uiManager.closeAll();
       input.value = "";

@@ -13,14 +13,14 @@ curl -fsSL "${ROBOTS_SRC}" -o "${TMP_DIR}/upstream_robots"
 
 echo "Updating ai-bots.caddy..."
 {
-  cat "${TMP_DIR}/upstream_caddy"
-  printf "\nhandle @aibots {\n\tabort\n}\n"
-} > ai-bots.caddy
+	cat "${TMP_DIR}/upstream_caddy"
+	printf "\nhandle @aibots {\n\tabort\n}\n"
+} >ai-bots.caddy
 
 echo "Updating internal/templates/robots.txt.tmpl..."
 {
-  cat "${TMP_DIR}/upstream_robots"
-  printf "\n\nUser-agent: *\nDisallow: /*/chapter/*\nDisallow: /catalog\nDisallow: /history\nDisallow: /updates\nDisallow: /comments\n\nSitemap: {{.Domain}}/sitemap.xml\n"
-} > internal/templates/robots.txt.tmpl
+	cat "${TMP_DIR}/upstream_robots"
+	printf "\n\nUser-agent: *\nDisallow: /*/chapter/*\nDisallow: /catalog\nDisallow: /history\nDisallow: /updates\nDisallow: /comments\n\nSitemap: {{.Domain}}/sitemap.xml\n"
+} >internal/templates/robots.txt.tmpl
 
 echo "AI bot lists updated successfully."

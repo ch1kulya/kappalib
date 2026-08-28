@@ -157,7 +157,6 @@ func GetAppUpdates(ctx context.Context, limit int) ([]models.AppUpdate, error) {
 
 		return updates, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

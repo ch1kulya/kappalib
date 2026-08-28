@@ -31,7 +31,6 @@ func GetRandomAnnouncement(ctx context.Context) (*models.Announcement, error) {
 
 		return &a, nil
 	})
-
 	if err != nil {
 		logger.Debug("GetRandomAnnouncement: no active announcements: %v", err)
 		return nil, err

@@ -1,2 +1,3 @@
 ALTER TABLE novels
-DROP CONSTRAINT novels_age_rating_check;
+    DROP CONSTRAINT novels_age_rating_check;
+

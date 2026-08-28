@@ -1,7 +1,7 @@
+import { trackEvent } from "./analytics";
 import Dropdown from "./dropdown";
 import { setKappalibCookie } from "./profile";
 import { uiManager } from "./ui";
-import { trackEvent } from "./analytics";
 
 const SETTINGS_COOKIE_KEY = "kappalib_reader_settings";
 
@@ -146,13 +146,10 @@ const COLOR_SCHEME_OPTIONS: {
 const FONT_URLS: Record<string, string> = {
   literata: "https://cdn.jsdelivr.net/npm/@fontsource/literata@5/index.min.css",
   nunito: "https://cdn.jsdelivr.net/npm/@fontsource/nunito@5/index.min.css",
-  merriweather:
-    "https://cdn.jsdelivr.net/npm/@fontsource/merriweather@5/index.min.css",
+  merriweather: "https://cdn.jsdelivr.net/npm/@fontsource/merriweather@5/index.min.css",
   lora: "https://cdn.jsdelivr.net/npm/@fontsource/lora@5/index.min.css",
-  "pt-serif":
-    "https://cdn.jsdelivr.net/npm/@fontsource/pt-serif@5/index.min.css",
-  "open-sans":
-    "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5/index.min.css",
+  "pt-serif": "https://cdn.jsdelivr.net/npm/@fontsource/pt-serif@5/index.min.css",
+  "open-sans": "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5/index.min.css",
   roboto: "https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/index.min.css",
 };
 
@@ -214,7 +211,7 @@ function enableThemeTransition(): void {
 }
 
 function updateUmamiSchemeTag(scheme: string): void {
-  const script = document.querySelector('script[src*="stats.kappalib.rip/script.js"]');
+  const script = document.querySelector("script[src*=\"stats.kappalib.rip/script.js\"]");
   if (script) {
     script.setAttribute("data-tag", scheme);
   }
@@ -404,9 +401,9 @@ export function initSettingsModal(): void {
 
   document.addEventListener("click", (e) => {
     if (
-      settingsCard.style.display === "block" &&
-      !settingsCard.contains(e.target as Node) &&
-      !settingsBtn.contains(e.target as Node)
+      settingsCard.style.display === "block"
+      && !settingsCard.contains(e.target as Node)
+      && !settingsBtn.contains(e.target as Node)
     ) {
       uiManager.closeAll();
     }
@@ -457,21 +454,19 @@ function renderSettingsView(): void {
   if (!content) return;
 
   const settings = settingsManager.getSettings();
-  const currentFont =
-    FONT_OPTIONS.find((f) => f.value === settings.fontFamily) ||
-    FONT_OPTIONS[0];
-  const currentScheme =
-    COLOR_SCHEME_OPTIONS.find((s) => s.value === settings.colorScheme) ||
-    COLOR_SCHEME_OPTIONS[0];
+  const currentFont = FONT_OPTIONS.find((f) => f.value === settings.fontFamily)
+    || FONT_OPTIONS[0];
+  const currentScheme = COLOR_SCHEME_OPTIONS.find((s) => s.value === settings.colorScheme)
+    || COLOR_SCHEME_OPTIONS[0];
 
   content.innerHTML = "";
   content.appendChild(cloneTemplate("tpl-settings"));
 
-  const fontLabel = content.querySelector('[data-field="currentFontLabel"]');
+  const fontLabel = content.querySelector("[data-field=\"currentFontLabel\"]");
   if (fontLabel) fontLabel.textContent = currentFont.label;
 
   const schemeLabel = content.querySelector(
-    '[data-field="currentSchemeLabel"]',
+    "[data-field=\"currentSchemeLabel\"]",
   );
   if (schemeLabel) schemeLabel.textContent = currentScheme.label;
 
@@ -488,7 +483,7 @@ function renderSettingsView(): void {
     );
   }
 
-  const fontSizeValue = content.querySelector('[data-field="fontSize"]');
+  const fontSizeValue = content.querySelector("[data-field=\"fontSize\"]");
   if (fontSizeValue) fontSizeValue.textContent = String(settings.fontSize);
 
   const fontOptionsContainer = document.getElementById(
@@ -507,7 +502,7 @@ function renderSettingsView(): void {
         if (settings.fontFamily === f.value) {
           btn.classList.add("selected");
         }
-        const label = btn.querySelector('[data-field="label"]');
+        const label = btn.querySelector("[data-field=\"label\"]");
         if (label) label.textContent = f.label;
       }
       fontOptionsContainer.appendChild(optionTemplate);
@@ -581,14 +576,14 @@ function renderSettingsView(): void {
     justifyToggle.appendChild(
       createToggleButton(
         "false",
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6H3"/><path d="M21 12H3"/><path d="M15 18H3"/></svg>',
+        "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17 6H3\"/><path d=\"M21 12H3\"/><path d=\"M15 18H3\"/></svg>",
         !settings.justify,
       ),
     );
     justifyToggle.appendChild(
       createToggleButton(
         "true",
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg>',
+        "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h18\"/><path d=\"M3 12h18\"/><path d=\"M3 18h18\"/></svg>",
         settings.justify,
       ),
     );
@@ -702,7 +697,7 @@ function initSettingsInteractions(): void {
     });
   }
 
-  const themeToggle = document.querySelector('[data-setting="theme"]');
+  const themeToggle = document.querySelector("[data-setting=\"theme\"]");
   themeToggle?.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest(
       ".settings-toggle-btn",
@@ -718,7 +713,7 @@ function initSettingsInteractions(): void {
     }
   });
 
-  const justifyToggle = document.querySelector('[data-setting="justify"]');
+  const justifyToggle = document.querySelector("[data-setting=\"justify\"]");
   justifyToggle?.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest(
       ".settings-toggle-btn",
@@ -729,7 +724,7 @@ function initSettingsInteractions(): void {
     updateActiveToggle(justifyToggle as HTMLElement, btn.dataset.value!);
   });
 
-  const indentToggle = document.querySelector('[data-setting="indent"]');
+  const indentToggle = document.querySelector("[data-setting=\"indent\"]");
   indentToggle?.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest(
       ".settings-toggle-btn",
@@ -740,7 +735,7 @@ function initSettingsInteractions(): void {
     updateActiveToggle(indentToggle as HTMLElement, btn.dataset.value!);
   });
 
-  const densityToggle = document.querySelector('[data-setting="density"]');
+  const densityToggle = document.querySelector("[data-setting=\"density\"]");
   densityToggle?.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest(
       ".settings-toggle-btn",
@@ -751,7 +746,7 @@ function initSettingsInteractions(): void {
     updateActiveToggle(densityToggle as HTMLElement, value);
   });
 
-  const commentsToggle = document.querySelector('[data-setting="showComments"]');
+  const commentsToggle = document.querySelector("[data-setting=\"showComments\"]");
   commentsToggle?.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest(
       ".settings-toggle-btn",
@@ -796,4 +791,4 @@ function updateActiveToggle(container: HTMLElement, activeValue: string): void {
   });
 }
 
-export { FONT_OPTIONS, COLOR_SCHEME_OPTIONS, getSettings };
+export { COLOR_SCHEME_OPTIONS, FONT_OPTIONS, getSettings };

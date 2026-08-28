@@ -424,15 +424,15 @@ func TestCacheMiddleware(t *testing.T) {
 	}))
 
 	tests := []struct {
-		name            string
-		method          string
-		path            string
-		headers         map[string]string
-		cookies         []*http.Cookie
-		wantCacheCtrl   string
-		wantVary        string
-		wantPragma      string
-		wantExpires     string
+		name          string
+		method        string
+		path          string
+		headers       map[string]string
+		cookies       []*http.Cookie
+		wantCacheCtrl string
+		wantVary      string
+		wantPragma    string
+		wantExpires   string
 	}{
 		{
 			name:          "public GET request without auth",
@@ -513,5 +513,3 @@ func TestCacheMiddleware(t *testing.T) {
 		})
 	}
 }
-
-
