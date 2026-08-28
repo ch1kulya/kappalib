@@ -16,7 +16,10 @@ document.addEventListener("click", (e) => {
   if (!target.closest(".comment-menu")) {
     document.querySelectorAll(".comment-menu.active").forEach((m) => {
       m.classList.remove("active");
-      m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+      m.querySelector(".comment-menu-btn")?.setAttribute(
+        "aria-expanded",
+        "false",
+      );
     });
   }
 });
@@ -25,7 +28,10 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     document.querySelectorAll(".comment-menu.active").forEach((m) => {
       m.classList.remove("active");
-      m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+      m.querySelector(".comment-menu-btn")?.setAttribute(
+        "aria-expanded",
+        "false",
+      );
     });
   }
 });
@@ -243,7 +249,7 @@ function startAllCooldownTimers(): void {
     });
 }
 
-function pluralize(
+export function pluralize(
   count: number,
   one: string,
   few: string,
@@ -257,7 +263,7 @@ function pluralize(
   return many;
 }
 
-function formatRelativeTime(dateStr: string): string {
+export function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return "";
 
@@ -340,7 +346,8 @@ function createCommentHTML(
     </div>`;
 
   let actionHTML = "";
-  const canEdit = isOwn && (comment.status === "approved" || comment.status === "rejected");
+  const canEdit =
+    isOwn && (comment.status === "approved" || comment.status === "rejected");
   const canDelete = isOwn && comment.status === "approved";
 
   if (canEdit || canDelete) {
@@ -467,7 +474,8 @@ function createAnswerHTML(answer: CommentAnswer): string {
   const isOwn = answer.user_id === profileManager.getProfileId();
 
   let actionHTML = "";
-  const canEdit = isOwn && (answer.status === "approved" || answer.status === "rejected");
+  const canEdit =
+    isOwn && (answer.status === "approved" || answer.status === "rejected");
   const canDelete = isOwn && answer.status === "approved";
 
   if (canEdit || canDelete) {
@@ -495,7 +503,9 @@ function createAnswerHTML(answer: CommentAnswer): string {
       </div>`;
   }
 
-  const newBadge = answer.is_new ? ' <span class="comment-new-badge">Новый ответ</span>' : '';
+  const newBadge = answer.is_new
+    ? ' <span class="comment-new-badge">Новый ответ</span>'
+    : "";
 
   return `
     <div class="comment-answer${extraClass}" id="${answer.id}" data-answer-id="${answer.id}" tabindex="0">
@@ -602,9 +612,15 @@ async function loadComments(
         commentsCurrentPage < commentsTotalPages ? "flex" : "none";
     }
 
-    if (page === 1 && window.location.hash && window.location.hash !== "#comments-section") {
+    if (
+      page === 1 &&
+      window.location.hash &&
+      window.location.hash !== "#comments-section"
+    ) {
       try {
-        const targetEl = document.querySelector(window.location.hash) as HTMLElement | null;
+        const targetEl = document.querySelector(
+          window.location.hash,
+        ) as HTMLElement | null;
         if (targetEl) {
           smoothScrollToTarget(
             () => targetEl,
@@ -1165,7 +1181,10 @@ export function initComments(): void {
       const wasActive = menu?.classList.contains("active");
       document.querySelectorAll(".comment-menu.active").forEach((m) => {
         m.classList.remove("active");
-        m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+        m.querySelector(".comment-menu-btn")?.setAttribute(
+          "aria-expanded",
+          "false",
+        );
       });
       if (!wasActive && menu) {
         menu.classList.add("active");
@@ -1174,7 +1193,9 @@ export function initComments(): void {
       return;
     }
 
-    const deleteBtn = target.closest(".comment-delete-btn") as HTMLElement | null;
+    const deleteBtn = target.closest(
+      ".comment-delete-btn",
+    ) as HTMLElement | null;
     if (deleteBtn) {
       e.preventDefault();
       deleteBtn.closest(".comment-menu")?.classList.remove("active");
@@ -1189,9 +1210,7 @@ export function initComments(): void {
   });
 }
 
-async function handleVote(
-  btn: HTMLElement,
-): Promise<void> {
+async function handleVote(btn: HTMLElement): Promise<void> {
   if (!profileManager.isLoggedIn()) return;
 
   const commentId = btn.dataset.commentId;
@@ -1307,7 +1326,8 @@ async function sendCommentPayload(
   content: string,
   submitBtn: HTMLButtonElement,
 ): Promise<boolean> {
-  const originalText = submitBtn.textContent || (method === "PATCH" ? "Сохранить" : "Отправить");
+  const originalText =
+    submitBtn.textContent || (method === "PATCH" ? "Сохранить" : "Отправить");
   submitBtn.disabled = true;
   submitBtn.textContent = "Проверка...";
 
@@ -1359,7 +1379,8 @@ async function sendCommentPayload(
       submitBtn.textContent = "Проверка...";
       smartCaptchaTok = await getSmartCaptchaToken();
       if (smartCaptchaTok) {
-        submitBtn.textContent = method === "PATCH" ? "Сохранение..." : "Отправка...";
+        submitBtn.textContent =
+          method === "PATCH" ? "Сохранение..." : "Отправка...";
         payload.turnstile_token = undefined;
         payload.smart_captcha_token = smartCaptchaTok;
         res = await fetch(url, {
@@ -1405,12 +1426,15 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
     return;
   }
 
-  document.querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper").forEach((el) => {
-    const parentMain = el.closest(".comment-main");
-    const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
-    if (parentBody) parentBody.style.display = "";
-    el.remove();
-  });
+  document
+    .querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper")
+    .forEach((el) => {
+      const parentMain = el.closest(".comment-main");
+      const parentBody =
+        parentMain?.querySelector<HTMLElement>(".comment-body");
+      if (parentBody) parentBody.style.display = "";
+      el.remove();
+    });
 
   const formWrapper = document.createElement("div");
   formWrapper.className = "comment-reply-form-wrapper";
@@ -1442,11 +1466,17 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
 
   initReplyFormHandlers(formWrapper, commentId, container);
 
-  const textarea = formWrapper.querySelector(".comment-reply-textarea") as HTMLTextAreaElement | null;
+  const textarea = formWrapper.querySelector(
+    ".comment-reply-textarea",
+  ) as HTMLTextAreaElement | null;
   textarea?.focus();
 }
 
-function handleEditComment(btn: HTMLElement, container: HTMLElement, chapterId?: string): void {
+function handleEditComment(
+  btn: HTMLElement,
+  container: HTMLElement,
+  chapterId?: string,
+): void {
   if (!profileManager.isLoggedIn()) {
     alert("Войдите в аккаунт, чтобы редактировать комментарий");
     return;
@@ -1458,21 +1488,30 @@ function handleEditComment(btn: HTMLElement, container: HTMLElement, chapterId?:
   const commentItem = btn.closest(".comment-item") as HTMLElement | null;
   if (!commentItem) return;
 
-  const mainEl = commentItem.querySelector(".comment-main") as HTMLElement | null;
-  const bodyEl = commentItem.querySelector(".comment-body") as HTMLElement | null;
-  const contentEl = commentItem.querySelector(".comment-content") as HTMLElement | null;
+  const mainEl = commentItem.querySelector(
+    ".comment-main",
+  ) as HTMLElement | null;
+  const bodyEl = commentItem.querySelector(
+    ".comment-body",
+  ) as HTMLElement | null;
+  const contentEl = commentItem.querySelector(
+    ".comment-content",
+  ) as HTMLElement | null;
   if (!mainEl || !bodyEl || !contentEl) return;
 
   if (commentItem.querySelector(".comment-edit-form-wrapper")) {
     return;
   }
 
-  document.querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper").forEach((el) => {
-    const parentMain = el.closest(".comment-main");
-    const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
-    if (parentBody) parentBody.style.display = "";
-    el.remove();
-  });
+  document
+    .querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper")
+    .forEach((el) => {
+      const parentMain = el.closest(".comment-main");
+      const parentBody =
+        parentMain?.querySelector<HTMLElement>(".comment-body");
+      if (parentBody) parentBody.style.display = "";
+      el.remove();
+    });
 
   const markdownText = htmlToMarkdown(contentEl.innerHTML);
   bodyEl.style.display = "none";
@@ -1501,11 +1540,21 @@ function handleEditComment(btn: HTMLElement, container: HTMLElement, chapterId?:
 
   mainEl.appendChild(formWrapper);
 
-  const textarea = formWrapper.querySelector(".comment-edit-textarea") as HTMLTextAreaElement;
-  const submitBtn = formWrapper.querySelector(".comment-edit-submit-btn") as HTMLButtonElement;
-  const cancelBtn = formWrapper.querySelector(".comment-edit-cancel-btn") as HTMLButtonElement;
-  const toolbar = formWrapper.querySelector(".comment-toolbar") as HTMLElement | null;
-  const imageInput = formWrapper.querySelector(".comment-edit-image-input") as HTMLInputElement | null;
+  const textarea = formWrapper.querySelector(
+    ".comment-edit-textarea",
+  ) as HTMLTextAreaElement;
+  const submitBtn = formWrapper.querySelector(
+    ".comment-edit-submit-btn",
+  ) as HTMLButtonElement;
+  const cancelBtn = formWrapper.querySelector(
+    ".comment-edit-cancel-btn",
+  ) as HTMLButtonElement;
+  const toolbar = formWrapper.querySelector(
+    ".comment-toolbar",
+  ) as HTMLElement | null;
+  const imageInput = formWrapper.querySelector(
+    ".comment-edit-image-input",
+  ) as HTMLInputElement | null;
 
   textarea.value = markdownText;
   autoResizeTextarea(textarea);
@@ -1585,7 +1634,11 @@ function handleEditComment(btn: HTMLElement, container: HTMLElement, chapterId?:
   textarea.focus();
 }
 
-function handleEditAnswer(btn: HTMLElement, container: HTMLElement, chapterId?: string): void {
+function handleEditAnswer(
+  btn: HTMLElement,
+  container: HTMLElement,
+  chapterId?: string,
+): void {
   if (!profileManager.isLoggedIn()) {
     alert("Войдите в аккаунт, чтобы редактировать ответ");
     return;
@@ -1597,21 +1650,30 @@ function handleEditAnswer(btn: HTMLElement, container: HTMLElement, chapterId?: 
   const answerItem = btn.closest(".comment-answer") as HTMLElement | null;
   if (!answerItem) return;
 
-  const mainEl = answerItem.querySelector(".comment-main") as HTMLElement | null;
-  const bodyEl = answerItem.querySelector(".comment-body") as HTMLElement | null;
-  const contentEl = answerItem.querySelector(".comment-content") as HTMLElement | null;
+  const mainEl = answerItem.querySelector(
+    ".comment-main",
+  ) as HTMLElement | null;
+  const bodyEl = answerItem.querySelector(
+    ".comment-body",
+  ) as HTMLElement | null;
+  const contentEl = answerItem.querySelector(
+    ".comment-content",
+  ) as HTMLElement | null;
   if (!mainEl || !bodyEl || !contentEl) return;
 
   if (answerItem.querySelector(".comment-edit-form-wrapper")) {
     return;
   }
 
-  document.querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper").forEach((el) => {
-    const parentMain = el.closest(".comment-main");
-    const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
-    if (parentBody) parentBody.style.display = "";
-    el.remove();
-  });
+  document
+    .querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper")
+    .forEach((el) => {
+      const parentMain = el.closest(".comment-main");
+      const parentBody =
+        parentMain?.querySelector<HTMLElement>(".comment-body");
+      if (parentBody) parentBody.style.display = "";
+      el.remove();
+    });
 
   const markdownText = htmlToMarkdown(contentEl.innerHTML);
   bodyEl.style.display = "none";
@@ -1640,11 +1702,21 @@ function handleEditAnswer(btn: HTMLElement, container: HTMLElement, chapterId?: 
 
   mainEl.appendChild(formWrapper);
 
-  const textarea = formWrapper.querySelector(".comment-edit-textarea") as HTMLTextAreaElement;
-  const submitBtn = formWrapper.querySelector(".comment-edit-submit-btn") as HTMLButtonElement;
-  const cancelBtn = formWrapper.querySelector(".comment-edit-cancel-btn") as HTMLButtonElement;
-  const toolbar = formWrapper.querySelector(".comment-toolbar") as HTMLElement | null;
-  const imageInput = formWrapper.querySelector(".comment-edit-image-input") as HTMLInputElement | null;
+  const textarea = formWrapper.querySelector(
+    ".comment-edit-textarea",
+  ) as HTMLTextAreaElement;
+  const submitBtn = formWrapper.querySelector(
+    ".comment-edit-submit-btn",
+  ) as HTMLButtonElement;
+  const cancelBtn = formWrapper.querySelector(
+    ".comment-edit-cancel-btn",
+  ) as HTMLButtonElement;
+  const toolbar = formWrapper.querySelector(
+    ".comment-toolbar",
+  ) as HTMLElement | null;
+  const imageInput = formWrapper.querySelector(
+    ".comment-edit-image-input",
+  ) as HTMLInputElement | null;
 
   textarea.value = markdownText;
   autoResizeTextarea(textarea);
@@ -1729,11 +1801,21 @@ function initReplyFormHandlers(
   commentId: string,
   container: HTMLElement,
 ): void {
-  const textarea = formWrapper.querySelector(".comment-reply-textarea") as HTMLTextAreaElement | null;
-  const submitBtn = formWrapper.querySelector(".comment-reply-submit-btn") as HTMLButtonElement | null;
-  const cancelBtn = formWrapper.querySelector(".comment-reply-cancel-btn") as HTMLButtonElement | null;
-  const toolbar = formWrapper.querySelector(".comment-toolbar") as HTMLElement | null;
-  const imageInput = formWrapper.querySelector(".comment-reply-image-input") as HTMLInputElement | null;
+  const textarea = formWrapper.querySelector(
+    ".comment-reply-textarea",
+  ) as HTMLTextAreaElement | null;
+  const submitBtn = formWrapper.querySelector(
+    ".comment-reply-submit-btn",
+  ) as HTMLButtonElement | null;
+  const cancelBtn = formWrapper.querySelector(
+    ".comment-reply-cancel-btn",
+  ) as HTMLButtonElement | null;
+  const toolbar = formWrapper.querySelector(
+    ".comment-toolbar",
+  ) as HTMLElement | null;
+  const imageInput = formWrapper.querySelector(
+    ".comment-reply-image-input",
+  ) as HTMLInputElement | null;
 
   if (!textarea || !submitBtn) return;
 
@@ -1844,7 +1926,9 @@ async function handleDeleteComment(
         nextWrapper &&
         nextWrapper.classList.contains("mc-comment-wrapper")
       ) {
-        const nextSeparator = nextWrapper.querySelector(".mc-chapter-separator");
+        const nextSeparator = nextWrapper.querySelector(
+          ".mc-chapter-separator",
+        );
         if (!nextSeparator) {
           nextWrapper.insertBefore(separator, nextWrapper.firstChild);
         }
@@ -1858,7 +1942,10 @@ async function handleDeleteComment(
     if (container && chapterId) {
       const countEl = container.querySelector(".comments-count");
       if (countEl) {
-        const current = parseInt((countEl.textContent || "").replace(/\D/g, "") || "0", 10);
+        const current = parseInt(
+          (countEl.textContent || "").replace(/\D/g, "") || "0",
+          10,
+        );
         if (current > 0) countEl.textContent = `(${current - 1})`;
       }
       const listEl = container.querySelector(".comments-list");
@@ -1869,7 +1956,10 @@ async function handleDeleteComment(
     } else {
       const countEl = document.getElementById("mc-count");
       if (countEl) {
-        const current = parseInt((countEl.textContent || "").replace(/\D/g, "") || "0", 10);
+        const current = parseInt(
+          (countEl.textContent || "").replace(/\D/g, "") || "0",
+          10,
+        );
         if (current > 1) {
           countEl.textContent = `(${current - 1})`;
         } else {
@@ -1878,7 +1968,11 @@ async function handleDeleteComment(
       }
       const listEl = document.getElementById("mc-list");
       const emptyEl = document.getElementById("mc-empty");
-      if (listEl && listEl.querySelectorAll(".comment-item").length === 0 && emptyEl) {
+      if (
+        listEl &&
+        listEl.querySelectorAll(".comment-item").length === 0 &&
+        emptyEl
+      ) {
         emptyEl.style.display = "block";
       }
     }
@@ -1910,16 +2004,17 @@ async function handleDeleteAnswer(
     if (container && chapterId) {
       const countEl = container.querySelector(".comments-count");
       if (countEl) {
-        const current = parseInt((countEl.textContent || "").replace(/\D/g, "") || "0", 10);
+        const current = parseInt(
+          (countEl.textContent || "").replace(/\D/g, "") || "0",
+          10,
+        );
         if (current > 0) countEl.textContent = `(${current - 1})`;
       }
     }
   } catch {}
 }
 
-async function handleDeleteMyAnswer(
-  answerId: string,
-): Promise<void> {
+async function handleDeleteMyAnswer(answerId: string): Promise<void> {
   if (!confirm("Вы уверены, что хотите удалить этот ответ?")) return;
 
   try {
@@ -1939,7 +2034,10 @@ async function handleDeleteMyAnswer(
 
     const countEl = document.getElementById("mc-count");
     if (countEl) {
-      const current = parseInt((countEl.textContent || "").replace(/\D/g, "") || "0", 10);
+      const current = parseInt(
+        (countEl.textContent || "").replace(/\D/g, "") || "0",
+        10,
+      );
       if (current > 1) {
         countEl.textContent = `(${current - 1})`;
       } else {
@@ -2062,10 +2160,7 @@ function wrapSelection(
   autoResizeTextarea(textarea);
 }
 
-function insertLinePrefix(
-  textarea: HTMLTextAreaElement,
-  prefix: string,
-): void {
+function insertLinePrefix(textarea: HTMLTextAreaElement, prefix: string): void {
   const start = textarea.selectionStart;
   const lineStart = textarea.value.lastIndexOf("\n", start - 1) + 1;
   const lineEnd = textarea.value.indexOf("\n", start);
@@ -2516,7 +2611,8 @@ async function loadMyComments(page: number = 1): Promise<void> {
 }
 
 async function loadMoreMyComments(): Promise<void> {
-  if (isMyCommentsLoading || myCommentsCurrentPage >= myCommentsTotalPages) return;
+  if (isMyCommentsLoading || myCommentsCurrentPage >= myCommentsTotalPages)
+    return;
   await loadMyComments(myCommentsCurrentPage + 1);
 }
 
@@ -2595,7 +2691,10 @@ export function initMyCommentsPage(): void {
       const wasActive = menu?.classList.contains("active");
       document.querySelectorAll(".comment-menu.active").forEach((m) => {
         m.classList.remove("active");
-        m.querySelector(".comment-menu-btn")?.setAttribute("aria-expanded", "false");
+        m.querySelector(".comment-menu-btn")?.setAttribute(
+          "aria-expanded",
+          "false",
+        );
       });
       if (!wasActive && menu) {
         menu.classList.add("active");
@@ -2643,7 +2742,9 @@ function initFormHandlers(container: HTMLElement): void {
     "#comment-submit",
   ) as HTMLButtonElement;
   const chapterId = container.dataset.chapterId;
-  const toolbar = container.querySelector(".comment-toolbar") as HTMLElement | null;
+  const toolbar = container.querySelector(
+    ".comment-toolbar",
+  ) as HTMLElement | null;
   const imageInput = container.querySelector(
     "#comment-image-input",
   ) as HTMLInputElement;
