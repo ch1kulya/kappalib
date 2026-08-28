@@ -25,6 +25,7 @@ export default class Dropdown {
 
     this.items.forEach((item) => {
       item.addEventListener("click", (e: Event) => {
+        if (item.dataset.noSelect === "true") return;
         e.preventDefault();
         this.select(item);
       });
@@ -70,8 +71,6 @@ export default class Dropdown {
     }
 
     const value = item.getAttribute("data-value");
-
-    console.info(`Dropdown selection changed to: ${value}`);
 
     this.root.dispatchEvent(
       new CustomEvent("change", {

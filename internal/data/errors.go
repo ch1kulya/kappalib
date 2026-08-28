@@ -26,4 +26,7 @@ var (
 	ErrCannotEditComment     = errors.New("cannot edit comment with current status")
 	ErrCannotEditAnswer      = errors.New("cannot edit answer with current status")
 	ErrBookmarkNotFound      = errors.New("bookmark not found")
+	ErrTooManyCategories     = errors.New("too many bookmark categories")
+	ErrTooManyBookmarks      = errors.New("too many bookmarks in category")
+	ErrBookmarkDuplicate     = errors.New("bookmark already exists for this chapter")
 )

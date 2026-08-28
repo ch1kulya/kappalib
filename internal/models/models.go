@@ -314,19 +314,32 @@ type Announcement struct {
 }
 
 type Bookmark struct {
-	ID            string `json:"id"`
-	NovelID       string `json:"novelId"`
-	ChapterID     string `json:"chapterId"`
-	ChapterNum    int    `json:"chapterNum"`
-	NovelTitle    string `json:"novelTitle"`
-	NovelCoverURL string `json:"novelCoverUrl"`
-	Name          string `json:"name"`
-	CreatedAt     int64  `json:"createdAt"`
-	UpdatedAt     int64  `json:"updatedAt"`
+	ID        string `json:"id"`
+	ChapterID string `json:"chapterId"`
+	Value     string `json:"value"`
+	CreatedAt int64  `json:"createdAt"`
+	UpdatedAt int64  `json:"updatedAt"`
 }
 
 type BookmarkCategory struct {
 	CreatedAt int64      `json:"createdAt"`
 	UpdatedAt int64      `json:"updatedAt"`
 	Bookmarks []Bookmark `json:"bookmarks"`
+}
+
+type EnrichedBookmark struct {
+	ID         string `json:"id"`
+	NovelID    string `json:"novelId"`
+	ChapterID  string `json:"chapterId"`
+	ChapterNum int    `json:"chapterNum"`
+	NovelTitle string `json:"novelTitle"`
+	Value      string `json:"value"`
+	CreatedAt  int64  `json:"createdAt"`
+	UpdatedAt  int64  `json:"updatedAt"`
+}
+
+type EnrichedBookmarkCategory struct {
+	CreatedAt int64              `json:"createdAt"`
+	UpdatedAt int64              `json:"updatedAt"`
+	Bookmarks []EnrichedBookmark `json:"bookmarks"`
 }

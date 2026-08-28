@@ -176,13 +176,9 @@ type VoteCommentInput struct {
 
 type AddBookmarkInput struct {
 	Body struct {
-		NovelID       string `json:"novelId" pattern:"^nvl_[a-z0-9]{8}$"`
-		ChapterID     string `json:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
-		ChapterNum    int    `json:"chapterNum" minimum:"1"`
-		NovelTitle    string `json:"novelTitle" minLength:"1" maxLength:"200"`
-		NovelCoverURL string `json:"novelCoverUrl" maxLength:"500"`
-		Category      string `json:"category" maxLength:"50"`
-		Name          string `json:"name" maxLength:"100"`
+		ChapterID string `json:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
+		Category  string `json:"category" maxLength:"15"`
+		Value     string `json:"value" maxLength:"100"`
 	}
 }
 
@@ -193,17 +189,17 @@ type DeleteBookmarkInput struct {
 type UpdateBookmarkInput struct {
 	BookmarkID string `path:"id" pattern:"^bkm_[a-z0-9]{8}$"`
 	Body       struct {
-		Name     string `json:"name,omitempty" maxLength:"100"`
-		Category string `json:"category,omitempty" maxLength:"50"`
+		Value    string `json:"value,omitempty" maxLength:"100"`
+		Category string `json:"category,omitempty" maxLength:"15"`
 	}
 }
 
 type BookmarkResponse struct {
-	Body models.Bookmark
+	Body models.EnrichedBookmark
 }
 
 type UserBookmarksResponse struct {
-	Body map[string]models.BookmarkCategory
+	Body map[string]models.EnrichedBookmarkCategory
 }
 
 type VoteCommentResponse struct {
@@ -769,16 +765,21 @@ func HandleAddBookmark(ctx context.Context, input *AddBookmarkInput) (*BookmarkR
 	}
 
 	bookmark, err := data.AddBookmark(ctx, userID, data.AddBookmarkInput{
-		NovelID:       input.Body.NovelID,
-		ChapterID:     input.Body.ChapterID,
-		ChapterNum:    input.Body.ChapterNum,
-		NovelTitle:    input.Body.NovelTitle,
-		NovelCoverURL: input.Body.NovelCoverURL,
-		Category:      input.Body.Category,
-		Name:          input.Body.Name,
+		ChapterID: input.Body.ChapterID,
+		Category:  input.Body.Category,
+		Value:     input.Body.Value,
 	})
 	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to add bookmark")
+		switch {
+		case errors.Is(err, data.ErrBookmarkDuplicate):
+			return nil, huma.Error409Conflict("Bookmark already exists for this chapter")
+		case errors.Is(err, data.ErrTooManyCategories):
+			return nil, huma.Error422UnprocessableEntity("Too many bookmark categories")
+		case errors.Is(err, data.ErrTooManyBookmarks):
+			return nil, huma.Error422UnprocessableEntity("Too many bookmarks in category")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to add bookmark")
+		}
 	}
 
 	return &BookmarkResponse{Body: *bookmark}, nil
@@ -801,7 +802,7 @@ func HandleDeleteBookmark(ctx context.Context, input *DeleteBookmarkInput) (*str
 }
 
 type DeleteCategoryInput struct {
-	Name string `path:"name" minLength:"1" maxLength:"50"`
+	Name string `path:"name" minLength:"1" maxLength:"15"`
 }
 
 func HandleDeleteBookmarkCategory(ctx context.Context, input *DeleteCategoryInput) (*struct{}, error) {
@@ -826,21 +827,25 @@ func HandleUpdateBookmark(ctx context.Context, input *UpdateBookmarkInput) (*Boo
 		return nil, err
 	}
 
-	bookmark, err := data.UpdateBookmark(ctx, userID, input.BookmarkID, input.Body.Name, input.Body.Category)
+	bookmark, err := data.UpdateBookmark(ctx, userID, input.BookmarkID, input.Body.Value, input.Body.Category)
 	if err != nil {
-		if errors.Is(err, data.ErrBookmarkNotFound) {
+		switch {
+		case errors.Is(err, data.ErrBookmarkNotFound):
 			return nil, huma.Error404NotFound("Bookmark not found")
+		case errors.Is(err, data.ErrTooManyCategories):
+			return nil, huma.Error422UnprocessableEntity("Too many bookmark categories")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to update bookmark")
 		}
-		return nil, huma.Error500InternalServerError("Failed to update bookmark")
 	}
 
 	return &BookmarkResponse{Body: *bookmark}, nil
 }
 
 type RenameCategoryInput struct {
-	Name string `path:"name" minLength:"1" maxLength:"50"`
+	Name string `path:"name" minLength:"1" maxLength:"15"`
 	Body struct {
-		NewName string `json:"newName" minLength:"1" maxLength:"50"`
+		NewName string `json:"newName" minLength:"1" maxLength:"15"`
 	}
 }
 

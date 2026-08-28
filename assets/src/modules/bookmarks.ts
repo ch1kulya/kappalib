@@ -1,4 +1,3 @@
-import { formatRelativeTime } from "./comments";
 import Dropdown from "./dropdown";
 import { profileManager } from "./profile";
 import { uiManager } from "./ui";
@@ -11,8 +10,7 @@ interface Bookmark {
   chapterId: string;
   chapterNum: number;
   novelTitle: string;
-  novelCoverUrl: string;
-  name: string;
+  value: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -70,168 +68,315 @@ interface ChapterCtx {
   chapterId: string;
   chapterNum: number;
   novelTitle: string;
-  novelCover: string;
+  chapterTitle: string;
 }
 
 let currentBookmark: Bookmark | null = null;
 let currentCtx: ChapterCtx | null = null;
-let selectedCategory = "";
 
 function cloneTemplate(id: string): DocumentFragment {
   const template = document.getElementById(id) as HTMLTemplateElement;
   return template.content.cloneNode(true) as DocumentFragment;
 }
 
-function getFinalCategoryValue(): string {
-  const newInput = document.getElementById(
-    "bm-category-new-input",
-  ) as HTMLInputElement | null;
-  if (newInput && newInput.style.display !== "none") {
-    return newInput.value.trim();
-  }
-  return selectedCategory;
-}
-
-function populateCategoryDropdown(
-  categories: BookmarkCategories,
-  preselected: string,
+function setupBookmarkFormInstance(
+  rootEl: HTMLElement,
+  options: {
+    bookmark: Bookmark | null;
+    defaultTitle: string;
+    categories: BookmarkCategories;
+    preselectedCategory: string;
+    cancelLabel?: string;
+    isDangerDelete?: boolean;
+    onSave: (value: string, category: string) => Promise<void>;
+    onCancel: () => void | Promise<void>;
+  },
 ): void {
-  const dropdownEl = document.getElementById(
-    "bm-category-dropdown",
+  const valueEl = rootEl.querySelector("#bm-form-value") as HTMLTextAreaElement;
+  const saveBtn = rootEl.querySelector("#bm-form-save") as HTMLButtonElement;
+  const deleteBtn = rootEl.querySelector("#bm-form-delete") as HTMLButtonElement;
+  const counter = rootEl.querySelector("#bm-char-counter") as HTMLElement;
+  const dropdownEl = rootEl.querySelector(".dropdown") as HTMLElement | null;
+  const dropdownContainer = rootEl.querySelector(
+    ".dropdown-menu-inner-bm",
   ) as HTMLElement | null;
-  const container = document.getElementById("bm-category-options");
-  const labelEl = document.getElementById(
-    "bm-category-label",
+  const dropdownLabel = rootEl.querySelector(
+    ".js-dropdown-label",
   ) as HTMLElement | null;
-  const newInput = document.getElementById(
-    "bm-category-new-input",
-  ) as HTMLInputElement | null;
-  if (!dropdownEl || !container || !labelEl || !newInput) return;
 
-  container.innerHTML = "";
-  newInput.style.display = "none";
-  newInput.value = "";
-  selectedCategory = "";
+  const maxLen = 100;
+  let selectedCategory = options.preselectedCategory || "Избранное";
+  const initialValue = options.bookmark
+    ? options.bookmark.value
+    : options.defaultTitle;
+  const initialCategory = selectedCategory;
 
-  const names = Object.keys(categories);
-  const initial = names.includes(preselected) ? preselected : names[0] || "";
+  const getFinalCategory = (): string => {
+    const inlineInput = rootEl.querySelector(
+      ".bm-category-input",
+    ) as HTMLInputElement | null;
+    if (
+      inlineInput &&
+      inlineInput.style.display !== "none" &&
+      inlineInput.value.trim()
+    ) {
+      return inlineInput.value.trim();
+    }
+    return selectedCategory;
+  };
 
-  names.forEach((name) => {
-    const node = cloneTemplate("tpl-bookmark-category-option");
-    const btn = node.querySelector(".dropdown-item") as HTMLElement;
-    const label = node.querySelector("[data-field=\"label\"]") as HTMLElement;
-    btn.dataset.value = name;
-    label.textContent = name;
-    const isSelected = name === initial;
-    btn.classList.toggle("selected", isSelected);
-    btn.setAttribute("aria-selected", String(isSelected));
-    container.appendChild(node);
+  const updateSaveState = () => {
+    if (!options.bookmark) {
+      saveBtn.disabled = false;
+      return;
+    }
+    const curVal = valueEl.value;
+    const curCat = getFinalCategory();
+    const hasChanged = curVal !== initialValue || curCat !== initialCategory;
+    saveBtn.disabled = !hasChanged;
+  };
+
+  const updateCounter = () => {
+    const len = valueEl.value.length;
+    counter.textContent = `${len}/${maxLen}`;
+    counter.classList.toggle("count-warning", len >= maxLen * 0.8);
+    counter.classList.toggle("count-error", len >= maxLen);
+  };
+
+  const autoResize = () => {
+    valueEl.style.height = "auto";
+    valueEl.style.height = valueEl.scrollHeight + "px";
+  };
+
+  valueEl.placeholder = "Ваша заметка...";
+
+  if (options.bookmark) {
+    valueEl.value = options.bookmark.value;
+    deleteBtn.style.display = "inline-flex";
+    deleteBtn.textContent = options.cancelLabel || "Удалить";
+    if (options.isDangerDelete) {
+      deleteBtn.classList.add("danger-hover");
+    } else {
+      deleteBtn.classList.remove("danger-hover");
+    }
+    saveBtn.disabled = true;
+  } else {
+    valueEl.value = options.defaultTitle;
+    saveBtn.disabled = false;
+    deleteBtn.style.display = "none";
+  }
+
+  let selectedOnFirstInteraction = false;
+  valueEl.addEventListener("focus", () => {
+    if (!selectedOnFirstInteraction) {
+      setTimeout(() => {
+        valueEl.select();
+      }, 0);
+      selectedOnFirstInteraction = true;
+    }
+  });
+  valueEl.addEventListener("mouseup", (e) => {
+    if (!selectedOnFirstInteraction) {
+      e.preventDefault();
+      valueEl.select();
+      selectedOnFirstInteraction = true;
+    }
   });
 
-  container.appendChild(cloneTemplate("tpl-bookmark-category-new"));
+  updateCounter();
+  autoResize();
 
-  if (initial) {
+  valueEl.addEventListener("input", () => {
+    selectedOnFirstInteraction = true;
+    updateCounter();
+    autoResize();
+    updateSaveState();
+  });
+
+  if (dropdownEl && dropdownContainer && dropdownLabel) {
+    dropdownContainer.innerHTML = "";
+    const names = Object.keys(options.categories);
+    if (!names.includes("Избранное")) {
+      names.unshift("Избранное");
+    }
+    const initial = names.includes(options.preselectedCategory)
+      ? options.preselectedCategory
+      : names[0] || "Избранное";
+
+    names.forEach((name) => {
+      const node = cloneTemplate("tpl-bookmark-category-option");
+      const btn = node.querySelector(".dropdown-item") as HTMLElement;
+      const label = node.querySelector("[data-field=\"label\"]") as HTMLElement;
+      btn.dataset.value = name;
+      label.textContent = name;
+      const isSelected = name === initial;
+      btn.classList.toggle("selected", isSelected);
+      btn.setAttribute("aria-selected", String(isSelected));
+      dropdownContainer.appendChild(node);
+    });
+
+    dropdownContainer.appendChild(cloneTemplate("tpl-bookmark-category-new"));
+
     selectedCategory = initial;
-    labelEl.textContent = initial;
-  } else {
-    labelEl.textContent = "Новая категория";
-    newInput.style.display = "block";
-    newInput.placeholder = "Избранное";
+    dropdownLabel.textContent = initial;
+
+    const dropdown = new Dropdown(dropdownEl);
+
+    const newWrap = dropdownContainer.querySelector(".dropdown-item-new-wrap");
+    const newBtn = newWrap?.querySelector(
+      "button.dropdown-item-new",
+    ) as HTMLElement | null;
+    const inputRow = newWrap?.querySelector(
+      ".bm-category-input-row",
+    ) as HTMLElement | null;
+    const newInput = newWrap?.querySelector(
+      ".bm-category-input",
+    ) as HTMLInputElement | null;
+
+    if (newBtn && inputRow && newInput) {
+      const showInput = () => {
+        newBtn.style.display = "none";
+        inputRow.style.display = "flex";
+        newInput.value = "";
+        newInput.focus();
+      };
+
+      const showButton = () => {
+        inputRow.style.display = "none";
+        newBtn.style.display = "";
+        newInput.value = "";
+      };
+
+      newBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showInput();
+      });
+
+      inputRow.addEventListener("click", (e) => {
+        e.stopPropagation();
+        newInput.focus();
+      });
+
+      const commit = () => {
+        const val = newInput.value.trim();
+        if (val) {
+          selectedCategory = val;
+          dropdownLabel.textContent = val;
+          dropdownContainer.querySelectorAll(".dropdown-item").forEach((i) => {
+            i.classList.remove("selected");
+            i.setAttribute("aria-selected", "false");
+          });
+          showButton();
+          updateSaveState();
+          dropdown.close();
+        } else {
+          showButton();
+        }
+      };
+
+      newInput.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          showButton();
+        }
+      });
+
+      newInput.addEventListener("blur", () => {
+        commit();
+      });
+    }
+
+    dropdownEl.addEventListener("change", (e: Event) => {
+      const value = (e as CustomEvent).detail.value as string;
+      if (value && value !== "__new__") {
+        selectedCategory = value;
+        dropdownLabel.textContent = value;
+        updateSaveState();
+      }
+    });
   }
 
-  const dropdown = new Dropdown(dropdownEl);
+  saveBtn.addEventListener("click", async () => {
+    const category = getFinalCategory();
+    const value = valueEl.value;
+    await options.onSave(value, category);
+  });
 
-  dropdownEl.addEventListener("change", (e: Event) => {
-    const value = (e as CustomEvent).detail.value as string;
-    if (value === "__new__") {
-      selectedCategory = "";
-      labelEl.textContent = "Новая категория";
-      newInput.style.display = "block";
-      newInput.value = "";
-      newInput.placeholder = "Название категории";
-      newInput.focus();
-    } else {
-      selectedCategory = value;
-      labelEl.textContent = value;
-      newInput.style.display = "none";
-      newInput.value = "";
-      dropdown.close();
-    }
+  deleteBtn.addEventListener("click", () => {
+    options.onCancel();
   });
 }
 
 function renderBookmarkForm(): void {
   const card = document.getElementById("bookmark-card");
-  const template = document.getElementById(
-    "tpl-bookmark-form",
-  ) as HTMLTemplateElement | null;
-  if (!card || !template || !currentCtx) return;
+  if (!card || !currentCtx) return;
 
   card.innerHTML = "";
-  const node = template.content.cloneNode(true) as DocumentFragment;
-  card.appendChild(node);
-
-  const titleEl = card.querySelector("#bm-form-title") as HTMLElement;
-  const nameInput = card.querySelector("#bm-form-name") as HTMLInputElement;
-  const saveBtn = card.querySelector("#bm-form-save") as HTMLButtonElement;
-  const deleteBtn = card.querySelector("#bm-form-delete") as HTMLButtonElement;
-
-  const defaultName = `Глава ${currentCtx.chapterNum} — ${currentCtx.novelTitle}`;
-
-  if (currentBookmark) {
-    nameInput.value = currentBookmark.name;
-    deleteBtn.style.display = "inline-block";
-  } else {
-    nameInput.placeholder = defaultName;
-  }
+  card.appendChild(cloneTemplate("tpl-bookmark-form"));
 
   fetchBookmarkCategories().then((categories) => {
     const preselected = currentBookmark
       ? findCategoryOfBookmark(categories, currentBookmark.id)
       : "";
-    populateCategoryDropdown(categories, preselected);
-  });
-
-  saveBtn.addEventListener("click", async () => {
-    const nameEl = card.querySelector("#bm-form-name") as HTMLInputElement;
-    const category = getFinalCategoryValue();
-    const name = nameEl.value;
-
-    if (currentBookmark) {
-      await fetch(`${API_URL}/bookmarks/${currentBookmark.id}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, category }),
-      });
-    } else {
-      await fetch(`${API_URL}/bookmarks`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          novelId: currentCtx!.novelId,
-          chapterId: currentCtx!.chapterId,
-          chapterNum: currentCtx!.chapterNum,
-          novelTitle: currentCtx!.novelTitle,
-          novelCoverUrl: currentCtx!.novelCover,
-          category,
-          name,
-        }),
-      });
-    }
-    uiManager.closeAll();
-    await refreshButtonState();
-  });
-
-  deleteBtn.addEventListener("click", async () => {
-    if (!currentBookmark) return;
-    await fetch(`${API_URL}/bookmarks/${currentBookmark.id}`, {
-      method: "DELETE",
-      credentials: "include",
+    setupBookmarkFormInstance(card, {
+      bookmark: currentBookmark,
+      defaultTitle:
+        currentCtx!.chapterTitle || `Глава ${currentCtx!.chapterNum}`,
+      categories,
+      preselectedCategory: preselected,
+      cancelLabel: "Удалить",
+      isDangerDelete: true,
+      onSave: async (value, category) => {
+        if (currentBookmark) {
+          const res = await fetch(
+            `${API_URL}/bookmarks/${currentBookmark.id}`,
+            {
+              method: "PATCH",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ value, category }),
+            },
+          );
+          if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            alert(data?.detail || "Не удалось сохранить закладку");
+            return;
+          }
+        } else {
+          const res = await fetch(`${API_URL}/bookmarks`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chapterId: currentCtx!.chapterId,
+              category,
+              value,
+            }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            alert(data?.detail || "Не удалось добавить закладку");
+            return;
+          }
+        }
+        uiManager.closeAll();
+        await refreshButtonState();
+      },
+      onCancel: async () => {
+        if (!currentBookmark) return;
+        await fetch(`${API_URL}/bookmarks/${currentBookmark.id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        uiManager.closeAll();
+        await refreshButtonState();
+      },
     });
-    uiManager.closeAll();
-    await refreshButtonState();
   });
 }
 
@@ -255,7 +400,7 @@ export function initBookmarkButton(): void {
     chapterId: tracker.dataset.chapterId!,
     chapterNum: Number(tracker.dataset.chapterNum),
     novelTitle: tracker.dataset.novelTitle!,
-    novelCover: tracker.dataset.novelCover || "",
+    chapterTitle: tracker.dataset.chapterTitle || "",
   };
 
   refreshButtonState();
@@ -322,76 +467,26 @@ function closeAllMenus(container: HTMLElement): void {
   });
 }
 
-function editInline(
-  displayEl: HTMLElement,
-  onSave: (newValue: string) => Promise<void>,
-): void {
-  const currentValue = displayEl.textContent || "";
-
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = displayEl.className + " bm-inline-input";
-  input.value = currentValue;
-  input.maxLength = 100;
-
-  let finished = false;
-
-  const restore = () => {
-    input.replaceWith(displayEl);
-  };
-
-  const commit = async () => {
-    if (finished) return;
-    finished = true;
-    const newValue = input.value.trim();
-    restore();
-    if (newValue && newValue !== currentValue) {
-      await onSave(newValue);
-    }
-  };
-
-  const cancel = () => {
-    if (finished) return;
-    finished = true;
-    restore();
-  };
-
-  input.addEventListener("mousedown", (e) => {
-    e.stopPropagation();
-  });
-  input.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      input.blur();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      cancel();
-    }
-  });
-
-  input.addEventListener("blur", () => {
-    commit();
-  });
-
-  displayEl.replaceWith(input);
-  input.focus();
-  input.select();
-}
-
 async function loadBookmarksPage(
   container: HTMLElement,
   empty: HTMLElement | null,
   loading: HTMLElement | null,
+  keepOpenCategoryNames?: Set<string>,
 ): Promise<void> {
+  const openCategoryNames = keepOpenCategoryNames || new Set<string>();
+  if (!keepOpenCategoryNames) {
+    container.querySelectorAll("details.bm-category[open]").forEach((d) => {
+      const name = d.querySelector("[data-field=\"name\"]")?.textContent?.trim();
+      if (name) openCategoryNames.add(name);
+    });
+  }
+
   const categories = await fetchBookmarkCategories(true);
   if (loading) loading.style.display = "none";
 
   const categoryEntries = Object.entries(categories);
+
+  container.innerHTML = "";
 
   if (categoryEntries.length === 0) {
     if (empty) empty.style.display = "block";
@@ -406,8 +501,6 @@ async function loadBookmarksPage(
     "tpl-bm-item",
   ) as HTMLTemplateElement;
 
-  container.innerHTML = "";
-
   container.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
     if (!target.closest(".comment-menu")) {
@@ -415,101 +508,38 @@ async function loadBookmarksPage(
     }
   });
 
-  categoryEntries.forEach(([catName, cat]) => {
+  categoryEntries.forEach(([catName, cat], index) => {
     const catNode = catTemplate.content.cloneNode(true) as HTMLElement;
+    const detailsEl = catNode.querySelector("details.bm-category") as HTMLDetailsElement;
     const nameEl = catNode.querySelector("[data-field=\"name\"]") as HTMLElement;
     const countEl = catNode.querySelector(
       "[data-field=\"count\"]",
     ) as HTMLElement;
-    const menu = catNode.querySelector(".bm-category-menu") as HTMLElement;
-    const menuBtn = menu.querySelector(".comment-menu-btn") as HTMLElement;
-    const renameBtn = catNode.querySelector(
-      ".bm-category-rename",
-    ) as HTMLButtonElement;
-    const deleteBtn = catNode.querySelector(
-      ".bm-category-delete-item",
-    ) as HTMLButtonElement;
     const itemsWrap = catNode.querySelector(".bm-items") as HTMLElement;
 
     nameEl.textContent = catName;
     nameEl.title = catName;
-    countEl.textContent = String(cat.bookmarks.length);
+    countEl.textContent = `(${cat.bookmarks.length})`;
 
-    menuBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleMenu(container, menu);
-    });
-
-    renameBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      closeAllMenus(container);
-
-      editInline(nameEl, async (newValue) => {
-        const res = await fetch(
-          `${API_URL}/bookmarks/category/${encodeURIComponent(catName)}`,
-          {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ newName: newValue }),
-          },
-        );
-
-        if (!res.ok) {
-          console.error(
-            "Failed to rename category:",
-            res.status,
-            await res.text(),
-          );
-          alert("Не удалось переименовать категорию");
-          return;
-        }
-
-        await loadBookmarksPage(container, empty, loading);
-      });
-    });
-
-    deleteBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      closeAllMenus(container);
-
-      const confirmed = confirm(
-        `Удалить категорию "${catName}" и все закладки в ней (${cat.bookmarks.length})?`,
-      );
-      if (!confirmed) return;
-
-      const res = await fetch(
-        `${API_URL}/bookmarks/category/${encodeURIComponent(catName)}`,
-        { method: "DELETE", credentials: "include" },
-      );
-
-      if (!res.ok) {
-        console.error(
-          "Failed to delete category:",
-          res.status,
-          await res.text(),
-        );
-        alert("Не удалось удалить категорию");
-        return;
+    if (openCategoryNames.size > 0) {
+      if (openCategoryNames.has(catName)) {
+        detailsEl.open = true;
       }
-
-      await loadBookmarksPage(container, empty, loading);
-    });
+    } else if (index === 0) {
+      detailsEl.open = true;
+    }
 
     cat.bookmarks.forEach((bm) => {
       const itemNode = itemTemplate.content.cloneNode(true) as HTMLElement;
+      const viewEl = itemNode.querySelector(".bm-item-view") as HTMLElement;
+      const slotEl = itemNode.querySelector(
+        ".bm-item-edit-slot",
+      ) as HTMLElement;
       const sourceEl = itemNode.querySelector(
         "[data-field=\"source\"]",
       ) as HTMLElement;
-      const dateEl = itemNode.querySelector(
-        "[data-field=\"date\"]",
-      ) as HTMLElement;
-      const nameEl = itemNode.querySelector(
-        "[data-field=\"name\"]",
-      ) as HTMLElement;
+      const nameEl = (itemNode.querySelector("[data-field=\"value\"]") ||
+        itemNode.querySelector("[data-field=\"name\"]")) as HTMLElement;
       const link = itemNode.querySelector(
         ".bm-item-name-link",
       ) as HTMLAnchorElement;
@@ -529,13 +559,12 @@ async function loadBookmarksPage(
         nvTitle = nvTitle.slice(0, -1);
       }
 
-      sourceEl.innerHTML = `${nvTitle}, глава <span class="chapter-num-highlight">${bm.chapterNum}</span>`;
+      const titleSpan = sourceEl.querySelector("[data-field=\"source-title\"]") as HTMLElement;
+      const chapterSpan = sourceEl.querySelector("[data-field=\"source-chapter\"]") as HTMLElement;
+      titleSpan.textContent = nvTitle;
+      chapterSpan.textContent = String(bm.chapterNum);
       sourceEl.title = `${nvTitle}, глава ${bm.chapterNum}`;
-      dateEl.textContent = formatRelativeTime(
-        new Date((bm.updatedAt || bm.createdAt) * 1000).toISOString(),
-      );
-      nameEl.textContent = bm.name;
-      nameEl.title = bm.name;
+      nameEl.textContent = bm.value;
       link.href = `/${bm.novelId}/chapter/${bm.chapterId}`;
 
       itemMenuBtn.addEventListener("click", (e) => {
@@ -544,26 +573,62 @@ async function loadBookmarksPage(
         toggleMenu(container, itemMenu);
       });
 
-      editBtn.addEventListener("click", (e) => {
+      editBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
         closeAllMenus(container);
 
-        editInline(nameEl, async (newValue) => {
-          const res = await fetch(`${API_URL}/bookmarks/${bm.id}`, {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: newValue }),
-          });
+        container.querySelectorAll(".bm-item-edit-slot").forEach((s) => {
+          s.innerHTML = "";
+          (s as HTMLElement).style.display = "none";
+        });
+        container.querySelectorAll(".bm-item-view").forEach((v) => {
+          (v as HTMLElement).style.display = "";
+        });
 
-          if (!res.ok) {
-            console.error("Failed to update bookmark:", res.status);
-            alert("Не удалось изменить закладку");
-            return;
-          }
+        if (!viewEl || !slotEl) return;
 
-          await loadBookmarksPage(container, empty, loading);
+        viewEl.style.display = "none";
+        slotEl.style.display = "block";
+        slotEl.innerHTML = "";
+        slotEl.appendChild(cloneTemplate("tpl-bookmark-form"));
+
+        const latestCategories = await fetchBookmarkCategories(true);
+        const preselected = findCategoryOfBookmark(latestCategories, bm.id);
+
+        setupBookmarkFormInstance(slotEl, {
+          bookmark: bm,
+          defaultTitle: `Глава ${bm.chapterNum}`,
+          categories: latestCategories,
+          preselectedCategory: preselected,
+          cancelLabel: "Отмена",
+          isDangerDelete: false,
+          onSave: async (value, category) => {
+            const res = await fetch(`${API_URL}/bookmarks/${bm.id}`, {
+              method: "PATCH",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ value, category }),
+            });
+            if (!res.ok) {
+              const data = await res.json().catch(() => null);
+              alert(data?.detail || "Не удалось сохранить закладку");
+              return;
+            }
+            const keepOpen = new Set<string>();
+            container.querySelectorAll("details.bm-category[open]").forEach((d) => {
+              const n = d.querySelector("[data-field=\"name\"]")?.textContent?.trim();
+              if (n) keepOpen.add(n);
+            });
+            keepOpen.add(catName);
+            if (category) keepOpen.add(category);
+            await loadBookmarksPage(container, empty, loading, keepOpen);
+          },
+          onCancel: () => {
+            slotEl.innerHTML = "";
+            slotEl.style.display = "none";
+            viewEl.style.display = "";
+          },
         });
       });
 
@@ -571,6 +636,13 @@ async function loadBookmarksPage(
         e.preventDefault();
         e.stopPropagation();
         closeAllMenus(container);
+
+        const keepOpen = new Set<string>();
+        container.querySelectorAll("details.bm-category[open]").forEach((d) => {
+          const n = d.querySelector("[data-field=\"name\"]")?.textContent?.trim();
+          if (n) keepOpen.add(n);
+        });
+        keepOpen.add(catName);
 
         const res = await fetch(`${API_URL}/bookmarks/${bm.id}`, {
           method: "DELETE",
@@ -581,7 +653,7 @@ async function loadBookmarksPage(
           alert("Не удалось удалить закладку");
           return;
         }
-        await loadBookmarksPage(container, empty, loading);
+        await loadBookmarksPage(container, empty, loading, keepOpen);
       });
 
       itemsWrap.appendChild(itemNode);

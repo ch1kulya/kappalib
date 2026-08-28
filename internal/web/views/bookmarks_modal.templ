@@ -18,15 +18,17 @@ templ BookmarkModalTemplates() {
 						<div class="dropdown-menu-inner-bm" id="bm-category-options"></div>
 					</div>
 				</div>
-				<input type="text" class="bm-input" id="bm-category-new-input" style="display: none; margin-top: 0.5rem;" placeholder="Название новой категории" maxlength="50"/>
 			</div>
 			<div class="settings-section">
-				<div class="settings-label">Название</div>
-				<input type="text" class="bm-input" id="bm-form-name" maxlength="100"/>
-			</div>
-			<div class="settings-section bm-form-actions">
-				<button class="action-btn btn-primary" id="bm-form-save">Сохранить</button>
-				<button class="action-btn" id="bm-form-delete" style="display: none;">Удалить</button>
+				<div class="settings-label">Значение</div>
+				<textarea class="comment-textarea bm-form-textarea" id="bm-form-value" maxlength="100" rows="1" placeholder="Ваша заметка..."></textarea>
+				<div class="comment-form-footer">
+					<span class="comment-char-counter" id="bm-char-counter">0/100</span>
+					<div class="bm-form-actions">
+						<button class="comment-reply-cancel-btn" id="bm-form-delete" style="display: none;">Удалить</button>
+						<button class="action-btn btn-primary comment-submit-btn" id="bm-form-save">Сохранить</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	</template>
@@ -37,8 +39,16 @@ templ BookmarkModalTemplates() {
 		</button>
 	</template>
 	<template id="tpl-bookmark-category-new">
-		<button class="dropdown-item dropdown-item-new" data-value="__new__" role="option" aria-selected="false">
-			<span>+ Добавить новую категорию</span>
-		</button>
+		<hr class="dropdown-divider"/>
+		<div class="dropdown-item-new-wrap">
+			<button class="dropdown-item dropdown-item-new" data-no-select="true" type="button">
+				<span class="bm-category-new-label">Новая категория</span>
+				<svg class="plus-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+			</button>
+			<div class="dropdown-item dropdown-item-new bm-category-input-row" style="display: none;">
+				<input type="text" class="bm-category-input" maxlength="15" placeholder="Название"/>
+				<svg class="plus-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+			</div>
+		</div>
 	</template>
 }

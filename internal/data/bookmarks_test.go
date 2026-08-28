@@ -20,6 +20,7 @@ func TestSanitizeBookmarkField(t *testing.T) {
 		{"spaces normalized", "a   b   c", "default", 50, "a b c"},
 		{"truncated to maxLen", "abcdefghij", "default", 5, "abcde"},
 		{"unicode length truncated", "Привет Мир", "default", 6, "Привет"},
+		{"category maxLen 15", "ОченьДлинноеНазваниеКатегории", "default", maxCategoryNameLen, "ОченьДлинноеНаз"},
 	}
 
 	for _, tt := range tests {
@@ -34,8 +35,8 @@ func TestSanitizeBookmarkField(t *testing.T) {
 
 func TestInsertBookmark(t *testing.T) {
 	bookmarks := make(map[string]models.BookmarkCategory)
-	bm1 := models.Bookmark{ID: "bkm_1", NovelID: "nvl_1", Name: "Bookmark 1", CreatedAt: 100, UpdatedAt: 100}
-	bm2 := models.Bookmark{ID: "bkm_2", NovelID: "nvl_2", Name: "Bookmark 2", CreatedAt: 200, UpdatedAt: 200}
+	bm1 := models.Bookmark{ID: "bkm_1", ChapterID: "chp_1", Value: "Bookmark 1", CreatedAt: 100, UpdatedAt: 100}
+	bm2 := models.Bookmark{ID: "bkm_2", ChapterID: "chp_2", Value: "Bookmark 2", CreatedAt: 200, UpdatedAt: 200}
 
 	bookmarks = insertBookmark(bookmarks, "Category A", bm1)
 	catA, ok := bookmarks["Category A"]
@@ -57,8 +58,8 @@ func TestInsertBookmark(t *testing.T) {
 }
 
 func TestRemoveBookmarkByID(t *testing.T) {
-	bm1 := models.Bookmark{ID: "bkm_1", NovelID: "nvl_1", CreatedAt: 100, UpdatedAt: 100}
-	bm2 := models.Bookmark{ID: "bkm_2", NovelID: "nvl_2", CreatedAt: 200, UpdatedAt: 200}
+	bm1 := models.Bookmark{ID: "bkm_1", ChapterID: "chp_1", CreatedAt: 100, UpdatedAt: 100}
+	bm2 := models.Bookmark{ID: "bkm_2", ChapterID: "chp_2", CreatedAt: 200, UpdatedAt: 200}
 	bookmarks := map[string]models.BookmarkCategory{
 		"Cat1": {CreatedAt: 100, UpdatedAt: 100, Bookmarks: []models.Bookmark{bm1, bm2}},
 		"Cat2": {CreatedAt: 100, UpdatedAt: 100, Bookmarks: []models.Bookmark{}},
@@ -77,10 +78,18 @@ func TestRemoveBookmarkByID(t *testing.T) {
 	if removedNone != nil {
 		t.Errorf("expected nil for nonexistent bookmark, got %v", removedNone)
 	}
+
+	removedLast, remainingAfterLast := removeBookmarkByID(remaining, "bkm_2")
+	if removedLast == nil || removedLast.ID != "bkm_2" {
+		t.Fatalf("expected removed bookmark bkm_2, got %v", removedLast)
+	}
+	if _, exists := remainingAfterLast["Cat1"]; exists {
+		t.Errorf("expected Cat1 to be deleted after removing last bookmark, but it still exists")
+	}
 }
 
 func TestFindBookmark(t *testing.T) {
-	bm1 := models.Bookmark{ID: "bkm_1", NovelID: "nvl_1", CreatedAt: 100, UpdatedAt: 100}
+	bm1 := models.Bookmark{ID: "bkm_1", ChapterID: "chp_1", CreatedAt: 100, UpdatedAt: 100}
 	bookmarks := map[string]models.BookmarkCategory{
 		"Cat1": {CreatedAt: 100, UpdatedAt: 100, Bookmarks: []models.Bookmark{bm1}},
 	}

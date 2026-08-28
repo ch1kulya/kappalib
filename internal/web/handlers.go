@@ -907,7 +907,7 @@ func (h *Handler) MyComments(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Bookmarks(w http.ResponseWriter, r *http.Request) {
 	props := views.BaseProps{
-		Title:          "Закладки — kappalib",
+		Title:          "Мои закладки — kappalib",
 		Description:    "Сохранённые веб-новеллы и ранобэ.",
 		Canonical:      "https://kappalib.rip/bookmarks",
 		Version:        h.assetVersion,
