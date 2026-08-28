@@ -183,6 +183,7 @@ func main() {
 	r.Get("/catalog", h.Catalog)
 	r.Get("/history", h.History)
 	r.Get("/comments", h.MyComments)
+	r.Get("/bookmarks", h.Bookmarks)
 	r.Get("/updates", h.Updates)
 	r.Get("/dmca", h.StaticPage("dmca", "DMCA"))
 	r.Get("/privacy", h.StaticPage("privacy", "Политика конфиденциальности"))
@@ -403,6 +404,60 @@ func main() {
 			Security:    []map[string][]string{{"sessionCookie": {}}},
 			Tags:        []string{"Comments"},
 		}, api.HandleVoteComment)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-user-bookmarks",
+			Method:      http.MethodGet,
+			Path:        "/profile/me/bookmarks",
+			Summary:     "Get current user's bookmarks",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Bookmarks"},
+		}, api.HandleGetUserBookmarks)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "add-bookmark",
+			Method:      http.MethodPost,
+			Path:        "/bookmarks",
+			Summary:     "Add a bookmark",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Bookmarks"},
+		}, api.HandleAddBookmark)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "delete-bookmark",
+			Method:      http.MethodDelete,
+			Path:        "/bookmarks/{id}",
+			Summary:     "Delete a bookmark",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Bookmarks"},
+		}, api.HandleDeleteBookmark)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "update-bookmark",
+			Method:      http.MethodPatch,
+			Path:        "/bookmarks/{id}",
+			Summary:     "Update a bookmark",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Bookmarks"},
+		}, api.HandleUpdateBookmark)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "delete-bookmark-category",
+			Method:      http.MethodDelete,
+			Path:        "/bookmarks/category/{name}",
+			Summary:     "Delete a bookmark category",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Bookmarks"},
+		}, api.HandleDeleteBookmarkCategory)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "rename-bookmark-category",
+			Method:      http.MethodPatch,
+			Path:        "/bookmarks/category/{name}",
+			Summary:     "Rename a bookmark category",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Bookmarks"},
+		}, api.HandleRenameBookmarkCategory)
 
 		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-user-comments",
