@@ -1,1 +1,3 @@
-ALTER TABLE users ADD COLUMN bookmarks JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE users
+    ADD COLUMN bookmarks jsonb NOT NULL DEFAULT '[]';
+

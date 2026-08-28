@@ -1,7 +1,7 @@
+import { formatRelativeTime } from "./comments";
+import Dropdown from "./dropdown";
 import { profileManager } from "./profile";
 import { uiManager } from "./ui";
-import Dropdown from "./dropdown";
-import { formatRelativeTime } from "./comments";
 
 const API_URL = process.env.API_URL;
 
@@ -115,7 +115,7 @@ function populateCategoryDropdown(
   names.forEach((name) => {
     const node = cloneTemplate("tpl-bookmark-category-option");
     const btn = node.querySelector(".dropdown-item") as HTMLElement;
-    const label = node.querySelector('[data-field="label"]') as HTMLElement;
+    const label = node.querySelector("[data-field=\"label\"]") as HTMLElement;
     btn.dataset.value = name;
     label.textContent = name;
     const isSelected = name === initial;
@@ -282,8 +282,7 @@ export function initBookmarksPage(): void {
     if (loading) loading.style.display = "none";
     if (empty) {
       empty.style.display = "block";
-      empty.querySelector("p")!.textContent =
-        "Войдите в аккаунт, чтобы видеть свои закладки";
+      empty.querySelector("p")!.textContent = "Войдите в аккаунт, чтобы видеть свои закладки";
     }
     return;
   }
@@ -414,9 +413,9 @@ async function loadBookmarksPage(
 
   visibleCategories.forEach((cat) => {
     const catNode = catTemplate.content.cloneNode(true) as HTMLElement;
-    const nameEl = catNode.querySelector('[data-field="name"]') as HTMLElement;
+    const nameEl = catNode.querySelector("[data-field=\"name\"]") as HTMLElement;
     const countEl = catNode.querySelector(
-      '[data-field="count"]',
+      "[data-field=\"count\"]",
     ) as HTMLElement;
     const menu = catNode.querySelector(".bm-category-menu") as HTMLElement;
     const menuBtn = menu.querySelector(".comment-menu-btn") as HTMLElement;
@@ -499,13 +498,13 @@ async function loadBookmarksPage(
     cat.bookmarks.forEach((bm) => {
       const itemNode = itemTemplate.content.cloneNode(true) as HTMLElement;
       const sourceEl = itemNode.querySelector(
-        '[data-field="source"]',
+        "[data-field=\"source\"]",
       ) as HTMLElement;
       const dateEl = itemNode.querySelector(
-        '[data-field="date"]',
+        "[data-field=\"date\"]",
       ) as HTMLElement;
       const nameEl = itemNode.querySelector(
-        '[data-field="name"]',
+        "[data-field=\"name\"]",
       ) as HTMLElement;
       const link = itemNode.querySelector(
         ".bm-item-name-link",

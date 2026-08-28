@@ -347,8 +347,7 @@ function createCommentHTML(
     </div>`;
 
   let actionHTML = "";
-  const canEdit =
-    isOwn && (comment.status === "approved" || comment.status === "rejected");
+  const canEdit = isOwn && (comment.status === "approved" || comment.status === "rejected");
   const canDelete = isOwn && comment.status === "approved";
 
   if (canEdit || canDelete) {
@@ -472,8 +471,7 @@ function createAnswerHTML(answer: CommentAnswer): string {
   const isOwn = answer.user_id === profileManager.getProfileId();
 
   let actionHTML = "";
-  const canEdit =
-    isOwn && (answer.status === "approved" || answer.status === "rejected");
+  const canEdit = isOwn && (answer.status === "approved" || answer.status === "rejected");
   const canDelete = isOwn && answer.status === "approved";
 
   if (canEdit || canDelete) {
@@ -606,9 +604,9 @@ async function loadComments(
     }
 
     if (
-      page === 1 &&
-      window.location.hash &&
-      window.location.hash !== "#comments-section"
+      page === 1
+      && window.location.hash
+      && window.location.hash !== "#comments-section"
     ) {
       try {
         const targetEl = document.querySelector(
@@ -1313,8 +1311,7 @@ async function sendCommentPayload(
   content: string,
   submitBtn: HTMLButtonElement,
 ): Promise<boolean> {
-  const originalText =
-    submitBtn.textContent || (method === "PATCH" ? "Сохранить" : "Отправить");
+  const originalText = submitBtn.textContent || (method === "PATCH" ? "Сохранить" : "Отправить");
   submitBtn.disabled = true;
   submitBtn.textContent = "Проверка...";
 
@@ -1366,8 +1363,7 @@ async function sendCommentPayload(
       submitBtn.textContent = "Проверка...";
       smartCaptchaTok = await getSmartCaptchaToken();
       if (smartCaptchaTok) {
-        submitBtn.textContent =
-          method === "PATCH" ? "Сохранение..." : "Отправка...";
+        submitBtn.textContent = method === "PATCH" ? "Сохранение..." : "Отправка...";
         payload.turnstile_token = undefined;
         payload.smart_captcha_token = smartCaptchaTok;
         res = await fetch(url, {
@@ -1417,8 +1413,7 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
     .querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper")
     .forEach((el) => {
       const parentMain = el.closest(".comment-main");
-      const parentBody =
-        parentMain?.querySelector<HTMLElement>(".comment-body");
+      const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
       if (parentBody) parentBody.style.display = "";
       el.remove();
     });
@@ -1494,8 +1489,7 @@ function handleEditComment(
     .querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper")
     .forEach((el) => {
       const parentMain = el.closest(".comment-main");
-      const parentBody =
-        parentMain?.querySelector<HTMLElement>(".comment-body");
+      const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
       if (parentBody) parentBody.style.display = "";
       el.remove();
     });
@@ -1655,8 +1649,7 @@ function handleEditAnswer(
     .querySelectorAll(".comment-reply-form-wrapper, .comment-edit-form-wrapper")
     .forEach((el) => {
       const parentMain = el.closest(".comment-main");
-      const parentBody =
-        parentMain?.querySelector<HTMLElement>(".comment-body");
+      const parentBody = parentMain?.querySelector<HTMLElement>(".comment-body");
       if (parentBody) parentBody.style.display = "";
       el.remove();
     });
@@ -1952,9 +1945,9 @@ async function handleDeleteComment(
       const listEl = document.getElementById("mc-list");
       const emptyEl = document.getElementById("mc-empty");
       if (
-        listEl &&
-        listEl.querySelectorAll(".comment-item").length === 0 &&
-        emptyEl
+        listEl
+        && listEl.querySelectorAll(".comment-item").length === 0
+        && emptyEl
       ) {
         emptyEl.style.display = "block";
       }
@@ -2588,8 +2581,9 @@ async function loadMyComments(page: number = 1): Promise<void> {
 }
 
 async function loadMoreMyComments(): Promise<void> {
-  if (isMyCommentsLoading || myCommentsCurrentPage >= myCommentsTotalPages)
+  if (isMyCommentsLoading || myCommentsCurrentPage >= myCommentsTotalPages) {
     return;
+  }
   await loadMyComments(myCommentsCurrentPage + 1);
 }
 

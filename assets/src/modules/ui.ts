@@ -5,14 +5,14 @@ class UIManager {
   private backdrop = document.getElementById("header-backdrop");
   private profileCard = document.getElementById("profile-card");
   private settingsCard = document.getElementById("settings-card");
-  private bookmarkCard = document.getElementById("bookmark-card"); // добавь
+  private bookmarkCard = document.getElementById("bookmark-card");
   private searchResults = document.getElementById("search-results");
   private searchInput = document.getElementById(
     "search-input",
   ) as HTMLInputElement | null;
   private profileBtn = document.getElementById("header-profile-btn");
   private settingsBtn = document.getElementById("header-settings-btn");
-  private bookmarkBtn = document.getElementById("header-bookmark-btn"); // добавь
+  private bookmarkBtn = document.getElementById("header-bookmark-btn");
   private header = document.getElementById("main-header");
 
   constructor() {
@@ -101,8 +101,7 @@ class UIManager {
       this.settingsBtn.classList.toggle("active", this.state === "settings");
     }
     if (this.bookmarkCard) {
-      this.bookmarkCard.style.display =
-        this.state === "bookmark" ? "block" : "none";
+      this.bookmarkCard.style.display = this.state === "bookmark" ? "block" : "none";
     }
     if (this.bookmarkBtn) {
       this.bookmarkBtn.classList.toggle("active", this.state === "bookmark");

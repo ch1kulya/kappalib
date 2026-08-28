@@ -1,4 +1,5 @@
 import { initAgeGate } from "./modules/age";
+import { initBookmarkButton, initBookmarksPage } from "./modules/bookmarks";
 import { initCatalogPage, initCatalogPagination } from "./modules/catalog";
 import { initComments, initMyCommentsPage } from "./modules/comments";
 import { initDescription } from "./modules/description";
@@ -11,7 +12,6 @@ import { initSettings, initSettingsModal } from "./modules/settings";
 import { initCatalogSort, initChaptersSort } from "./modules/sort";
 import { initStatusBadge } from "./modules/status";
 import { initTimeTracker } from "./modules/time";
-import { initBookmarkButton, initBookmarksPage } from "./modules/bookmarks";
 import { initTocFilter } from "./modules/toc";
 
 declare global {

@@ -1,1 +1,3 @@
-ALTER TABLE users DROP COLUMN bookmarks;
+ALTER TABLE users
+    DROP COLUMN bookmarks;
+
