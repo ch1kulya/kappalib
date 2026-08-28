@@ -13,6 +13,7 @@ templ Chapter(props ChapterProps) {
 				data-novel-title={ props.Novel.Title }
 				data-novel-author={ props.Novel.Author }
 				data-novel-cover={ ResolveCover(props.Novel.CoverURL) }
+				data-chapter-title={ props.Chapter.Title }
 				data-total-chapters={ fmt.Sprintf("%d", props.TotalChapters) }
 				style="display: none;"
 			></div>

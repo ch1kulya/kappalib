@@ -17,5 +17,8 @@ SELECT
     has_graphic_sex,
     has_profanity,
     alt_titles
-FROM novels
-WHERE id = $1;
+FROM
+    novels
+WHERE
+    id = $1;
+

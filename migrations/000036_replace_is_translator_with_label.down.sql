@@ -1,1 +1,3 @@
-ALTER TABLE sources DROP COLUMN label;
+ALTER TABLE sources
+    DROP COLUMN label;
+

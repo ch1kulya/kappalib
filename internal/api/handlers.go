@@ -174,6 +174,34 @@ type VoteCommentInput struct {
 	}
 }
 
+type AddBookmarkInput struct {
+	Body struct {
+		ChapterID string `json:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
+		Category  string `json:"category" maxLength:"15"`
+		Value     string `json:"value" maxLength:"100"`
+	}
+}
+
+type DeleteBookmarkInput struct {
+	BookmarkID string `path:"id" pattern:"^bkm_[a-z0-9]{8}$"`
+}
+
+type UpdateBookmarkInput struct {
+	BookmarkID string `path:"id" pattern:"^bkm_[a-z0-9]{8}$"`
+	Body       struct {
+		Value    string `json:"value,omitempty" maxLength:"100"`
+		Category string `json:"category,omitempty" maxLength:"15"`
+	}
+}
+
+type BookmarkResponse struct {
+	Body models.EnrichedBookmark
+}
+
+type UserBookmarksResponse struct {
+	Body map[string]models.EnrichedBookmarkCategory
+}
+
 type VoteCommentResponse struct {
 	Body struct {
 		Score    int `json:"score"`
@@ -714,6 +742,135 @@ func HandleUploadCommentImage(ctx context.Context, input *UploadCommentImageInpu
 			URL string `json:"url"`
 		}{URL: imageURL},
 	}, nil
+}
+
+func HandleGetUserBookmarks(ctx context.Context, input *struct{}) (*UserBookmarksResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	bookmarks, err := data.GetUserBookmarks(ctx, userID)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to load bookmarks")
+	}
+
+	return &UserBookmarksResponse{Body: bookmarks}, nil
+}
+
+func HandleAddBookmark(ctx context.Context, input *AddBookmarkInput) (*BookmarkResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	bookmark, err := data.AddBookmark(ctx, userID, data.AddBookmarkInput{
+		ChapterID: input.Body.ChapterID,
+		Category:  input.Body.Category,
+		Value:     input.Body.Value,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrChapterNotFound):
+			return nil, huma.Error404NotFound("Chapter not found")
+		case errors.Is(err, data.ErrBookmarkDuplicate):
+			return nil, huma.Error409Conflict("Bookmark already exists for this chapter")
+		case errors.Is(err, data.ErrTooManyCategories):
+			return nil, huma.Error422UnprocessableEntity("Too many bookmark categories")
+		case errors.Is(err, data.ErrTooManyBookmarks):
+			return nil, huma.Error422UnprocessableEntity("Too many bookmarks in category")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to add bookmark")
+		}
+	}
+
+	return &BookmarkResponse{Body: *bookmark}, nil
+}
+
+func HandleDeleteBookmark(ctx context.Context, input *DeleteBookmarkInput) (*struct{}, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := data.DeleteBookmark(ctx, userID, input.BookmarkID); err != nil {
+		if errors.Is(err, data.ErrBookmarkNotFound) {
+			return nil, huma.Error404NotFound("Bookmark not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to delete bookmark")
+	}
+
+	return nil, nil
+}
+
+type DeleteCategoryInput struct {
+	Name string `path:"name" minLength:"1" maxLength:"15"`
+}
+
+func HandleDeleteBookmarkCategory(ctx context.Context, input *DeleteCategoryInput) (*struct{}, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := data.DeleteCategory(ctx, userID, input.Name); err != nil {
+		if errors.Is(err, data.ErrBookmarkNotFound) {
+			return nil, huma.Error404NotFound("Category not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to delete category")
+	}
+
+	return nil, nil
+}
+
+func HandleUpdateBookmark(ctx context.Context, input *UpdateBookmarkInput) (*BookmarkResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	bookmark, err := data.UpdateBookmark(ctx, userID, input.BookmarkID, input.Body.Value, input.Body.Category)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrBookmarkNotFound):
+			return nil, huma.Error404NotFound("Bookmark not found")
+		case errors.Is(err, data.ErrTooManyCategories):
+			return nil, huma.Error422UnprocessableEntity("Too many bookmark categories")
+		case errors.Is(err, data.ErrTooManyBookmarks):
+			return nil, huma.Error422UnprocessableEntity("Too many bookmarks in category")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to update bookmark")
+		}
+	}
+
+	return &BookmarkResponse{Body: *bookmark}, nil
+}
+
+type RenameCategoryInput struct {
+	Name string `path:"name" minLength:"1" maxLength:"15"`
+	Body struct {
+		NewName string `json:"newName" minLength:"1" maxLength:"15"`
+	}
+}
+
+func HandleRenameBookmarkCategory(ctx context.Context, input *RenameCategoryInput) (*struct{}, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := data.RenameCategory(ctx, userID, input.Name, input.Body.NewName); err != nil {
+		switch {
+		case errors.Is(err, data.ErrBookmarkNotFound):
+			return nil, huma.Error404NotFound("Category not found")
+		case errors.Is(err, data.ErrTooManyBookmarks):
+			return nil, huma.Error422UnprocessableEntity("Too many bookmarks in category")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to rename category")
+		}
+	}
+
+	return nil, nil
 }
 
 func HandleVoteComment(ctx context.Context, input *VoteCommentInput) (*VoteCommentResponse, error) {

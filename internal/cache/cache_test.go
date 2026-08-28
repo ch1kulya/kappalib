@@ -95,7 +95,6 @@ func TestGetOrFetch_CacheHit(t *testing.T) {
 		fetchCalled = true
 		return "fetched", nil
 	})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -113,7 +112,6 @@ func TestGetOrFetch_CacheMiss(t *testing.T) {
 	got, err := c.GetOrFetch("key", time.Minute, func() (any, error) {
 		return "fetched", nil
 	})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

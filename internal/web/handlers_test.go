@@ -370,5 +370,3 @@ func TestGetReaderSettings(t *testing.T) {
 		}
 	})
 }
-
-

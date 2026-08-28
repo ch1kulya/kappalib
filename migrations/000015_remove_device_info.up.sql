@@ -1,1 +1,3 @@
-ALTER TABLE sessions DROP COLUMN IF EXISTS device_info;
+ALTER TABLE sessions
+    DROP COLUMN IF EXISTS device_info;
+

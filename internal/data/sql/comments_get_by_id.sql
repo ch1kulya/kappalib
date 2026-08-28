@@ -7,5 +7,8 @@ SELECT
     edited_at,
     telegram_message_id,
     created_at
-FROM comments
-WHERE id = $1;
+FROM
+    comments
+WHERE
+    id = $1;
+

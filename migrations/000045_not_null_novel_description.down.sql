@@ -1,2 +1,6 @@
-ALTER TABLE novels ALTER COLUMN description DROP NOT NULL;
-ALTER TABLE novels ALTER COLUMN description DROP DEFAULT;
+ALTER TABLE novels
+    ALTER COLUMN description DROP NOT NULL;
+
+ALTER TABLE novels
+    ALTER COLUMN description DROP DEFAULT;
+

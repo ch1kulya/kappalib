@@ -1,5 +1,5 @@
-import { setKappalibCookie, updateKappalibCookieQuietly } from "./profile";
 import { trackEvent } from "./analytics";
+import { setKappalibCookie, updateKappalibCookieQuietly } from "./profile";
 
 const API_URL = process.env.API_URL;
 
@@ -96,9 +96,9 @@ export function initReadingProgressSaver(): void {
 
   const data = getProgressCookie();
   if (
-    data.lastRead &&
-    data.lastRead.novelId === novelId &&
-    data.lastRead.totalChapters < totalChapters
+    data.lastRead
+    && data.lastRead.novelId === novelId
+    && data.lastRead.totalChapters < totalChapters
   ) {
     data.lastRead.totalChapters = totalChapters;
     saveProgressCookieQuietly(data);
@@ -154,8 +154,7 @@ export function initReadingProgressSaver(): void {
     saveProgress(currentChapterId, currentChapterNum);
   }, TIMER_DELAY);
 
-  const nextButtons =
-    document.querySelectorAll<HTMLElement>(".js-next-chapter");
+  const nextButtons = document.querySelectorAll<HTMLElement>(".js-next-chapter");
 
   nextButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -243,10 +242,10 @@ function setupSwipeNavigation(): void {
 
       const target = e.target as HTMLElement | null;
       if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target?.isContentEditable ||
-        target?.closest(
+        target instanceof HTMLInputElement
+        || target instanceof HTMLTextAreaElement
+        || target?.isContentEditable
+        || target?.closest(
           "button, a, input, textarea, select, iframe, .dropdown-menu, pre, code",
         )
       ) {

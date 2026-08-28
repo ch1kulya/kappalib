@@ -9,8 +9,10 @@ import (
 
 type contextKey string
 
-const UserIDContextKey contextKey = "userID"
-const SessionContextKey contextKey = "sessionID"
+const (
+	UserIDContextKey  contextKey = "userID"
+	SessionContextKey contextKey = "sessionID"
+)
 
 func BridgeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

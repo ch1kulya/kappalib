@@ -1,1 +1,3 @@
-ALTER TABLE novels DROP COLUMN IF EXISTS parsing_flags;
+ALTER TABLE novels
+    DROP COLUMN IF EXISTS parsing_flags;
+

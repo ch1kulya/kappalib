@@ -1,9 +1,9 @@
-import { uiManager } from "./ui";
-import { settingsManager } from "./settings";
+import { identifyUmami, trackEvent } from "./analytics";
 import { initComments } from "./comments";
 import { refreshHistory } from "./history";
 import { refreshLastReadTotalChapters } from "./progress";
-import { trackEvent, identifyUmami } from "./analytics";
+import { settingsManager } from "./settings";
+import { uiManager } from "./ui";
 
 const API_URL = process.env.API_URL;
 const PROFILE_ID_KEY = "kappalib_profile_id";
@@ -418,9 +418,9 @@ export function initProfileModal(): void {
 
   document.addEventListener("click", (e) => {
     if (
-      profileCard.style.display === "block" &&
-      !profileCard.contains(e.target as Node) &&
-      !profileBtn.contains(e.target as Node)
+      profileCard.style.display === "block"
+      && !profileCard.contains(e.target as Node)
+      && !profileBtn.contains(e.target as Node)
     ) {
       uiManager.closeAll();
     }
@@ -490,7 +490,7 @@ function renderLoggedInView(profile: ProfilePublic): void {
     }),
   );
 
-  const commentsBtn = content.querySelector('a[href="/comments"]');
+  const commentsBtn = content.querySelector("a[href=\"/comments\"]");
   const count = profile.unread_notifications || 0;
   if (commentsBtn && count > 0) {
     const badge = document.createElement("span");
@@ -630,7 +630,10 @@ function initProfileInteractions(profile: ProfilePublic): void {
   function restoreMetaDate() {
     const metaDateEl = document.querySelector(".pc-meta-date") as HTMLElement;
     if (metaDateEl) {
-      metaDateEl.innerHTML = `<svg xmlns="http://w.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13H3"></path><path d="M16 17H3"></path><path d="m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6"></path><circle cx="9" cy="7" r="2"></circle></svg><span data-field="createdAt">${formatDate(currentProfile.created_at)}</span>`;
+      metaDateEl.innerHTML =
+        `<svg xmlns="http://w.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13H3"></path><path d="M16 17H3"></path><path d="m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6"></path><circle cx="9" cy="7" r="2"></circle></svg><span data-field="createdAt">${
+          formatDate(currentProfile.created_at)
+        }</span>`;
       metaDateEl.style.color = "";
     }
   }

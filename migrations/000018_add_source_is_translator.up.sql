@@ -1,1 +1,3 @@
-ALTER TABLE sources ADD COLUMN is_translator BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE sources
+    ADD COLUMN is_translator boolean NOT NULL DEFAULT FALSE;
+

@@ -7,3 +7,4 @@ tmp
 dist
 .env.dev
 .claude
+tools/

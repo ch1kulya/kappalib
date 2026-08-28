@@ -321,7 +321,6 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 	err := database.DB.QueryRow(dbCtx, queryCommentsCreate,
 		input.ChapterID, userID, contentHTML,
 	).Scan(&comment.ID, &comment.ChapterID, &comment.UserID, &comment.ContentHTML, &comment.Status, &comment.EditedAt, &comment.CreatedAt)
-
 	if err != nil {
 		logger.Error("Failed to create comment: %v", err)
 		return nil, err
@@ -376,7 +375,6 @@ func EditComment(ctx context.Context, commentID, userID string, input models.Edi
 	err = database.DB.QueryRow(dbCtx, queryCommentsEdit,
 		contentHTML, commentID, userID,
 	).Scan(&comment.ID, &comment.ChapterID, &comment.UserID, &comment.ContentHTML, &comment.Status, &comment.EditedAt, &comment.CreatedAt)
-
 	if err != nil {
 		logger.Error("Failed to edit comment: %v", err)
 		return nil, err
@@ -899,7 +897,6 @@ func CreateCommentAnswer(ctx context.Context, userID string, input models.Create
 	err = database.DB.QueryRow(dbCtx, queryCommentAnswersCreate,
 		input.CommentID, userID, contentHTML,
 	).Scan(&answer.ID, &answer.CommentID, &answer.UserID, &answer.ContentHTML, &answer.Status, &answer.EditedAt, &answer.CreatedAt)
-
 	if err != nil {
 		logger.Error("Failed to create comment answer: %v", err)
 		return nil, err
@@ -954,7 +951,6 @@ func EditCommentAnswer(ctx context.Context, answerID, userID string, input model
 	err = database.DB.QueryRow(dbCtx, queryCommentAnswersEdit,
 		contentHTML, answerID, userID,
 	).Scan(&answer.ID, &answer.CommentID, &answer.UserID, &answer.ContentHTML, &answer.Status, &answer.EditedAt, &answer.CreatedAt)
-
 	if err != nil {
 		logger.Error("Failed to edit comment answer: %v", err)
 		return nil, err

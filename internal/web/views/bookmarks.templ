@@ -1,0 +1,66 @@
+package views
+
+templ Bookmarks(props BaseProps) {
+	@Base(props) {
+		<div class="bookmarks-page">
+			<div class="chapters-header" style="margin-bottom: 1.5rem;">
+				<h2 style="margin: 0;">Мои закладки</h2>
+				<button class="btn-text" id="bm-edit-categories-btn" style="display: none;">Переименовать</button>
+			</div>
+			<div id="bm-content">
+				<div class="mc-empty" id="bm-empty" style="display: none;">
+					<p>У вас пока нет закладок</p>
+				</div>
+				<div class="mc-loading" id="bm-loading">Загрузка закладок...</div>
+				<div class="bm-categories" id="bm-categories"></div>
+			</div>
+		</div>
+		<template id="tpl-bm-category">
+			<div class="bm-category-wrapper">
+				<details class="bm-category">
+					<summary class="bm-category-summary">
+						<span class="bm-category-title-group">
+							<span class="bm-category-name" data-field="name"></span>
+							<span class="bm-category-count" data-field="count"></span>
+						</span>
+						<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+					</summary>
+					<div class="bm-items"></div>
+				</details>
+				<div class="bm-category-edit-wrap" style="display: none;">
+					<input type="text" class="bm-category-edit-input" maxlength="15" data-field="edit-input"/>
+				</div>
+			</div>
+		</template>
+		<template id="tpl-bm-item">
+			<div class="bm-item">
+				<div class="bm-item-view">
+					<div class="bm-item-top">
+						<span class="bm-item-source" data-field="source"><span class="bm-item-novel-title" data-field="source-title"></span><span class="bm-item-chapter-part">, глава <span class="chapter-num-highlight" data-field="source-chapter"></span></span></span>
+						<div class="bm-item-side">
+							<div class="comment-menu bm-item-menu">
+								<button class="comment-menu-btn" type="button" aria-label="Действия" aria-haspopup="true" aria-expanded="false">
+									<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+								</button>
+								<div class="comment-dropdown-menu">
+									<button class="comment-dropdown-item bm-item-edit" type="button">
+										<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>
+										<span>Редактировать</span>
+									</button>
+									<button class="comment-dropdown-item danger bm-item-delete" type="button">
+										<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+										<span>Удалить</span>
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+					<a href="" class="bm-item-name-link">
+						<span class="bm-item-name" data-field="value"></span>
+					</a>
+				</div>
+				<div class="bm-item-edit-slot" style="display: none;"></div>
+			</div>
+		</template>
+	}
+}

@@ -1,1 +1,5 @@
-SELECT COUNT(*) FROM novels;
+SELECT
+    COUNT(*)
+FROM
+    novels;
+
