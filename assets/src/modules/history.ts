@@ -442,7 +442,7 @@ export function initHistoryPage(): void {
 
     let previousEl: HTMLElement | null = null;
     for (const item of updatedItems) {
-      let el = currentMap.get(item.novelId);
+      let el: HTMLElement | null | undefined = currentMap.get(item.novelId);
       if (el) {
         updateItemElement(el, item);
       } else {
