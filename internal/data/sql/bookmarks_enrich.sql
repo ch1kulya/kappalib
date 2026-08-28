@@ -7,4 +7,5 @@ FROM
     chapters ch
     JOIN novels n ON ch.novel_id = n.id
 WHERE
-    ch.id = ANY($1);
+    ch.id = ANY ($1);
+

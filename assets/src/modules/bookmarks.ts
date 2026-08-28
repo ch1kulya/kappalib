@@ -116,9 +116,9 @@ function setupBookmarkFormInstance(
       ".bm-category-input",
     ) as HTMLInputElement | null;
     if (
-      inlineInput &&
-      inlineInput.style.display !== "none" &&
-      inlineInput.value.trim()
+      inlineInput
+      && inlineInput.style.display !== "none"
+      && inlineInput.value.trim()
     ) {
       return inlineInput.value.trim();
     }
@@ -325,8 +325,7 @@ function renderBookmarkForm(): void {
       : "";
     setupBookmarkFormInstance(card, {
       bookmark: currentBookmark,
-      defaultTitle:
-        currentCtx!.chapterTitle || `Глава ${currentCtx!.chapterNum}`,
+      defaultTitle: currentCtx!.chapterTitle || `Глава ${currentCtx!.chapterNum}`,
       categories,
       preselectedCategory: preselected,
       cancelLabel: "Удалить",
@@ -634,8 +633,8 @@ async function loadBookmarksPage(
       const sourceEl = itemNode.querySelector(
         "[data-field=\"source\"]",
       ) as HTMLElement;
-      const nameEl = (itemNode.querySelector("[data-field=\"value\"]") ||
-        itemNode.querySelector("[data-field=\"name\"]")) as HTMLElement;
+      const nameEl = (itemNode.querySelector("[data-field=\"value\"]")
+        || itemNode.querySelector("[data-field=\"name\"]")) as HTMLElement;
       const link = itemNode.querySelector(
         ".bm-item-name-link",
       ) as HTMLAnchorElement;

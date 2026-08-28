@@ -8,3 +8,4 @@ FROM
     JOIN novels n ON ch.novel_id = n.id
 WHERE
     ch.id = $1;
+
