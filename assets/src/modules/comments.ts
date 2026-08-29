@@ -223,10 +223,15 @@ function startCooldownTimer(button: HTMLButtonElement): void {
     if (!button.isConnected) return;
     const remaining = getRemainingCooldown();
     if (remaining <= 0) {
-      button.disabled = false;
       if (button.classList.contains("comment-edit-submit-btn")) {
         button.textContent = "Сохранить";
+        const form = button.closest(".comment-edit-form") as HTMLElement | null;
+        const textarea = form?.querySelector<HTMLTextAreaElement>(".comment-edit-textarea");
+        const original = button.dataset.originalText ?? "";
+        const trimmed = textarea ? textarea.value.trim() : "";
+        button.disabled = trimmed.length === 0 || trimmed === original;
       } else {
+        button.disabled = false;
         button.textContent = "Отправить";
       }
       return;
@@ -1540,6 +1545,9 @@ function handleEditComment(
   textarea.value = markdownText;
   autoResizeTextarea(textarea);
 
+  submitBtn.dataset.originalText = markdownText.trim()
+  submitBtn.disabled = true;
+
   if (getRemainingCooldown() > 0) {
     startCooldownTimer(submitBtn);
   }
@@ -1556,6 +1564,12 @@ function handleEditComment(
   textarea.addEventListener("input", () => {
     updateCharCounter(textarea);
     autoResizeTextarea(textarea);
+
+    if (getRemainingCooldown() <= 0) {
+      const trimmed = textarea.value.trim()
+      submitBtn.disabled = trimmed.length === 0 || trimmed == markdownText.trim();
+    };
+
   });
 
   textarea.addEventListener("focus", () => {
@@ -1700,6 +1714,9 @@ function handleEditAnswer(
   textarea.value = markdownText;
   autoResizeTextarea(textarea);
 
+  submitBtn.dataset.originalText = markdownText.trim()
+  submitBtn.disabled = true;
+
   if (getRemainingCooldown() > 0) {
     startCooldownTimer(submitBtn);
   }
@@ -1716,6 +1733,12 @@ function handleEditAnswer(
   textarea.addEventListener("input", () => {
     updateCharCounter(textarea);
     autoResizeTextarea(textarea);
+
+    if (getRemainingCooldown() <= 0) {
+      const trimmed = textarea.value.trim()
+      submitBtn.disabled = trimmed.length == 0 || trimmed === markdownText.trim()
+    };
+
   });
 
   textarea.addEventListener("focus", () => {
