@@ -1308,6 +1308,7 @@ function initToolbarHandlers(
       }
       updateCharCounter(textarea);
       autoResizeTextarea(textarea);
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
     });
   });
 }
