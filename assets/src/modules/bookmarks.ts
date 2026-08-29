@@ -129,15 +129,25 @@ function setupBookmarkFormInstance(
     return selectedCategory;
   };
 
+  let isSaving = false;
   const updateSaveState = () => {
-    if (!options.bookmark) {
-      saveBtn.disabled = false;
+    if (isSaving) return;
+    const curVal = valueEl.value.trim();
+    if (!curVal) {
+      saveBtn.disabled = true;
+      saveBtn.classList.remove("btn-primary");
       return;
     }
-    const curVal = valueEl.value;
+    if (!options.bookmark) {
+      saveBtn.disabled = false;
+      saveBtn.classList.add("btn-primary");
+      return;
+    }
+    const curRawVal = valueEl.value;
     const curCat = getFinalCategory();
-    const hasChanged = curVal !== initialValue || curCat !== initialCategory;
+    const hasChanged = curRawVal !== initialValue || curCat !== initialCategory;
     saveBtn.disabled = !hasChanged;
+    saveBtn.classList.toggle("btn-primary", hasChanged);
   };
 
   const updateCounter = () => {
@@ -163,10 +173,8 @@ function setupBookmarkFormInstance(
     } else {
       deleteBtn.classList.remove("danger-hover");
     }
-    saveBtn.disabled = true;
   } else {
     valueEl.value = options.defaultTitle;
-    saveBtn.disabled = false;
     deleteBtn.style.display = "none";
   }
 
@@ -189,6 +197,7 @@ function setupBookmarkFormInstance(
 
   updateCounter();
   autoResize();
+  updateSaveState();
 
   valueEl.addEventListener("input", () => {
     selectedOnFirstInteraction = true;
@@ -306,9 +315,23 @@ function setupBookmarkFormInstance(
   }
 
   saveBtn.addEventListener("click", async () => {
+    if (isSaving) return;
+    const value = valueEl.value.trim();
+    if (!value) return;
+    isSaving = true;
+    const originalText = saveBtn.textContent || "Сохранить";
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Сохранение...";
     const category = getFinalCategory();
-    const value = valueEl.value;
-    await options.onSave(value, category);
+    try {
+      await options.onSave(value, category);
+    } finally {
+      isSaving = false;
+      if (saveBtn.isConnected) {
+        saveBtn.textContent = originalText;
+        updateSaveState();
+      }
+    }
   });
 
   deleteBtn.addEventListener("click", () => {
