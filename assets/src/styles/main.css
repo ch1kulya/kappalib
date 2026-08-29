@@ -3526,12 +3526,12 @@ a.update-log-item:active {
   box-shadow: var(--shadow-primary);
   background: var(--bg-primary);
   color: var(--primary);
-  font-size: .85rem;
+  font-size: 0.85rem;
   font-family: inherit;
   line-height: 1.5;
   resize: none;
   overflow-y: hidden;
-  transition: border-color .2s, box-shadow .2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .bm-form-textarea:focus {
