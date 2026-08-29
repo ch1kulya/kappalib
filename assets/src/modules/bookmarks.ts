@@ -1,3 +1,4 @@
+import { trackEvent } from "./analytics";
 import Dropdown from "./dropdown";
 import { profileManager } from "./profile";
 import { uiManager } from "./ui";
@@ -373,6 +374,7 @@ function renderBookmarkForm(): void {
             alert(data?.detail || "Не удалось сохранить закладку");
             return;
           }
+          trackEvent("bookmark_edit");
         } else {
           const res = await fetch(`${API_URL}/bookmarks`, {
             method: "POST",
@@ -389,16 +391,20 @@ function renderBookmarkForm(): void {
             alert(data?.detail || "Не удалось добавить закладку");
             return;
           }
+          trackEvent("bookmark_create");
         }
         uiManager.closeAll();
         await refreshButtonState();
       },
       onCancel: async () => {
         if (!currentBookmark) return;
-        await fetch(`${API_URL}/bookmarks/${currentBookmark.id}`, {
+        const res = await fetch(`${API_URL}/bookmarks/${currentBookmark.id}`, {
           method: "DELETE",
           credentials: "include",
         });
+        if (res.ok) {
+          trackEvent("bookmark_delete");
+        }
         uiManager.closeAll();
         await refreshButtonState();
       },
@@ -441,6 +447,7 @@ export function initBookmarkButton(): void {
       return;
     }
 
+    trackEvent("bookmark_click");
     uiManager.toggleBookmark();
     renderBookmarkForm();
   });
@@ -481,6 +488,9 @@ async function saveCategoriesEdit(
       const failed = results.filter((res) => !res.ok);
       if (failed.length > 0) {
         alert("Не удалось переименовать некоторые категории");
+      }
+      if (results.length > failed.length) {
+        trackEvent("bookmark_category_rename");
       }
     }
   } catch (err) {
@@ -748,6 +758,7 @@ async function loadBookmarksPage(
               alert(data?.detail || "Не удалось сохранить закладку");
               return;
             }
+            trackEvent("bookmark_edit");
             const keepOpen = new Set<string>();
             container.querySelectorAll("details.bm-category[open]").forEach((d) => {
               const n = d.querySelector("[data-field=\"name\"]")?.textContent?.trim();
@@ -786,6 +797,7 @@ async function loadBookmarksPage(
           alert("Не удалось удалить закладку");
           return;
         }
+        trackEvent("bookmark_delete");
         await loadBookmarksPage(container, empty, loading, keepOpen);
       });
 
