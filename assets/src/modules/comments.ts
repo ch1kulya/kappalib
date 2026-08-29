@@ -228,8 +228,10 @@ function startCooldownTimer(button: HTMLButtonElement): void {
         const form = button.closest(".comment-edit-form") as HTMLElement | null;
         const textarea = form?.querySelector<HTMLTextAreaElement>(".comment-edit-textarea");
         const original = button.dataset.originalText ?? "";
-        const trimmed = textarea ? textarea.value.trim() : "";
-        button.disabled = trimmed.length === 0 || trimmed === original;
+        const value = textarea ? textarea.value : "";
+        const isEmpty = value.trim().length === 0;
+        const isUnchanged = value === original;
+        button.disabled = isEmpty || isUnchanged;
       } else {
         button.disabled = false;
         button.textContent = "Отправить";
@@ -1545,7 +1547,7 @@ function handleEditComment(
   textarea.value = markdownText;
   autoResizeTextarea(textarea);
 
-  submitBtn.dataset.originalText = markdownText.trim();
+  submitBtn.dataset.originalText = markdownText;
   submitBtn.disabled = true;
 
   if (getRemainingCooldown() > 0) {
@@ -1566,8 +1568,9 @@ function handleEditComment(
     autoResizeTextarea(textarea);
 
     if (getRemainingCooldown() <= 0) {
-      const trimmed = textarea.value.trim();
-      submitBtn.disabled = trimmed.length === 0 || trimmed == markdownText.trim();
+      const isEmpty = textarea.value.trim().length === 0;
+      const isUnchanged = textarea.value === markdownText;
+      submitBtn.disabled = isEmpty || isUnchanged;
     }
   });
 
@@ -1713,7 +1716,7 @@ function handleEditAnswer(
   textarea.value = markdownText;
   autoResizeTextarea(textarea);
 
-  submitBtn.dataset.originalText = markdownText.trim();
+  submitBtn.dataset.originalText = markdownText;
   submitBtn.disabled = true;
 
   if (getRemainingCooldown() > 0) {
@@ -1734,8 +1737,9 @@ function handleEditAnswer(
     autoResizeTextarea(textarea);
 
     if (getRemainingCooldown() <= 0) {
-      const trimmed = textarea.value.trim();
-      submitBtn.disabled = trimmed.length == 0 || trimmed === markdownText.trim();
+      const isEmpty = textarea.value.trim().length === 0;
+      const isUnchanged = textarea.value === markdownText;
+      submitBtn.disabled = isEmpty || isUnchanged;
     }
   });
 
