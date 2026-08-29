@@ -1,5 +1,5 @@
 import { initAgeGate } from "./modules/age";
-import { initBookmarkButton, initBookmarksPage } from "./modules/bookmarks";
+import { initBookmarkButton, initBookmarksPage, initChaptersBookmarks } from "./modules/bookmarks";
 import { initCatalogPage, initCatalogPagination } from "./modules/catalog";
 import { initComments, initMyCommentsPage } from "./modules/comments";
 import { initDescription } from "./modules/description";
@@ -56,6 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initTimeTracker();
     initBookmarkButton();
     initBookmarksPage();
+    initChaptersBookmarks();
 
     if (document.querySelector(".cr-wrapper")) {
       refreshLastReadTotalChapters();

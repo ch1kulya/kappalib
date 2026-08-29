@@ -1163,14 +1163,14 @@ a:hover {
 
 .chapter-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 1rem;
   padding: 1rem 0.5rem;
   background: transparent;
   border-bottom: 1px solid var(--border);
   text-decoration: none;
   color: inherit;
-  align-items: baseline;
+  align-items: center;
   content-visibility: auto;
   contain-intrinsic-size: 36px;
 }
@@ -1211,6 +1211,25 @@ a:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
+}
+
+.chapter-bookmark-icon {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--accent-primary);
+  & svg {
+    width: 18px;
+    height: 18px;
+    fill: var(--accent-primary);
+    stroke: var(--accent-primary);
+  }
+}
+
+.chapter-item.is-bookmarked .chapter-bookmark-icon {
+  display: flex;
 }
 
 .volume-tag {

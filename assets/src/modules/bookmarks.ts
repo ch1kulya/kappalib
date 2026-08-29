@@ -795,3 +795,33 @@ async function loadBookmarksPage(
     container.appendChild(catNode);
   });
 }
+
+export function initChaptersBookmarks(): void {
+  const chaptersList = document.getElementById("chapters-list");
+  if (!chaptersList) return;
+
+  const update = async () => {
+    if (!profileManager.isLoggedIn()) return;
+    const categories = await fetchBookmarkCategories();
+    const bookmarkedChapterIds = new Set<string>();
+    for (const cat of Object.values(categories)) {
+      for (const b of cat.bookmarks) {
+        bookmarkedChapterIds.add(b.chapterId);
+      }
+    }
+
+    chaptersList
+      .querySelectorAll<HTMLElement>(".chapter-item[data-chapter-id]")
+      .forEach((item) => {
+        const chapterId = item.dataset.chapterId;
+        if (chapterId && bookmarkedChapterIds.has(chapterId)) {
+          item.classList.add("is-bookmarked");
+        } else {
+          item.classList.remove("is-bookmarked");
+        }
+      });
+  };
+
+  update();
+  profileManager.onLogin(update);
+}
