@@ -2332,6 +2332,7 @@ async function uploadCommentImage(
 
   updateCharCounter(textarea);
   autoResizeTextarea(textarea);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 interface UserCommentsPage {
