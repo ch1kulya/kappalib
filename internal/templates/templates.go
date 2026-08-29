@@ -96,7 +96,7 @@ func RenderSchemaWebsite(data SchemaWebsiteData) (string, error) {
 				"url":   data.Domain,
 				"logo": map[string]any{
 					"@type": "ImageObject",
-					"url":   "https://s3.kappalib.rip/favicon.ico",
+					"url":   "https://cdn.kappalib.rip/favicon.ico",
 				},
 				"contactPoint": map[string]any{
 					"@type":       "ContactPoint",

@@ -714,7 +714,7 @@ func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) StaticPage(name, title string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const DOCS_URL = "https://s3.kappalib.rip"
+		const DOCS_URL = "https://cdn.kappalib.rip"
 
 		var content string
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, fmt.Sprintf("%s/%s.html", DOCS_URL, name), nil)
