@@ -1545,7 +1545,7 @@ function handleEditComment(
   textarea.value = markdownText;
   autoResizeTextarea(textarea);
 
-  submitBtn.dataset.originalText = markdownText.trim()
+  submitBtn.dataset.originalText = markdownText.trim();
   submitBtn.disabled = true;
 
   if (getRemainingCooldown() > 0) {
@@ -1566,10 +1566,9 @@ function handleEditComment(
     autoResizeTextarea(textarea);
 
     if (getRemainingCooldown() <= 0) {
-      const trimmed = textarea.value.trim()
+      const trimmed = textarea.value.trim();
       submitBtn.disabled = trimmed.length === 0 || trimmed == markdownText.trim();
-    };
-
+    }
   });
 
   textarea.addEventListener("focus", () => {
@@ -1714,7 +1713,7 @@ function handleEditAnswer(
   textarea.value = markdownText;
   autoResizeTextarea(textarea);
 
-  submitBtn.dataset.originalText = markdownText.trim()
+  submitBtn.dataset.originalText = markdownText.trim();
   submitBtn.disabled = true;
 
   if (getRemainingCooldown() > 0) {
@@ -1735,10 +1734,9 @@ function handleEditAnswer(
     autoResizeTextarea(textarea);
 
     if (getRemainingCooldown() <= 0) {
-      const trimmed = textarea.value.trim()
-      submitBtn.disabled = trimmed.length == 0 || trimmed === markdownText.trim()
-    };
-
+      const trimmed = textarea.value.trim();
+      submitBtn.disabled = trimmed.length == 0 || trimmed === markdownText.trim();
+    }
   });
 
   textarea.addEventListener("focus", () => {
