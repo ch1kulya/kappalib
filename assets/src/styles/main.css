@@ -4446,10 +4446,45 @@ a.update-log-item:active {
   user-select: none;
 }
 
+.comment-content .spoiler:has(img) {
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+}
+
+.comment-content .spoiler img {
+  display: block;
+  max-width: 100%;
+  max-height: 300px;
+  height: auto;
+  border-radius: 8px;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.comment-content .spoiler:not(.revealed) img {
+  opacity: 0;
+  filter: blur(25px);
+  pointer-events: none;
+}
+
 .comment-content .spoiler.revealed {
   background: var(--outline);
   color: inherit;
   user-select: text;
+}
+
+.comment-content .spoiler:has(img).revealed {
+  background: transparent;
+}
+
+.comment-content .spoiler.revealed img {
+  opacity: 1;
+  filter: none;
+  pointer-events: auto;
 }
 
 .comment-form-guest {

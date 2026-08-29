@@ -543,6 +543,16 @@ func TestRenderMarkdown(t *testing.T) {
 			input:    "![alt text](https://example.com/image.png)",
 			expected: `<p><img loading="lazy" src="https://example.com/image.png" alt="alt text"/></p>`,
 		},
+		{
+			name:     "spoiler with image",
+			input:    "||![image](https://example.com/image.png)||",
+			expected: `<p><span class="spoiler"><img loading="lazy" src="https://example.com/image.png" alt="image"/></span></p>`,
+		},
+		{
+			name:     "spoiler with text and image",
+			input:    "||Secret: ![image](https://example.com/image.png)||",
+			expected: `<p><span class="spoiler">Secret: <img loading="lazy" src="https://example.com/image.png" alt="image"/></span></p>`,
+		},
 	}
 
 	for _, tt := range tests {

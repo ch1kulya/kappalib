@@ -63,9 +63,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.querySelector(".markdown-help")?.addEventListener("click", (e) => {
-      const target = e.target as HTMLElement;
-      if (target.classList.contains("spoiler")) {
-        target.classList.toggle("revealed");
+      const spoiler = (e.target as HTMLElement).closest(".spoiler");
+      if (spoiler) {
+        spoiler.classList.toggle("revealed");
       }
     });
 
