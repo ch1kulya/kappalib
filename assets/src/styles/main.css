@@ -1163,14 +1163,14 @@ a:hover {
 
 .chapter-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 1rem;
   padding: 1rem 0.5rem;
   background: transparent;
   border-bottom: 1px solid var(--border);
   text-decoration: none;
   color: inherit;
-  align-items: baseline;
+  align-items: center;
   content-visibility: auto;
   contain-intrinsic-size: 36px;
 }
@@ -1211,6 +1211,25 @@ a:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
+}
+
+.chapter-bookmark-icon {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--accent-primary);
+  & svg {
+    width: 18px;
+    height: 18px;
+    fill: var(--accent-primary);
+    stroke: var(--accent-primary);
+  }
+}
+
+.chapter-item.is-bookmarked .chapter-bookmark-icon {
+  display: flex;
 }
 
 .volume-tag {
@@ -3459,9 +3478,10 @@ a.update-log-item:active {
 
 .dropdown-item-new {
   color: var(--secondary);
-  height: 38px;
-  min-height: 38px;
+  height: 36px;
+  min-height: 36px;
   box-sizing: border-box;
+  margin-bottom: 0;
 }
 
 .dropdown-item-new .bm-category-new-label {
@@ -3514,8 +3534,33 @@ a.update-log-item:active {
 }
 
 .bm-form-textarea {
-  min-height: 40px;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  min-height: 36px;
   max-height: 120px;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-primary);
+  background: var(--bg-primary);
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: none;
+  overflow-y: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.bm-form-textarea:focus {
+  outline: none;
+  border-color: var(--tertiary);
+  box-shadow: var(--shadow-focus);
+}
+
+.bm-form-textarea::placeholder {
+  color: var(--tertiary);
 }
 
 .bm-form-actions {
@@ -3526,7 +3571,7 @@ a.update-log-item:active {
 }
 
 #bm-form-delete.danger-hover {
-  color: var(--tertiary);
+  color: var(--color-danger-dark);
   transition: color 0.15s, background 0.15s;
 }
 
@@ -4401,10 +4446,45 @@ a.update-log-item:active {
   user-select: none;
 }
 
+.comment-content .spoiler:has(img) {
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+}
+
+.comment-content .spoiler img {
+  display: block;
+  max-width: 100%;
+  max-height: 300px;
+  height: auto;
+  border-radius: 8px;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.comment-content .spoiler:not(.revealed) img {
+  opacity: 0;
+  filter: blur(25px);
+  pointer-events: none;
+}
+
 .comment-content .spoiler.revealed {
   background: var(--outline);
   color: inherit;
   user-select: text;
+}
+
+.comment-content .spoiler:has(img).revealed {
+  background: transparent;
+}
+
+.comment-content .spoiler.revealed img {
+  opacity: 1;
+  filter: none;
+  pointer-events: auto;
 }
 
 .comment-form-guest {

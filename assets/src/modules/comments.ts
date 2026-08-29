@@ -223,15 +223,30 @@ function startCooldownTimer(button: HTMLButtonElement): void {
     if (!button.isConnected) return;
     const remaining = getRemainingCooldown();
     if (remaining <= 0) {
-      button.disabled = false;
       if (button.classList.contains("comment-edit-submit-btn")) {
         button.textContent = "Сохранить";
+        const form = button.closest(".comment-edit-form") as HTMLElement | null;
+        const textarea = form?.querySelector<HTMLTextAreaElement>(".comment-edit-textarea");
+        const original = button.dataset.originalText ?? "";
+        const value = textarea ? textarea.value : "";
+        const isEmpty = value.trim().length === 0;
+        const isUnchanged = value === original;
+        const isDisabled = isEmpty || isUnchanged;
+        button.disabled = isDisabled;
+        button.classList.toggle("btn-primary", !isDisabled);
       } else {
+        const form = button.closest(".comment-form") as HTMLElement | null;
+        const textarea = form?.querySelector<HTMLTextAreaElement>(".comment-textarea");
+        const value = textarea ? textarea.value : "";
+        const isEmpty = value.trim().length === 0;
         button.textContent = "Отправить";
+        button.disabled = isEmpty;
+        button.classList.toggle("btn-primary", !isEmpty);
       }
       return;
     }
     button.disabled = true;
+    button.classList.add("btn-primary");
     button.textContent = `Кулдаун ${Math.ceil(remaining / 1000)} сек.`;
     setTimeout(updateButton, 100);
   };
@@ -1301,6 +1316,7 @@ function initToolbarHandlers(
       }
       updateCharCounter(textarea);
       autoResizeTextarea(textarea);
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
     });
   });
 }
@@ -1324,8 +1340,25 @@ async function sendCommentPayload(
   }
 
   if (!turnstileTok && !smartCaptchaTok) {
-    submitBtn.disabled = false;
     submitBtn.textContent = originalText;
+    const form = submitBtn.closest(".comment-form") as HTMLElement | null;
+    const textarea = form?.querySelector<HTMLTextAreaElement>(".comment-textarea");
+    if (textarea) {
+      if (submitBtn.classList.contains("comment-edit-submit-btn")) {
+        const original = submitBtn.dataset.originalText ?? "";
+        const value = textarea.value;
+        const isDisabled = value.trim().length === 0 || value === original;
+        submitBtn.disabled = isDisabled;
+        submitBtn.classList.toggle("btn-primary", !isDisabled);
+      } else {
+        const isEmpty = textarea.value.trim().length === 0;
+        submitBtn.disabled = isEmpty;
+        submitBtn.classList.toggle("btn-primary", !isEmpty);
+      }
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.classList.add("btn-primary");
+    }
     return false;
   }
 
@@ -1433,7 +1466,7 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
         <span class="comment-char-counter">0/500</span>
         <div class="comment-reply-actions">
           <button type="button" class="comment-reply-cancel-btn">Отмена</button>
-          <button type="button" class="action-btn btn-primary comment-submit-btn comment-reply-submit-btn">Отправить</button>
+          <button type="button" class="action-btn comment-submit-btn comment-reply-submit-btn" disabled>Отправить</button>
         </div>
       </div>
     </div>
@@ -1513,7 +1546,7 @@ function handleEditComment(
         <a href="/markdown" target="_blank" class="comment-markdown-hint">Формат</a>
         <div class="comment-edit-actions">
           <button type="button" class="comment-edit-cancel-btn">Отмена</button>
-          <button type="button" class="action-btn btn-primary comment-submit-btn comment-edit-submit-btn">Сохранить</button>
+          <button type="button" class="action-btn comment-submit-btn comment-edit-submit-btn" disabled>Сохранить</button>
         </div>
       </div>
     </div>
@@ -1540,8 +1573,21 @@ function handleEditComment(
   textarea.value = markdownText;
   autoResizeTextarea(textarea);
 
+  submitBtn.dataset.originalText = markdownText;
+
+  const updateSubmitState = () => {
+    if (getRemainingCooldown() > 0) return;
+    const isEmpty = textarea.value.trim().length === 0;
+    const isUnchanged = textarea.value === markdownText;
+    const isDisabled = isEmpty || isUnchanged;
+    submitBtn.disabled = isDisabled;
+    submitBtn.classList.toggle("btn-primary", !isDisabled);
+  };
+
   if (getRemainingCooldown() > 0) {
     startCooldownTimer(submitBtn);
+  } else {
+    updateSubmitState();
   }
 
   if (toolbar) {
@@ -1556,6 +1602,7 @@ function handleEditComment(
   textarea.addEventListener("input", () => {
     updateCharCounter(textarea);
     autoResizeTextarea(textarea);
+    updateSubmitState();
   });
 
   textarea.addEventListener("focus", () => {
@@ -1673,7 +1720,7 @@ function handleEditAnswer(
         <a href="/markdown" target="_blank" class="comment-markdown-hint">Формат</a>
         <div class="comment-edit-actions">
           <button type="button" class="comment-edit-cancel-btn">Отмена</button>
-          <button type="button" class="action-btn btn-primary comment-submit-btn comment-edit-submit-btn">Сохранить</button>
+          <button type="button" class="action-btn comment-submit-btn comment-edit-submit-btn" disabled>Сохранить</button>
         </div>
       </div>
     </div>
@@ -1700,8 +1747,21 @@ function handleEditAnswer(
   textarea.value = markdownText;
   autoResizeTextarea(textarea);
 
+  submitBtn.dataset.originalText = markdownText;
+
+  const updateSubmitState = () => {
+    if (getRemainingCooldown() > 0) return;
+    const isEmpty = textarea.value.trim().length === 0;
+    const isUnchanged = textarea.value === markdownText;
+    const isDisabled = isEmpty || isUnchanged;
+    submitBtn.disabled = isDisabled;
+    submitBtn.classList.toggle("btn-primary", !isDisabled);
+  };
+
   if (getRemainingCooldown() > 0) {
     startCooldownTimer(submitBtn);
+  } else {
+    updateSubmitState();
   }
 
   if (toolbar) {
@@ -1716,6 +1776,7 @@ function handleEditAnswer(
   textarea.addEventListener("input", () => {
     updateCharCounter(textarea);
     autoResizeTextarea(textarea);
+    updateSubmitState();
   });
 
   textarea.addEventListener("focus", () => {
@@ -1797,8 +1858,17 @@ function initReplyFormHandlers(
 
   if (!textarea || !submitBtn) return;
 
+  const updateSubmitState = () => {
+    if (getRemainingCooldown() > 0) return;
+    const isEmpty = textarea.value.trim().length === 0;
+    submitBtn.disabled = isEmpty;
+    submitBtn.classList.toggle("btn-primary", !isEmpty);
+  };
+
   if (getRemainingCooldown() > 0) {
     startCooldownTimer(submitBtn);
+  } else {
+    updateSubmitState();
   }
 
   if (toolbar) {
@@ -1812,6 +1882,7 @@ function initReplyFormHandlers(
   textarea.addEventListener("input", () => {
     updateCharCounter(textarea);
     autoResizeTextarea(textarea);
+    updateSubmitState();
   });
 
   textarea.addEventListener("focus", () => {
@@ -1868,8 +1939,7 @@ function initReplyFormHandlers(
           : err.message
         : "Не удалось отправить. Попробуйте ещё раз.";
       alert(msg);
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Отправить";
+      updateSubmitState();
     }
   });
 }
@@ -2042,7 +2112,7 @@ function renderCommentForm(container: HTMLElement): void {
           <span id="comment-char-counter" class="comment-char-counter">0/3000</span>
           <a href="/markdown" target="_blank" class="comment-markdown-hint">Формат</a>
           <div id="comments-turnstile-container"></div>
-          <button id="comment-submit" class="action-btn btn-primary comment-submit-btn">Отправить</button>
+          <button id="comment-submit" class="action-btn comment-submit-btn" disabled>Отправить</button>
         </div>
       </div>
     `;
@@ -2306,6 +2376,7 @@ async function uploadCommentImage(
 
   updateCharCounter(textarea);
   autoResizeTextarea(textarea);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 interface UserCommentsPage {
@@ -2721,8 +2792,17 @@ function initFormHandlers(container: HTMLElement): void {
 
   if (!chapterId) return;
 
+  const updateSubmitState = () => {
+    if (getRemainingCooldown() > 0) return;
+    const isEmpty = textarea.value.trim().length === 0;
+    submitBtn.disabled = isEmpty;
+    submitBtn.classList.toggle("btn-primary", !isEmpty);
+  };
+
   if (submitBtn && getRemainingCooldown() > 0) {
     startCooldownTimer(submitBtn);
+  } else if (submitBtn && textarea) {
+    updateSubmitState();
   }
 
   if (toolbar && textarea) {
@@ -2733,6 +2813,7 @@ function initFormHandlers(container: HTMLElement): void {
     textarea.addEventListener("input", () => {
       updateCharCounter(textarea);
       autoResizeTextarea(textarea);
+      updateSubmitState();
     });
 
     textarea.addEventListener("focus", () => {
@@ -2789,8 +2870,7 @@ function initFormHandlers(container: HTMLElement): void {
             : err.message
           : "Не удалось отправить. Попробуйте ещё раз.";
         alert(msg);
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Отправить";
+        updateSubmitState();
       }
     });
   }
