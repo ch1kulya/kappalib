@@ -873,6 +873,71 @@ func HandleRenameBookmarkCategory(ctx context.Context, input *RenameCategoryInpu
 	return nil, nil
 }
 
+type SetListItemInput struct {
+	Body struct {
+		NovelID string `json:"novelId" pattern:"^nvl_[a-z0-9]{8}$"`
+		Status  string `json:"status" enum:"reading,rereading,planned,completed,on_hold,dropped,favorite"`
+	}
+}
+
+type DeleteListItemInput struct {
+	NovelID string `path:"novelId" pattern:"^nvl_[a-z0-9]{8}$"`
+}
+
+type UserListResponse struct {
+	Body map[string]models.EnrichedListCategory
+}
+
+func HandleGetUserList(ctx context.Context, input *struct{}) (*UserListResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := data.GetUserList(ctx, userID)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to load list")
+	}
+
+	return &UserListResponse{Body: list}, nil
+}
+
+func HandleSetListItem(ctx context.Context, input *SetListItemInput) (*struct{}, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := data.SetListItem(ctx, userID, input.Body.NovelID, input.Body.Status); err != nil {
+		switch {
+		case errors.Is(err, data.ErrNovelNotFound):
+			return nil, huma.Error404NotFound("Novel not found")
+		case errors.Is(err, data.ErrInvalidListStatus):
+			return nil, huma.Error422UnprocessableEntity("Invalid list status")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to update list")
+		}
+	}
+
+	return nil, nil
+}
+
+func HandleDeleteListItem(ctx context.Context, input *DeleteListItemInput) (*struct{}, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := data.RemoveListItem(ctx, userID, input.NovelID); err != nil {
+		if errors.Is(err, data.ErrListItemNotFound) {
+			return nil, huma.Error404NotFound("Novel not found in list")
+		}
+		return nil, huma.Error500InternalServerError("Failed to update list")
+	}
+
+	return nil, nil
+}
+
 func HandleVoteComment(ctx context.Context, input *VoteCommentInput) (*VoteCommentResponse, error) {
 	userID, err := requireAuth(ctx)
 	if err != nil {

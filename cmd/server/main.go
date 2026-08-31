@@ -184,6 +184,7 @@ func main() {
 	r.Get("/history", h.History)
 	r.Get("/comments", h.MyComments)
 	r.Get("/bookmarks", h.Bookmarks)
+	r.Get("/list", h.List)
 	r.Get("/updates", h.Updates)
 	r.Get("/dmca", h.StaticPage("dmca", "DMCA"))
 	r.Get("/privacy", h.StaticPage("privacy", "Политика конфиденциальности"))
@@ -458,6 +459,33 @@ func main() {
 			Security:    []map[string][]string{{"sessionCookie": {}}},
 			Tags:        []string{"Bookmarks"},
 		}, api.HandleRenameBookmarkCategory)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-user-list",
+			Method:      http.MethodGet,
+			Path:        "/profile/me/list",
+			Summary:     "Get current user's novel list",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"List"},
+		}, api.HandleGetUserList)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "set-list-item",
+			Method:      http.MethodPut,
+			Path:        "/list",
+			Summary:     "Add a novel to the list or move it between categories",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"List"},
+		}, api.HandleSetListItem)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "delete-list-item",
+			Method:      http.MethodDelete,
+			Path:        "/list/{novelId}",
+			Summary:     "Remove a novel from the list",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"List"},
+		}, api.HandleDeleteListItem)
 
 		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-user-comments",
