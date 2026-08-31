@@ -917,6 +917,18 @@ func (h *Handler) Bookmarks(w http.ResponseWriter, r *http.Request) {
 	h.render(w, r, views.Bookmarks(props))
 }
 
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	props := views.BaseProps{
+		Title:          "Мой список — kappalib",
+		Description:    "Личный список веб-новелл.",
+		Canonical:      "https://kappalib.rip/list",
+		Version:        h.assetVersion,
+		IsLoggedIn:     h.hasSession(r),
+		ReaderSettings: h.getReaderSettings(r),
+	}
+	h.render(w, r, views.List(props))
+}
+
 type matchedNovelAddition struct {
 	addition *models.NovelAddition
 	matched  bool

@@ -185,6 +185,16 @@ var ColorSchemeOptions = []ColorSchemeOption{
 	{Value: "oxocarbon", Label: "Oxocarbon"},
 }
 
+var ListStatuses = []ListStatusOption{
+	{Slug: "completed", Label: "Прочитано"},
+	{Slug: "dropped", Label: "Брошено"},
+	{Slug: "on_hold", Label: "Отложено"},
+	{Slug: "planned", Label: "Запланировано"},
+	{Slug: "rereading", Label: "Перечитываю"},
+	{Slug: "reading", Label: "Читаю"},
+	{Slug: "favorite", Label: "Избранное"},
+}
+
 var FontURLs = map[string]string{
 	"literata":     "https://cdn.jsdelivr.net/npm/@fontsource/literata@5/index.min.css",
 	"nunito":       "https://cdn.jsdelivr.net/npm/@fontsource/nunito@5/index.min.css",

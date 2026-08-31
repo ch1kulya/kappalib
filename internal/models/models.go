@@ -343,3 +343,28 @@ type EnrichedBookmarkCategory struct {
 	UpdatedAt int64              `json:"updatedAt"`
 	Bookmarks []EnrichedBookmark `json:"bookmarks"`
 }
+
+type ListEntry struct {
+	ID      string `json:"id"`
+	AddedAt int64  `json:"addedAt"`
+}
+
+type ListCategory struct {
+	CreatedAt int64       `json:"createdAt"`
+	UpdatedAt int64       `json:"updatedAt"`
+	Novels    []ListEntry `json:"novels"`
+}
+
+type EnrichedListEntry struct {
+	ID       string  `json:"id"`
+	AddedAt  int64   `json:"addedAt"`
+	Title    string  `json:"title"`
+	Author   string  `json:"author"`
+	CoverURL *string `json:"coverUrl"`
+}
+
+type EnrichedListCategory struct {
+	CreatedAt int64               `json:"createdAt"`
+	UpdatedAt int64               `json:"updatedAt"`
+	Novels    []EnrichedListEntry `json:"novels"`
+}
