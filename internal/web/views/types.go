@@ -95,6 +95,11 @@ type ColorSchemeOption struct {
 	Label string
 }
 
+type ListStatusOption struct {
+	Slug  string
+	Label string
+}
+
 type CatalogProps struct {
 	BaseProps
 	Novels      []models.NovelSummary

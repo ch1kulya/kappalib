@@ -1,0 +1,66 @@
+package views
+
+templ List(props BaseProps) {
+	@Base(props) {
+		<div class="bookmarks-page">
+			<div class="chapters-header" style="margin-bottom: 1.5rem;">
+				<h2 style="margin: 0;">Мой список</h2>
+			</div>
+			<div id="ls-content">
+				<div class="mc-empty" id="ls-empty" style="display: none;">
+					<p>У вас пока ничего нет в списке</p>
+				</div>
+				<div class="mc-loading" id="ls-loading">Загрузка списка...</div>
+				<div class="bm-categories" id="ls-categories"></div>
+			</div>
+		</div>
+		<template id="tpl-ls-category">
+			<div class="bm-category-wrapper">
+				<details class="bm-category" data-slug="">
+					<summary class="bm-category-summary">
+						<span class="bm-category-title-group">
+							<span class="ls-cat-icon-slot"></span>
+							<span class="bm-category-name" data-field="name"></span>
+							<span class="bm-category-count" data-field="count"></span>
+						</span>
+						<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+					</summary>
+					<div class="bm-items ls-items"></div>
+				</details>
+			</div>
+		</template>
+		<template id="tpl-ls-novel-card">
+			<div class="ls-card-wrapper">
+				<a href="" class="novel-card">
+					<div class="poster-wrapper">
+						<img src="" alt="" loading="lazy"/>
+					</div>
+					<div class="novel-card-info">
+						<h3></h3>
+						<p class="author"></p>
+					</div>
+				</a>
+				<div class="comment-menu ls-card-menu">
+					<button class="comment-menu-btn" type="button" aria-label="Действия" aria-haspopup="true" aria-expanded="false">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+					</button>
+					<div class="comment-dropdown-menu">
+						<button class="comment-dropdown-item danger ls-item-delete" type="button">
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+							<span>Удалить из списка</span>
+						</button>
+					</div>
+				</div>
+			</div>
+		</template>
+		<template id="tpl-ls-icons">
+			@IconListStatus("completed", "ls-icon")
+			@IconListStatus("dropped", "ls-icon")
+			@IconListStatus("on_hold", "ls-icon")
+			@IconListStatus("planned", "ls-icon")
+			@IconListStatus("rereading", "ls-icon")
+			@IconListStatus("reading", "ls-icon")
+			@IconListStatus("favorite", "ls-icon")
+		</template>
+	}
+}

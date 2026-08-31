@@ -20,7 +20,7 @@ echo "Updating ai-bots.caddy..."
 echo "Updating internal/templates/robots.txt.tmpl..."
 {
 	cat "${TMP_DIR}/upstream_robots"
-	printf "\n\nUser-agent: *\nDisallow: /*/chapter/*\nDisallow: /catalog\nDisallow: /history\nDisallow: /updates\nDisallow: /comments\nDisallow: /bookmarks\n\nSitemap: {{.Domain}}/sitemap.xml\n"
+	printf "\n\nUser-agent: *\nDisallow: /*/chapter/*\nDisallow: /catalog\nDisallow: /history\nDisallow: /updates\nDisallow: /comments\nDisallow: /bookmarks\nDisallow: /list\n\nSitemap: {{.Domain}}/sitemap.xml\n"
 } >internal/templates/robots.txt.tmpl
 
 echo "AI bot lists updated successfully."

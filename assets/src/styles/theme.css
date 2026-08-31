@@ -41,6 +41,13 @@
     rgba(239, 68, 68, 0.2)
   );
   --color-danger-dark: light-dark(#b91c1c, #dc2626);
+  --list-reading: light-dark(#2563eb, #3b82f6);
+  --list-rereading: light-dark(#0891b2, #22d3ee);
+  --list-planned: light-dark(#7c3aed, #a78bfa);
+  --list-completed: light-dark(#059669, #10b981);
+  --list-on-hold: light-dark(#d97706, #fbbf24);
+  --list-dropped: light-dark(#dc2626, #f87171);
+  --list-favorite: light-dark(#db2777, #f472b6);
   --oauth-google: #4285f4;
   --oauth-google-hover: #3367d6;
   --oauth-github: light-dark(#24292e, #f0f6fc);
@@ -81,6 +88,13 @@
     rgba(243, 139, 168, 0.2)
   );
   --color-danger-dark: light-dark(#a60d2d, #e06486);
+  --list-reading: light-dark(#1e66f5, #89b4fa);
+  --list-rereading: light-dark(#179299, #94e2d5);
+  --list-planned: light-dark(#8839ef, #cba6f7);
+  --list-completed: light-dark(#40a02b, #a6e3a1);
+  --list-on-hold: light-dark(#df8e1d, #f9e2af);
+  --list-dropped: light-dark(#d20f39, #f38ba8);
+  --list-favorite: light-dark(#ea76cb, #f5c2e7);
   --oauth-google: light-dark(#1e66f5, #89b4fa);
   --oauth-google-hover: light-dark(#1859d6, #74a8f7);
   --oauth-github: light-dark(#4c4f69, #cdd6f4);
@@ -121,6 +135,13 @@
     rgba(251, 73, 52, 0.2)
   );
   --color-danger-dark: light-dark(#7c0005, #cc241d);
+  --list-reading: light-dark(#076678, #83a598);
+  --list-rereading: light-dark(#427b58, #8ec07c);
+  --list-planned: light-dark(#8f3f71, #d3869b);
+  --list-completed: light-dark(#79740e, #b8bb26);
+  --list-on-hold: light-dark(#b57614, #fabd2f);
+  --list-dropped: light-dark(#9d0006, #fb4934);
+  --list-favorite: light-dark(#af3a03, #fe8019);
   --oauth-google: light-dark(#076678, #83a598);
   --oauth-google-hover: light-dark(#055564, #6d9486);
   --oauth-github: light-dark(#3c3836, #ebdbb2);
@@ -158,6 +179,13 @@
     rgba(191, 97, 106, 0.2)
   );
   --color-danger-dark: light-dark(#8a464b, #a5545a);
+  --list-reading: light-dark(#5e81ac, #81a1c1);
+  --list-rereading: light-dark(#24737c, #8fbcbb);
+  --list-planned: light-dark(#8f5c8c, #b48ead);
+  --list-completed: light-dark(#8aa873, #a3be8c);
+  --list-on-hold: light-dark(#d99d54, #ebcb8b);
+  --list-dropped: light-dark(#a5545a, #bf616a);
+  --list-favorite: light-dark(#b15446, #d08770);
   --oauth-google: light-dark(#5e81ac, #88c0d0);
   --oauth-google-hover: light-dark(#4e6f96, #72b0c0);
   --oauth-github: light-dark(#3b4252, #eceff4);
@@ -198,6 +226,13 @@
     rgba(235, 111, 146, 0.2)
   );
   --color-danger-dark: light-dark(#944e62, #d25879);
+  --list-reading: light-dark(#56949f, #9ccfd8);
+  --list-rereading: light-dark(#797593, #908caa);
+  --list-planned: light-dark(#575279, #c4a7e7);
+  --list-completed: light-dark(#286983, #317873);
+  --list-on-hold: light-dark(#ea9d34, #f6c177);
+  --list-dropped: light-dark(#b4637a, #eb6f92);
+  --list-favorite: light-dark(#d7827e, #ea9a97);
   --oauth-google: light-dark(#286983, #9ccfd8);
   --oauth-google-hover: light-dark(#1d5566, #86bfcc);
   --oauth-github: light-dark(#575279, #e0def4);
@@ -238,6 +273,13 @@
     rgba(247, 118, 142, 0.2)
   );
   --color-danger-dark: light-dark(#a83232, #db4b63);
+  --list-reading: light-dark(#2e7de9, #7aa2f7);
+  --list-rereading: light-dark(#0db9d7, #73daca);
+  --list-planned: light-dark(#7847bd, #bb9af7);
+  --list-completed: light-dark(#387068, #9ece6a);
+  --list-on-hold: light-dark(#8c6c3e, #e0af68);
+  --list-dropped: light-dark(#c64343, #f7768e);
+  --list-favorite: light-dark(#a62c71, #ff007c);
   --oauth-google: light-dark(#2e7de9, #7aa2f7);
   --oauth-google-hover: light-dark(#226bce, #688fe0);
   --oauth-github: light-dark(#3760bf, #c0caf5);
@@ -278,6 +320,13 @@
     rgba(230, 126, 128, 0.2)
   );
   --color-danger-dark: light-dark(#dc3e3b, #ce6466);
+  --list-reading: light-dark(#3a94c5, #7fbbb3);
+  --list-rereading: light-dark(#35a77c, #83c092);
+  --list-planned: light-dark(#df69ba, #d699b6);
+  --list-completed: light-dark(#8da101, #a7c080);
+  --list-on-hold: light-dark(#dfa000, #dbbc7f);
+  --list-dropped: light-dark(#f85552, #e67e80);
+  --list-favorite: light-dark(#f57d26, #e69875);
   --oauth-google: light-dark(#3a94c5, #7fbbb3);
   --oauth-google-hover: light-dark(#2f7ca6, #6fa79f);
   --oauth-github: light-dark(#5c6a72, #d3c6aa);
@@ -318,6 +367,13 @@
     rgba(209, 77, 65, 0.2)
   );
   --color-danger-dark: light-dark(#b83a2f, #af3029);
+  --list-reading: light-dark(#205ea6, #4385be);
+  --list-rereading: light-dark(#24837b, #3aa99f);
+  --list-planned: light-dark(#5e409d, #8b7ec8);
+  --list-completed: light-dark(#66800b, #879a39);
+  --list-on-hold: light-dark(#ad8901, #d0a215);
+  --list-dropped: light-dark(#af3029, #d14d41);
+  --list-favorite: light-dark(#a02f66, #ce5d97);
   --oauth-google: light-dark(#4385be, #4385be);
   --oauth-google-hover: light-dark(#3370a5, #3370a5);
   --oauth-github: light-dark(#1c1b1a, #cecdc3);
@@ -358,6 +414,13 @@
     rgba(248, 94, 132, 0.2)
   );
   --color-danger-dark: light-dark(#c42149, #e0466c);
+  --list-reading: light-dark(#0992a6, #78dce8);
+  --list-rereading: light-dark(#077d8e, #61c6d2);
+  --list-planned: light-dark(#6a4fb8, #ab9df2);
+  --list-completed: light-dark(#5c9e1e, #a9dc76);
+  --list-on-hold: light-dark(#bf8b00, #ffd866);
+  --list-dropped: light-dark(#e0315d, #f85e84);
+  --list-favorite: light-dark(#c8581e, #fc9867);
   --oauth-google: light-dark(#0992a6, #78dce8);
   --oauth-google-hover: light-dark(#077d8e, #61c6d2);
   --oauth-github: light-dark(#2d2a2e, #e3e1e4);
@@ -398,6 +461,13 @@
     rgba(255, 126, 182, 0.2)
   );
   --color-danger-dark: light-dark(#b81922, #ee5396);
+  --list-reading: light-dark(#0f62fe, #78a9ff);
+  --list-rereading: light-dark(#007d79, #08bdba);
+  --list-planned: light-dark(#6929c4, #be95ff);
+  --list-completed: light-dark(#198038, #42be65);
+  --list-on-hold: light-dark(#8a6d00, #f1c21b);
+  --list-dropped: light-dark(#da1e28, #fa4d56);
+  --list-favorite: light-dark(#d02670, #ee5396);
   --oauth-google: light-dark(#0f62fe, #78a9ff);
   --oauth-google-hover: light-dark(#0353e9, #659af0);
   --oauth-github: light-dark(#161616, #f2f4f8);

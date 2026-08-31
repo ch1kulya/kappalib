@@ -29,4 +29,7 @@ var (
 	ErrTooManyCategories     = errors.New("too many bookmark categories")
 	ErrTooManyBookmarks      = errors.New("too many bookmarks in category")
 	ErrBookmarkDuplicate     = errors.New("bookmark already exists for this chapter")
+	ErrInvalidListStatus     = errors.New("invalid list status")
+	ErrNovelNotFound         = errors.New("novel not found")
+	ErrListItemNotFound      = errors.New("novel not found in list")
 )
