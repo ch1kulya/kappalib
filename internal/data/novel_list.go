@@ -197,6 +197,25 @@ func enrichListWithDB(ctx context.Context, list map[string]models.ListCategory) 
 	return result, nil
 }
 
+func GetUserNovelListStatus(ctx context.Context, userID, novelID string) (string, error) {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	list, err := loadList(dbCtx, userID)
+	if err != nil {
+		return "", err
+	}
+
+	for slug, cat := range list {
+		for _, entry := range cat.Novels {
+			if entry.ID == novelID {
+				return slug, nil
+			}
+		}
+	}
+	return "", nil
+}
+
 func GetUserList(ctx context.Context, userID string) (map[string]models.EnrichedListCategory, error) {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

@@ -21,6 +21,9 @@ func TestSanitizeBookmarkField(t *testing.T) {
 		{"truncated to maxLen", "abcdefghij", "default", 5, "abcde"},
 		{"unicode length truncated", "Привет Мир", "default", 6, "Привет"},
 		{"category maxLen 15", "ОченьДлинноеНазваниеКатегории", "default", maxCategoryNameLen, "ОченьДлинноеНаз"},
+		{"quotes kept as-is", `Глава "Злой Меч"`, "default", 50, `Глава "Злой Меч"`},
+		{"html tags stripped and quotes decoded", `<b>"x" & 'y'</b>`, "default", 50, `"x" & 'y'`},
+		{"typed entities decoded once", "A &amp; B", "default", 50, "A & B"},
 	}
 
 	for _, tt := range tests {
@@ -124,6 +127,8 @@ func TestSanitizeCategoryName(t *testing.T) {
 		{"html stripped", "<b>Reading</b>", "Избранное", "Reading"},
 		{"truncated to maxCategoryNameLen", "ОченьДлинноеНазваниеКатегории", "Избранное", "ОченьДлинноеНаз"},
 		{"unicode with spaces and slashes", "Лайт / Новеллы", "Избранное", "Лайт Новеллы"},
+		{"quotes kept as-is", `"Книги"`, "Избранное", `"Книги"`},
+		{"ampersand kept as-is", "Книги & Манга", "Избранное", "Книги & Манга"},
 	}
 
 	for _, tt := range tests {

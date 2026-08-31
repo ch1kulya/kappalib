@@ -47,6 +47,9 @@ var queryCommentsUpdateStatus string
 //go:embed sql/comments_set_telegram_message_id.sql
 var queryCommentsSetTelegramMessageID string
 
+//go:embed sql/comments_pending_telegram.sql
+var queryCommentsPendingTelegram string
+
 //go:embed sql/comment_votes_upsert.sql
 var queryCommentVotesUpsert string
 
@@ -70,6 +73,9 @@ var queryCommentAnswersDeleteByCommentUser string
 
 //go:embed sql/comment_answers_set_telegram_message_id.sql
 var queryCommentAnswersSetTelegramMessageID string
+
+//go:embed sql/comment_answers_pending_telegram.sql
+var queryCommentAnswersPendingTelegram string
 
 //go:embed sql/comments_telegram_info.sql
 var queryCommentsTelegramInfo string
@@ -1019,6 +1025,83 @@ func UpdateCommentAnswerStatus(ctx context.Context, answerID, status string) err
 
 	logger.Info("Comment answer %s status updated to %s", answerID, status)
 	return nil
+}
+
+func RetryPendingTelegramNotifications(ctx context.Context) {
+	if telegramBotToken == "" || telegramChatID == "" {
+		return
+	}
+
+	sweepCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	type pendingAnswer struct {
+		id, commentID, contentHTML, displayName string
+	}
+
+	rows, err := database.DB.Query(sweepCtx, queryCommentsPendingTelegram)
+	if err != nil {
+		logger.Error("Failed to fetch pending comments for telegram retry: %v", err)
+		return
+	}
+
+	type pendingComment struct {
+		id, chapterID, contentHTML, displayName string
+	}
+
+	pending := make([]pendingComment, 0)
+	for rows.Next() {
+		var c pendingComment
+		if err := rows.Scan(&c.id, &c.chapterID, &c.contentHTML, &c.displayName); err != nil {
+			continue
+		}
+		pending = append(pending, c)
+	}
+	rows.Close()
+
+	for _, c := range pending {
+		if sweepCtx.Err() != nil {
+			return
+		}
+		comment := &models.Comment{
+			ID:              c.id,
+			ChapterID:       c.chapterID,
+			ContentHTML:     c.contentHTML,
+			UserDisplayName: c.displayName,
+		}
+		logger.Info("Retrying telegram notification for comment %s", c.id)
+		sendCommentToTelegram(sweepCtx, comment)
+	}
+
+	rows, err = database.DB.Query(sweepCtx, queryCommentAnswersPendingTelegram)
+	if err != nil {
+		logger.Error("Failed to fetch pending comment answers for telegram retry: %v", err)
+		return
+	}
+
+	answers := make([]pendingAnswer, 0)
+	for rows.Next() {
+		var a pendingAnswer
+		if err := rows.Scan(&a.id, &a.commentID, &a.contentHTML, &a.displayName); err != nil {
+			continue
+		}
+		answers = append(answers, a)
+	}
+	rows.Close()
+
+	for _, a := range answers {
+		if sweepCtx.Err() != nil {
+			return
+		}
+		answer := &models.CommentAnswer{
+			ID:              a.id,
+			CommentID:       a.commentID,
+			ContentHTML:     a.contentHTML,
+			UserDisplayName: a.displayName,
+		}
+		logger.Info("Retrying telegram notification for comment answer %s", a.id)
+		sendAnswerToTelegram(sweepCtx, answer)
+	}
 }
 
 func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {

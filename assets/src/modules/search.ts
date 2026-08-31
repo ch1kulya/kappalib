@@ -35,6 +35,13 @@ export function initSearch(): void {
     firstResultUrl = null;
   };
 
+  const collapseSearch = () => {
+    uiManager.closeAll();
+    input.value = "";
+    firstResultUrl = null;
+    clearResults();
+  };
+
   input.onfocus = () => {
     uiManager.openSearch();
   };
@@ -187,12 +194,41 @@ export function initSearch(): void {
       !input.contains(e.target as Node)
       && !results.contains(e.target as Node)
     ) {
-      uiManager.closeAll();
-      input.value = "";
-      firstResultUrl = null;
-      clearResults();
+      collapseSearch();
     }
   });
+
+  let tapOnResults = false;
+  results.addEventListener("pointerdown", () => {
+    tapOnResults = true;
+    window.setTimeout(() => {
+      tapOnResults = false;
+    }, 500);
+  });
+
+  input.addEventListener("focusout", (e: FocusEvent) => {
+    if (e.relatedTarget && results.contains(e.relatedTarget as Node)) return;
+    if (tapOnResults) return;
+    if (!uiManager.isSearchActive()) return;
+    collapseSearch();
+  });
+
+  const visualViewport = window.visualViewport;
+  if (visualViewport) {
+    let prevHeight = visualViewport.height;
+    visualViewport.addEventListener("resize", () => {
+      const keyboardClosed = visualViewport.height - prevHeight > 100;
+      prevHeight = visualViewport.height;
+      if (
+        keyboardClosed
+        && uiManager.isSearchActive()
+        && document.activeElement === input
+      ) {
+        input.blur();
+        collapseSearch();
+      }
+    });
+  }
 }
 
 function mapStatus(status: string): string {

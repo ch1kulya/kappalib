@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html"
 	"strings"
 	"time"
 	"unicode"
@@ -47,6 +48,7 @@ func randomBookmarkID() string {
 
 func sanitizeBookmarkField(value, fallback string, maxLen int) string {
 	value = strictPolicy.Sanitize(value)
+	value = html.UnescapeString(value)
 	value = strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) && !unicode.IsSpace(r) {
 			return -1
@@ -66,6 +68,7 @@ func sanitizeBookmarkField(value, fallback string, maxLen int) string {
 
 func sanitizeCategoryName(value, fallback string) string {
 	value = strictPolicy.Sanitize(value)
+	value = html.UnescapeString(value)
 	value = strings.Map(func(r rune) rune {
 		if r == '/' || r == '\\' || (unicode.IsControl(r) && !unicode.IsSpace(r)) {
 			return ' '
@@ -212,7 +215,7 @@ func enrichBookmarksWithDB(ctx context.Context, bookmarks map[string]models.Book
 
 	result := make(map[string]models.EnrichedBookmarkCategory, len(bookmarks))
 	for catName, cat := range bookmarks {
-		result[catName] = models.EnrichedBookmarkCategory{
+		result[html.UnescapeString(catName)] = models.EnrichedBookmarkCategory{
 			CreatedAt: cat.CreatedAt,
 			UpdatedAt: cat.UpdatedAt,
 			Bookmarks: make([]models.EnrichedBookmark, 0, len(cat.Bookmarks)),
@@ -252,7 +255,7 @@ func enrichBookmarksWithDB(ctx context.Context, bookmarks map[string]models.Book
 			eb := models.EnrichedBookmark{
 				ID:        b.ID,
 				ChapterID: b.ChapterID,
-				Value:     b.Value,
+				Value:     html.UnescapeString(b.Value),
 				CreatedAt: b.CreatedAt,
 				UpdatedAt: b.UpdatedAt,
 			}
@@ -263,7 +266,7 @@ func enrichBookmarksWithDB(ctx context.Context, bookmarks map[string]models.Book
 			}
 			enrichedList = append(enrichedList, eb)
 		}
-		result[catName] = models.EnrichedBookmarkCategory{
+		result[html.UnescapeString(catName)] = models.EnrichedBookmarkCategory{
 			CreatedAt: cat.CreatedAt,
 			UpdatedAt: cat.UpdatedAt,
 			Bookmarks: enrichedList,
@@ -440,15 +443,28 @@ func UpdateBookmark(ctx context.Context, userID, bookmarkID, newValue, newCatego
 	}, nil
 }
 
+func resolveCategoryKey(bookmarks map[string]models.BookmarkCategory, name string) (string, bool) {
+	if _, ok := bookmarks[name]; ok {
+		return name, true
+	}
+	for key := range bookmarks {
+		if html.UnescapeString(key) == name {
+			return key, true
+		}
+	}
+	return "", false
+}
+
 func DeleteCategory(ctx context.Context, userID, categoryName string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	return withBookmarkTx(dbCtx, userID, func(bookmarks map[string]models.BookmarkCategory) (map[string]models.BookmarkCategory, error) {
-		if _, exists := bookmarks[categoryName]; !exists {
+		key, exists := resolveCategoryKey(bookmarks, categoryName)
+		if !exists {
 			return nil, ErrBookmarkNotFound
 		}
-		delete(bookmarks, categoryName)
+		delete(bookmarks, key)
 		return bookmarks, nil
 	})
 }
@@ -458,10 +474,11 @@ func RenameCategory(ctx context.Context, userID, oldName, newName string) error 
 	defer cancel()
 
 	return withBookmarkTx(dbCtx, userID, func(bookmarks map[string]models.BookmarkCategory) (map[string]models.BookmarkCategory, error) {
-		cat, exists := bookmarks[oldName]
+		key, exists := resolveCategoryKey(bookmarks, oldName)
 		if !exists {
 			return nil, ErrBookmarkNotFound
 		}
+		cat := bookmarks[key]
 
 		sanitized := sanitizeCategoryName(newName, oldName)
 		if sanitized == oldName {
@@ -469,7 +486,7 @@ func RenameCategory(ctx context.Context, userID, oldName, newName string) error 
 		}
 
 		now := time.Now().Unix()
-		delete(bookmarks, oldName)
+		delete(bookmarks, key)
 		if existingTarget, ok := bookmarks[sanitized]; ok {
 			if len(existingTarget.Bookmarks)+len(cat.Bookmarks) > maxBookmarksPerCategory {
 				return nil, ErrTooManyBookmarks

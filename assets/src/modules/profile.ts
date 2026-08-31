@@ -206,9 +206,7 @@ class ProfileManager {
         method: "POST",
         credentials: "include",
       });
-    } catch {
-      // ignore errors
-    }
+    } catch {}
     trackEvent("logout");
     this.clearLocal();
   }

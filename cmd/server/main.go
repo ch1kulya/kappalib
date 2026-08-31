@@ -192,7 +192,7 @@ func main() {
 	r.Get("/license", h.StaticPage("license", "Лицензия MIT"))
 	r.Get("/terms", h.StaticPage("terms", "Пользовательское соглашение"))
 	r.Get("/markdown", h.StaticPage("markdown", "Шпаргалка по форматированию"))
-	r.Get("/{id}", h.Novel)
+	r.With(authService.Middleware(), auth.BridgeMiddleware).Get("/{id}", h.Novel)
 	r.Get("/{id}/chapter/{chapterId}", h.Chapter)
 	r.Get("/status", h.GetStatus)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -570,6 +570,15 @@ func main() {
 	}()
 
 	data.TimeTracker.Start(60 * time.Second)
+
+	go func() {
+		data.RetryPendingTelegramNotifications(context.Background())
+		ticker := time.NewTicker(2 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			data.RetryPendingTelegramNotifications(context.Background())
+		}
+	}()
 
 	port := "1666"
 
