@@ -80,6 +80,32 @@ function cloneTemplate(id: string): DocumentFragment {
   return template.content.cloneNode(true) as DocumentFragment;
 }
 
+const VOLUME_TAG_RE = /\[((?:Начало|Конец)(?:\s+\d+\s+тома)?)\]/g;
+
+function renderRichText(el: HTMLElement, text: string): void {
+  el.replaceChildren();
+  if (!text.includes("[")) {
+    el.textContent = text;
+    return;
+  }
+  let last = 0;
+  VOLUME_TAG_RE.lastIndex = 0;
+  for (const match of text.matchAll(VOLUME_TAG_RE)) {
+    const idx = match.index ?? 0;
+    if (idx > last) {
+      el.appendChild(document.createTextNode(text.slice(last, idx)));
+    }
+    const tag = document.createElement("span");
+    tag.className = "volume-tag";
+    tag.textContent = match[0];
+    el.appendChild(tag);
+    last = idx + match[0].length;
+  }
+  if (last < text.length) {
+    el.appendChild(document.createTextNode(text.slice(last)));
+  }
+}
+
 function setupBookmarkFormInstance(
   rootEl: HTMLElement,
   options: {
@@ -702,10 +728,10 @@ async function loadBookmarksPage(
 
       const titleSpan = sourceEl.querySelector("[data-field=\"source-title\"]") as HTMLElement;
       const chapterSpan = sourceEl.querySelector("[data-field=\"source-chapter\"]") as HTMLElement;
-      titleSpan.textContent = nvTitle;
+      renderRichText(titleSpan, nvTitle);
       chapterSpan.textContent = String(bm.chapterNum);
       sourceEl.title = `${nvTitle}, глава ${bm.chapterNum}`;
-      nameEl.textContent = bm.value;
+      renderRichText(nameEl, bm.value);
       link.href = bm.novelId && bm.chapterId
         ? `/${encodeURIComponent(bm.novelId)}/chapter/${encodeURIComponent(bm.chapterId)}`
         : "#";

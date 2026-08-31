@@ -49,6 +49,7 @@ type NovelProps struct {
 	ProgressPercent int
 	NextChapterNum  int
 	TotalChapters   int
+	ListStatus      string
 }
 
 type ChapterProps struct {

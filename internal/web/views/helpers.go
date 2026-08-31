@@ -294,6 +294,13 @@ func chapterTitleClasses(settings ReaderSettings) string {
 
 var volumeTagRe = regexp.MustCompile(`\[((?:Начало|Конец)(?:\s+\d+\s+тома)?)\]`)
 
+func lsRemoveWrapStyle(status string) string {
+	if status == "" {
+		return "display: none;"
+	}
+	return "display: block;"
+}
+
 func FormatTitle(title string) string {
 	if !strings.Contains(title, "[") {
 		return html.EscapeString(title)

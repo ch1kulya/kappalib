@@ -118,15 +118,12 @@ async function loadListPage(
   container: HTMLElement,
   empty: HTMLElement | null,
   loading: HTMLElement | null,
-  keepOpenSlugs?: Set<string>,
 ): Promise<void> {
-  const openSlugs = keepOpenSlugs || new Set<string>();
-  if (!keepOpenSlugs) {
-    container.querySelectorAll("details.bm-category[open]").forEach((d) => {
-      const slug = (d as HTMLDetailsElement).dataset.slug;
-      if (slug) openSlugs.add(slug);
-    });
-  }
+  const openSlugs = new Set<string>();
+  container.querySelectorAll("details.bm-category[open]").forEach((d) => {
+    const slug = (d as HTMLDetailsElement).dataset.slug;
+    if (slug) openSlugs.add(slug);
+  });
 
   const list = await fetchUserList(true);
   if (loading) loading.style.display = "none";
@@ -212,7 +209,7 @@ async function loadListPage(
         e.preventDefault();
         e.stopPropagation();
         if (await removeFromList(entry.id)) {
-          await loadListPage(container, empty, loading, openSlugs);
+          await loadListPage(container, empty, loading);
         }
       });
 

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ch1kulya/kappalib/internal/auth"
 	"github.com/ch1kulya/kappalib/internal/data"
 	"github.com/ch1kulya/kappalib/internal/models"
 	"github.com/ch1kulya/kappalib/internal/templates"
@@ -86,6 +88,22 @@ func (h *Handler) getProgressCookie(r *http.Request) *progressCookie {
 func (h *Handler) hasSession(r *http.Request) bool {
 	_, err := r.Cookie("kpl_session")
 	return err == nil
+}
+
+func (h *Handler) novelListStatus(r *http.Request, novelID string) string {
+	userID := auth.GetUserIDFromContext(r.Context())
+	if userID == "" {
+		return ""
+	}
+
+	status, err := data.GetUserNovelListStatus(r.Context(), userID, novelID)
+	if err != nil {
+		if !errors.Is(err, data.ErrProfileNotFound) {
+			logger.Warn("Failed to load list status for novel %s: %v", novelID, err)
+		}
+		return ""
+	}
+	return status
 }
 
 func NewHandler() *Handler {
@@ -506,6 +524,7 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		ProgressPercent: cookieData.ProgressPercent,
 		NextChapterNum:  cookieData.NextChapterNum,
 		TotalChapters:   novel.ChapterCount,
+		ListStatus:      h.novelListStatus(r, id),
 	}
 
 	h.render(w, r, views.Novel(props))

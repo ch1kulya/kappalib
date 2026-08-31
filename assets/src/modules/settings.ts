@@ -184,9 +184,7 @@ function getSettings(): ReaderSettings {
       const parsed = JSON.parse(raw);
       return { ...DEFAULT_SETTINGS, ...parsed };
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
   return { ...DEFAULT_SETTINGS };
 }
 

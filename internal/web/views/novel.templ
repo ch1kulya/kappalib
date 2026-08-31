@@ -13,13 +13,17 @@ templ Novel(props NovelProps) {
 					<div class="dropdown novel-list-dropdown" data-novel-id={ props.Novel.ID }>
 						<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Добавить в список" title="Добавить в список">
 							<span class="ls-btn-icon">
-								@IconListPlus("ls-btn-plus")
+								if props.ListStatus != "" {
+									@IconListStatus(props.ListStatus, "ls-icon")
+								} else {
+									@IconListPlus("ls-btn-plus")
+								}
 							</span>
 						</button>
 						<div class="dropdown-menu" role="listbox">
 							<div class="dropdown-menu-inner">
 								for _, opt := range ListStatuses {
-									<button class="dropdown-item" data-value={ opt.Slug } role="option" aria-selected="false">
+									<button class={ "dropdown-item", templ.KV("selected", opt.Slug == props.ListStatus) } data-value={ opt.Slug } role="option" aria-selected={ templ.Bool(opt.Slug == props.ListStatus) }>
 										<span class="ls-item-label">
 											@IconListStatus(opt.Slug, "ls-icon")
 											<span>{ opt.Label }</span>
@@ -27,7 +31,7 @@ templ Novel(props NovelProps) {
 										<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
 									</button>
 								}
-								<div class="ls-remove-wrap" style="display: none;">
+								<div class="ls-remove-wrap" style={ lsRemoveWrapStyle(props.ListStatus) }>
 									<hr class="dropdown-divider"/>
 									<button class="dropdown-item dropdown-item-remove" data-value="__remove__" data-no-select="true" role="option" aria-selected="false">
 										<span class="ls-item-label">
