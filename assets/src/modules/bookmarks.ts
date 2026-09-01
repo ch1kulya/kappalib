@@ -133,9 +133,13 @@ function setupBookmarkFormInstance(
 
   const maxLen = 100;
   let selectedCategory = options.preselectedCategory || "Избранное";
+  const defaultChars = Array.from(options.defaultTitle || "");
+  const defaultTitle = defaultChars.length > maxLen
+    ? defaultChars.slice(0, maxLen - 3).join("") + "..."
+    : defaultChars.join("");
   const initialValue = options.bookmark
     ? options.bookmark.value
-    : options.defaultTitle;
+    : defaultTitle;
   const initialCategory = selectedCategory;
 
   const getFinalCategory = (): string => {
@@ -201,7 +205,7 @@ function setupBookmarkFormInstance(
       deleteBtn.classList.remove("danger-hover");
     }
   } else {
-    valueEl.value = options.defaultTitle;
+    valueEl.value = defaultTitle;
     deleteBtn.style.display = "none";
   }
 

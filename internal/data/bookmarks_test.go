@@ -18,12 +18,13 @@ func TestSanitizeBookmarkField(t *testing.T) {
 		{"whitespace uses fallback", "   ", "default", 50, "default"},
 		{"html stripped", "<b>Hello</b>", "default", 50, "Hello"},
 		{"spaces normalized", "a   b   c", "default", 50, "a b c"},
-		{"truncated to maxLen", "abcdefghij", "default", 5, "abcde"},
-		{"unicode length truncated", "Привет Мир", "default", 6, "Привет"},
-		{"category maxLen 15", "ОченьДлинноеНазваниеКатегории", "default", maxCategoryNameLen, "ОченьДлинноеНаз"},
+		{"truncated to maxLen", "abcdefghij", "default", 5, "ab..."},
+		{"unicode length truncated", "Привет Мир", "default", 6, "При..."},
+		{"category maxLen 15", "ОченьДлинноеНазваниеКатегории", "default", maxCategoryNameLen, "ОченьДлинное..."},
 		{"quotes kept as-is", `Глава "Злой Меч"`, "default", 50, `Глава "Злой Меч"`},
 		{"html tags stripped and quotes decoded", `<b>"x" & 'y'</b>`, "default", 50, `"x" & 'y'`},
 		{"typed entities decoded once", "A &amp; B", "default", 50, "A & B"},
+		{"long fallback truncated to maxLen with ellipsis", "", "Длинное название главы превышающее лимит в сто символов для проверки корректной обрезки с троеточием в конце строки", 100, string([]rune("Длинное название главы превышающее лимит в сто символов для проверки корректной обрезки с троеточием в конце строки")[:97]) + "..."},
 	}
 
 	for _, tt := range tests {
@@ -125,7 +126,7 @@ func TestSanitizeCategoryName(t *testing.T) {
 		{"only slashes uses fallback", "///\\\\\\", "Избранное", "Избранное"},
 		{"control characters stripped", "Cat\x00\x07\x1bName", "Избранное", "Cat Name"},
 		{"html stripped", "<b>Reading</b>", "Избранное", "Reading"},
-		{"truncated to maxCategoryNameLen", "ОченьДлинноеНазваниеКатегории", "Избранное", "ОченьДлинноеНаз"},
+		{"truncated to maxCategoryNameLen", "ОченьДлинноеНазваниеКатегории", "Избранное", "ОченьДлинное..."},
 		{"unicode with spaces and slashes", "Лайт / Новеллы", "Избранное", "Лайт Новеллы"},
 		{"quotes kept as-is", `"Книги"`, "Избранное", `"Книги"`},
 		{"ampersand kept as-is", "Книги & Манга", "Избранное", "Книги & Манга"},

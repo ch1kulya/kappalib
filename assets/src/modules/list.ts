@@ -23,13 +23,13 @@ const FALLBACK_COVER =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect fill='%23ecf0f1' width='200' height='300'/%3E%3C/svg%3E";
 
 const LIST_STATUSES: { slug: string; label: string }[] = [
+  { slug: "favorite", label: "Избранное" },
+  { slug: "reading", label: "Читаю" },
+  { slug: "rereading", label: "Перечитываю" },
+  { slug: "planned", label: "Запланировано" },
+  { slug: "on_hold", label: "Отложено" },
   { slug: "completed", label: "Прочитано" },
   { slug: "dropped", label: "Брошено" },
-  { slug: "on_hold", label: "Отложено" },
-  { slug: "planned", label: "Запланировано" },
-  { slug: "rereading", label: "Перечитываю" },
-  { slug: "reading", label: "Читаю" },
-  { slug: "favorite", label: "Избранное" },
 ];
 
 let cachedList: UserList | null = null;

@@ -54,13 +54,13 @@ templ List(props BaseProps) {
 			</div>
 		</template>
 		<template id="tpl-ls-icons">
+			@IconListStatus("favorite", "ls-icon")
+			@IconListStatus("reading", "ls-icon")
+			@IconListStatus("rereading", "ls-icon")
+			@IconListStatus("planned", "ls-icon")
+			@IconListStatus("on_hold", "ls-icon")
 			@IconListStatus("completed", "ls-icon")
 			@IconListStatus("dropped", "ls-icon")
-			@IconListStatus("on_hold", "ls-icon")
-			@IconListStatus("planned", "ls-icon")
-			@IconListStatus("rereading", "ls-icon")
-			@IconListStatus("reading", "ls-icon")
-			@IconListStatus("favorite", "ls-icon")
 		</template>
 	}
 }
