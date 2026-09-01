@@ -23,32 +23,33 @@ templ Catalog(props CatalogProps) {
 		@CatalogGrid(props)
 	} else {
 		@Base(props.BaseProps) {
-			<div class="catalog-header-wrapper">
-				<div class="chapters-header">
-					if props.SearchQuery != "" {
-						<h2 style="margin: 0;">Поиск</h2>
-					} else {
-						<h2 style="margin: 0;">Каталог</h2>
-					}
-					<div class="dropdown" id="catalog-sort-dropdown">
-						<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
-							<span class="js-dropdown-label">{ GetSortLabel(props.SortOrder) }</span>
-							<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
-						</button>
-						<div class="dropdown-menu" role="listbox">
-							<div class="dropdown-menu-inner">
-								if props.SearchQuery != "" {
-									<button
-										class={ "dropdown-item", templ.KV("selected", props.SortOrder == "relevance") }
-										data-value="relevance"
-										role="option"
-										aria-selected={ fmt.Sprintf("%t", props.SortOrder == "relevance") }
-									>
-										<span>Релевантные</span>
-										<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-									</button>
-								}
-								for _, opt := range []struct{Val, Label string}{
+			<div class="catalog-page">
+				<div class="catalog-header-wrapper">
+					<div class="chapters-header">
+						if props.SearchQuery != "" {
+							<h2 style="margin: 0;">Поиск</h2>
+						} else {
+							<h2 style="margin: 0;">Каталог</h2>
+						}
+						<div class="dropdown" id="catalog-sort-dropdown">
+							<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+								<span class="js-dropdown-label">{ GetSortLabel(props.SortOrder) }</span>
+								<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+							</button>
+							<div class="dropdown-menu" role="listbox">
+								<div class="dropdown-menu-inner">
+									if props.SearchQuery != "" {
+										<button
+											class={ "dropdown-item", templ.KV("selected", props.SortOrder == "relevance") }
+											data-value="relevance"
+											role="option"
+											aria-selected={ fmt.Sprintf("%t", props.SortOrder == "relevance") }
+										>
+											<span>Релевантные</span>
+											<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+										</button>
+									}
+									for _, opt := range []struct{Val, Label string}{
 									{"popular", "Популярные"},
 									{"oldest", "Старые"},
 									{"newest", "Новые"},
@@ -57,53 +58,61 @@ templ Catalog(props CatalogProps) {
 									{"small", "Маленькие"},
 									{"alphabet", "Алфавитный порядок"},
 								} {
-									<button
-										class={ "dropdown-item", templ.KV("selected", props.SortOrder == opt.Val) }
-										data-value={ opt.Val }
-										role="option"
-										aria-selected={ fmt.Sprintf("%t", props.SortOrder == opt.Val) }
-									>
-										<span>{ opt.Label }</span>
-										<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-									</button>
-								}
+										<button
+											class={ "dropdown-item", templ.KV("selected", props.SortOrder == opt.Val) }
+											data-value={ opt.Val }
+											role="option"
+											aria-selected={ fmt.Sprintf("%t", props.SortOrder == opt.Val) }
+										>
+											<span>{ opt.Label }</span>
+											<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+										</button>
+									}
+								</div>
 							</div>
 						</div>
 					</div>
-				</div>
-				if len(props.SearchTags) > 0 {
-					<span class="catalog-search-meta">
-						{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по { pluralizeTags(len(props.SearchTags)) }
-						<span style="display: inline-flex; flex-wrap: wrap; gap: 0.4rem;">
-							for _, tag := range props.SearchTags {
-								<span class="tag badge">{ tag }</span>
-							}
+					if len(props.SearchTags) > 0 {
+						<span class="catalog-search-meta">
+							{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по { pluralizeTags(len(props.SearchTags)) }
+							<span style="display: inline-flex; flex-wrap: wrap; gap: 0.4rem;">
+								for _, tag := range props.SearchTags {
+									<span class="tag badge">{ tag }</span>
+								}
+							</span>
 						</span>
-					</span>
-				} else if props.SearchQuery != "" {
-					<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по запросу «{ props.SearchQuery }»</span>
-				} else {
-					<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } из основной коллекции</span>
-				}
-			</div>
-			<div
-				id="catalog-content"
-				data-total-pages={ fmt.Sprintf("%d", props.TotalPages) }
-				data-sort={ props.SortOrder }
-				data-search={ props.SearchQuery }
-			>
-				@CatalogGrid(props)
-				if len(props.Novels) == 0 {
-					<div class="catalog-empty">
-						<p>Ничего не найдено</p>
+					} else if props.SearchQuery != "" {
+						<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по запросу «{ props.SearchQuery }»</span>
+					} else {
+						<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } из основной коллекции</span>
+					}
+				</div>
+				<div
+					id="catalog-content"
+					data-total-pages={ fmt.Sprintf("%d", props.TotalPages) }
+					data-sort={ props.SortOrder }
+					data-search={ props.SearchQuery }
+				>
+					@CatalogGrid(props)
+					if len(props.Novels) == 0 {
+						<div class="catalog-empty">
+							<p>Ничего не найдено</p>
+							<p class="catalog-empty-suggest">
+								Не нашли нужную новеллу?
+								<a href="https://stats.kappalib.rip/q/LNdWv7KGd" target="_blank" rel="noopener noreferrer">
+									Предложите добавить
+									@IconExternalLink()
+								</a>
+							</p>
+						</div>
+					}
+				</div>
+				if props.Page < props.TotalPages && len(props.Novels) > 0 {
+					<div class="catalog-loader" id="catalog-loader">
+						<span>Загрузка...</span>
 					</div>
 				}
 			</div>
-			if props.Page < props.TotalPages && len(props.Novels) > 0 {
-				<div class="catalog-loader" id="catalog-loader">
-					<span>Загрузка...</span>
-				</div>
-			}
 		}
 	}
 }
