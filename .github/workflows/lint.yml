@@ -10,12 +10,12 @@ permissions:
   contents: read
 
 jobs:
-  golangci:
+  format:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -26,8 +26,30 @@ jobs:
       - name: Install templ
         run: go install github.com/a-h/templ/cmd/templ@$(go list -m -f '{{.Version}}' github.com/a-h/templ)
 
-      - name: Check templ formatting
-        run: templ fmt -fail .
+      - name: Install shfmt
+        run: go install mvdan.cc/sh/v3/cmd/shfmt@latest
+
+      - name: Install pg_format
+        run: git clone --depth 1 https://github.com/darold/pgFormatter.git tools/pg_format
+
+      - name: Run dprint check
+        uses: dprint/check@v2.3
+
+  golangci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install templ
+        run: go install github.com/a-h/templ/cmd/templ@$(go list -m -f '{{.Version}}' github.com/a-h/templ)
 
       - name: Generate templ
         run: templ generate

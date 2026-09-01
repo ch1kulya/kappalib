@@ -35,6 +35,13 @@ export function initSearch(): void {
     firstResultUrl = null;
   };
 
+  const collapseSearch = () => {
+    uiManager.closeAll();
+    input.value = "";
+    firstResultUrl = null;
+    clearResults();
+  };
+
   input.onfocus = () => {
     uiManager.openSearch();
   };
@@ -99,7 +106,24 @@ export function initSearch(): void {
           console.info(`No results found for: "${query}"`);
           const noResultsDiv = document.createElement("div");
           noResultsDiv.className = "no-results";
-          noResultsDiv.textContent = "Ничего не найдено";
+
+          const titleP = document.createElement("p");
+          titleP.textContent = "Ничего не найдено";
+          noResultsDiv.appendChild(titleP);
+
+          const suggestP = document.createElement("p");
+          suggestP.className = "search-suggest";
+          suggestP.appendChild(document.createTextNode("Не нашли нужную новеллу? "));
+
+          const link = document.createElement("a");
+          link.href = "https://stats.kappalib.rip/q/LNdWv7KGd";
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.appendChild(document.createTextNode("Предложите добавить"));
+          link.appendChild(createExternalLinkIcon());
+
+          suggestP.appendChild(link);
+          noResultsDiv.appendChild(suggestP);
           results.appendChild(noResultsDiv);
           return;
         }
@@ -187,12 +211,41 @@ export function initSearch(): void {
       !input.contains(e.target as Node)
       && !results.contains(e.target as Node)
     ) {
-      uiManager.closeAll();
-      input.value = "";
-      firstResultUrl = null;
-      clearResults();
+      collapseSearch();
     }
   });
+
+  let tapOnResults = false;
+  results.addEventListener("pointerdown", () => {
+    tapOnResults = true;
+    window.setTimeout(() => {
+      tapOnResults = false;
+    }, 500);
+  });
+
+  input.addEventListener("focusout", (e: FocusEvent) => {
+    if (e.relatedTarget && results.contains(e.relatedTarget as Node)) return;
+    if (tapOnResults) return;
+    if (!uiManager.isSearchActive()) return;
+    collapseSearch();
+  });
+
+  const visualViewport = window.visualViewport;
+  if (visualViewport) {
+    let prevHeight = visualViewport.height;
+    visualViewport.addEventListener("resize", () => {
+      const keyboardClosed = visualViewport.height - prevHeight > 100;
+      prevHeight = visualViewport.height;
+      if (
+        keyboardClosed
+        && uiManager.isSearchActive()
+        && document.activeElement === input
+      ) {
+        input.blur();
+        collapseSearch();
+      }
+    });
+  }
 }
 
 function mapStatus(status: string): string {
@@ -202,4 +255,31 @@ function mapStatus(status: string): string {
     announced: "Анонс",
   };
   return statusMap[status] || status;
+}
+
+function createExternalLinkIcon(): SVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "icon-external-link");
+  svg.setAttribute("width", "12");
+  svg.setAttribute("height", "12");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+
+  const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path1.setAttribute("d", "M15 3h6v6");
+  svg.appendChild(path1);
+
+  const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path2.setAttribute("d", "M10 14 21 3");
+  svg.appendChild(path2);
+
+  const path3 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path3.setAttribute("d", "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6");
+  svg.appendChild(path3);
+
+  return svg;
 }

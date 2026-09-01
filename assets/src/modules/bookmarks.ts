@@ -1,3 +1,4 @@
+import { trackEvent } from "./analytics";
 import Dropdown from "./dropdown";
 import { profileManager } from "./profile";
 import { uiManager } from "./ui";
@@ -79,6 +80,32 @@ function cloneTemplate(id: string): DocumentFragment {
   return template.content.cloneNode(true) as DocumentFragment;
 }
 
+const VOLUME_TAG_RE = /\[((?:Начало|Конец)(?:\s+\d+\s+тома)?)\]/g;
+
+function renderRichText(el: HTMLElement, text: string): void {
+  el.replaceChildren();
+  if (!text.includes("[")) {
+    el.textContent = text;
+    return;
+  }
+  let last = 0;
+  VOLUME_TAG_RE.lastIndex = 0;
+  for (const match of text.matchAll(VOLUME_TAG_RE)) {
+    const idx = match.index ?? 0;
+    if (idx > last) {
+      el.appendChild(document.createTextNode(text.slice(last, idx)));
+    }
+    const tag = document.createElement("span");
+    tag.className = "volume-tag";
+    tag.textContent = match[0];
+    el.appendChild(tag);
+    last = idx + match[0].length;
+  }
+  if (last < text.length) {
+    el.appendChild(document.createTextNode(text.slice(last)));
+  }
+}
+
 function setupBookmarkFormInstance(
   rootEl: HTMLElement,
   options: {
@@ -129,15 +156,25 @@ function setupBookmarkFormInstance(
     return selectedCategory;
   };
 
+  let isSaving = false;
   const updateSaveState = () => {
-    if (!options.bookmark) {
-      saveBtn.disabled = false;
+    if (isSaving) return;
+    const curVal = valueEl.value.trim();
+    if (!curVal) {
+      saveBtn.disabled = true;
+      saveBtn.classList.remove("btn-primary");
       return;
     }
-    const curVal = valueEl.value;
+    if (!options.bookmark) {
+      saveBtn.disabled = false;
+      saveBtn.classList.add("btn-primary");
+      return;
+    }
+    const curRawVal = valueEl.value;
     const curCat = getFinalCategory();
-    const hasChanged = curVal !== initialValue || curCat !== initialCategory;
+    const hasChanged = curRawVal !== initialValue || curCat !== initialCategory;
     saveBtn.disabled = !hasChanged;
+    saveBtn.classList.toggle("btn-primary", hasChanged);
   };
 
   const updateCounter = () => {
@@ -163,10 +200,8 @@ function setupBookmarkFormInstance(
     } else {
       deleteBtn.classList.remove("danger-hover");
     }
-    saveBtn.disabled = true;
   } else {
     valueEl.value = options.defaultTitle;
-    saveBtn.disabled = false;
     deleteBtn.style.display = "none";
   }
 
@@ -189,6 +224,7 @@ function setupBookmarkFormInstance(
 
   updateCounter();
   autoResize();
+  updateSaveState();
 
   valueEl.addEventListener("input", () => {
     selectedOnFirstInteraction = true;
@@ -306,9 +342,23 @@ function setupBookmarkFormInstance(
   }
 
   saveBtn.addEventListener("click", async () => {
+    if (isSaving) return;
+    const value = valueEl.value.trim();
+    if (!value) return;
+    isSaving = true;
+    const originalText = saveBtn.textContent || "Сохранить";
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Сохранение...";
     const category = getFinalCategory();
-    const value = valueEl.value;
-    await options.onSave(value, category);
+    try {
+      await options.onSave(value, category);
+    } finally {
+      isSaving = false;
+      if (saveBtn.isConnected) {
+        saveBtn.textContent = originalText;
+        updateSaveState();
+      }
+    }
   });
 
   deleteBtn.addEventListener("click", () => {
@@ -350,6 +400,7 @@ function renderBookmarkForm(): void {
             alert(data?.detail || "Не удалось сохранить закладку");
             return;
           }
+          trackEvent("bookmark_edit");
         } else {
           const res = await fetch(`${API_URL}/bookmarks`, {
             method: "POST",
@@ -366,16 +417,20 @@ function renderBookmarkForm(): void {
             alert(data?.detail || "Не удалось добавить закладку");
             return;
           }
+          trackEvent("bookmark_create");
         }
         uiManager.closeAll();
         await refreshButtonState();
       },
       onCancel: async () => {
         if (!currentBookmark) return;
-        await fetch(`${API_URL}/bookmarks/${currentBookmark.id}`, {
+        const res = await fetch(`${API_URL}/bookmarks/${currentBookmark.id}`, {
           method: "DELETE",
           credentials: "include",
         });
+        if (res.ok) {
+          trackEvent("bookmark_delete");
+        }
         uiManager.closeAll();
         await refreshButtonState();
       },
@@ -418,6 +473,7 @@ export function initBookmarkButton(): void {
       return;
     }
 
+    trackEvent("bookmark_click");
     uiManager.toggleBookmark();
     renderBookmarkForm();
   });
@@ -458,6 +514,9 @@ async function saveCategoriesEdit(
       const failed = results.filter((res) => !res.ok);
       if (failed.length > 0) {
         alert("Не удалось переименовать некоторые категории");
+      }
+      if (results.length > failed.length) {
+        trackEvent("bookmark_category_rename");
       }
     }
   } catch (err) {
@@ -669,10 +728,10 @@ async function loadBookmarksPage(
 
       const titleSpan = sourceEl.querySelector("[data-field=\"source-title\"]") as HTMLElement;
       const chapterSpan = sourceEl.querySelector("[data-field=\"source-chapter\"]") as HTMLElement;
-      titleSpan.textContent = nvTitle;
+      renderRichText(titleSpan, nvTitle);
       chapterSpan.textContent = String(bm.chapterNum);
       sourceEl.title = `${nvTitle}, глава ${bm.chapterNum}`;
-      nameEl.textContent = bm.value;
+      renderRichText(nameEl, bm.value);
       link.href = bm.novelId && bm.chapterId
         ? `/${encodeURIComponent(bm.novelId)}/chapter/${encodeURIComponent(bm.chapterId)}`
         : "#";
@@ -725,6 +784,7 @@ async function loadBookmarksPage(
               alert(data?.detail || "Не удалось сохранить закладку");
               return;
             }
+            trackEvent("bookmark_edit");
             const keepOpen = new Set<string>();
             container.querySelectorAll("details.bm-category[open]").forEach((d) => {
               const n = d.querySelector("[data-field=\"name\"]")?.textContent?.trim();
@@ -763,6 +823,7 @@ async function loadBookmarksPage(
           alert("Не удалось удалить закладку");
           return;
         }
+        trackEvent("bookmark_delete");
         await loadBookmarksPage(container, empty, loading, keepOpen);
       });
 
@@ -771,4 +832,34 @@ async function loadBookmarksPage(
 
     container.appendChild(catNode);
   });
+}
+
+export function initChaptersBookmarks(): void {
+  const chaptersList = document.getElementById("chapters-list");
+  if (!chaptersList) return;
+
+  const update = async () => {
+    if (!profileManager.isLoggedIn()) return;
+    const categories = await fetchBookmarkCategories();
+    const bookmarkedChapterIds = new Set<string>();
+    for (const cat of Object.values(categories)) {
+      for (const b of cat.bookmarks) {
+        bookmarkedChapterIds.add(b.chapterId);
+      }
+    }
+
+    chaptersList
+      .querySelectorAll<HTMLElement>(".chapter-item[data-chapter-id]")
+      .forEach((item) => {
+        const chapterId = item.dataset.chapterId;
+        if (chapterId && bookmarkedChapterIds.has(chapterId)) {
+          item.classList.add("is-bookmarked");
+        } else {
+          item.classList.remove("is-bookmarked");
+        }
+      });
+  };
+
+  update();
+  profileManager.onLogin(update);
 }

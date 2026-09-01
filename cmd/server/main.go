@@ -184,6 +184,7 @@ func main() {
 	r.Get("/history", h.History)
 	r.Get("/comments", h.MyComments)
 	r.Get("/bookmarks", h.Bookmarks)
+	r.Get("/list", h.List)
 	r.Get("/updates", h.Updates)
 	r.Get("/dmca", h.StaticPage("dmca", "DMCA"))
 	r.Get("/privacy", h.StaticPage("privacy", "Политика конфиденциальности"))
@@ -191,7 +192,7 @@ func main() {
 	r.Get("/license", h.StaticPage("license", "Лицензия MIT"))
 	r.Get("/terms", h.StaticPage("terms", "Пользовательское соглашение"))
 	r.Get("/markdown", h.StaticPage("markdown", "Шпаргалка по форматированию"))
-	r.Get("/{id}", h.Novel)
+	r.With(authService.Middleware(), auth.BridgeMiddleware).Get("/{id}", h.Novel)
 	r.Get("/{id}/chapter/{chapterId}", h.Chapter)
 	r.Get("/status", h.GetStatus)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -460,6 +461,33 @@ func main() {
 		}, api.HandleRenameBookmarkCategory)
 
 		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-user-list",
+			Method:      http.MethodGet,
+			Path:        "/profile/me/list",
+			Summary:     "Get current user's novel list",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"List"},
+		}, api.HandleGetUserList)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "set-list-item",
+			Method:      http.MethodPut,
+			Path:        "/list",
+			Summary:     "Add a novel to the list or move it between categories",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"List"},
+		}, api.HandleSetListItem)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "delete-list-item",
+			Method:      http.MethodDelete,
+			Path:        "/list/{novelId}",
+			Summary:     "Remove a novel from the list",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"List"},
+		}, api.HandleDeleteListItem)
+
+		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-user-comments",
 			Method:      http.MethodGet,
 			Path:        "/profile/me/comments",
@@ -542,6 +570,15 @@ func main() {
 	}()
 
 	data.TimeTracker.Start(60 * time.Second)
+
+	go func() {
+		data.RetryPendingTelegramNotifications(context.Background())
+		ticker := time.NewTicker(2 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			data.RetryPendingTelegramNotifications(context.Background())
+		}
+	}()
 
 	port := "1666"
 

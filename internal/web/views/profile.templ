@@ -87,7 +87,10 @@ templ ProfileTemplates() {
 			</div>
 			<div class="pc-footer">
 				<span class="pc-skeleton pc-skeleton-logout"></span>
-				<span class="pc-skeleton pc-skeleton-logout"></span>
+				<div class="pc-footer-row">
+					<span class="pc-skeleton pc-skeleton-logout"></span>
+					<span class="pc-skeleton pc-skeleton-logout"></span>
+				</div>
 				<span class="pc-skeleton pc-skeleton-logout"></span>
 			</div>
 		</div>
@@ -120,10 +123,16 @@ templ ProfileTemplates() {
 					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
 					<span>Комментарии</span>
 				</a>
-				<a href="/bookmarks" class="pc-btn pc-btn-action">
-					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-icon lucide-bookmark"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"></path></svg>
-					<span>Закладки</span>
-				</a>
+				<div class="pc-footer-row">
+					<a href="/bookmarks" class="pc-btn pc-btn-action">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-icon lucide-bookmark"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"></path></svg>
+						<span>Закладки</span>
+					</a>
+					<a href="/list" class="pc-btn pc-btn-action">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-icon lucide-list"><line x1="8" x2="21" y1="6" y2="6"></line><line x1="8" x2="21" y1="12" y2="12"></line><line x1="8" x2="21" y1="18" y2="18"></line><line x1="3" x2="3.01" y1="6" y2="6"></line><line x1="3" x2="3.01" y1="12" y2="12"></line><line x1="3" x2="3.01" y1="18" y2="18"></line></svg>
+						<span>Список</span>
+					</a>
+				</div>
 				<button class="pc-btn pc-btn-action pc-btn-danger" id="pc-logout">
 					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg>
 					<span>Выйти</span>

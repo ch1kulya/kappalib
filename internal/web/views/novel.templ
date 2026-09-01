@@ -10,6 +10,39 @@ templ Novel(props NovelProps) {
 					<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(props.Novel.CoverURL)) }>
 						<img src={ ResolveCover(props.Novel.CoverURL) } alt={ props.Novel.TitleEn }/>
 					</div>
+					<div class="dropdown novel-list-dropdown" data-novel-id={ props.Novel.ID }>
+						<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Добавить в список" title="Добавить в список">
+							<span class="ls-btn-icon">
+								if props.ListStatus != "" {
+									@IconListStatus(props.ListStatus, "ls-icon")
+								} else {
+									@IconListPlus("ls-btn-plus")
+								}
+							</span>
+						</button>
+						<div class="dropdown-menu" role="listbox">
+							<div class="dropdown-menu-inner">
+								for _, opt := range ListStatuses {
+									<button class={ "dropdown-item", templ.KV("selected", opt.Slug == props.ListStatus) } data-value={ opt.Slug } role="option" aria-selected={ templ.Bool(opt.Slug == props.ListStatus) }>
+										<span class="ls-item-label">
+											@IconListStatus(opt.Slug, "ls-icon")
+											<span>{ opt.Label }</span>
+										</span>
+										<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+									</button>
+								}
+								<div class="ls-remove-wrap" style={ lsRemoveWrapStyle(props.ListStatus) }>
+									<hr class="dropdown-divider"/>
+									<button class="dropdown-item dropdown-item-remove" data-value="__remove__" data-no-select="true" role="option" aria-selected="false">
+										<span class="ls-item-label">
+											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+											<span>Удалить из списка</span>
+										</span>
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
 					if len(props.Chapters) > 0 {
 						<div class="desktop-actions">
 							if props.LastChapterID != "" {
@@ -171,6 +204,9 @@ templ Novel(props NovelProps) {
 									if ch.Title != "Без названия" {
 										@templ.Raw(FormatTitle(ch.Title))
 									}
+								</span>
+								<span class="chapter-bookmark-icon" aria-label="В закладках">
+									@IconBookmark("chapter-bm-svg")
 								</span>
 							</a>
 						}

@@ -44,3 +44,39 @@ air
 ```
 
 If you forget something during the process, you will receive an error.
+
+### Code formatting
+
+The project uses [dprint](https://dprint.dev) to format source code across languages and configurations.
+
+[Install dprint](https://dprint.dev/install/) and additional formatting utilities required by `dprint.json`:
+
+- `shfmt` for shell scripts:
+
+```shell
+go install mvdan.cc/sh/v3/cmd/shfmt@latest
+```
+
+- `templ` for templates (if not already installed):
+
+```shell
+go install github.com/a-h/templ/cmd/templ@v0.3.1020
+```
+
+- `pg_format` for SQL (requires Perl):
+
+```shell
+git clone --depth 1 https://github.com/darold/pgFormatter.git tools/pg_format
+```
+
+To check formatting without modifying files:
+
+```shell
+dprint check
+```
+
+To format files:
+
+```shell
+dprint fmt
+```

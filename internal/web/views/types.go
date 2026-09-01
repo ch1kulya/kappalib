@@ -49,6 +49,7 @@ type NovelProps struct {
 	ProgressPercent int
 	NextChapterNum  int
 	TotalChapters   int
+	ListStatus      string
 }
 
 type ChapterProps struct {
@@ -92,6 +93,11 @@ type FontOption struct {
 
 type ColorSchemeOption struct {
 	Value string
+	Label string
+}
+
+type ListStatusOption struct {
+	Slug  string
 	Label string
 }
 

@@ -18,7 +18,7 @@ func TestRenderSchemaNovel_Escaping(t *testing.T) {
 			TitleEn:  `English "Title"`,
 			Author:   `Author "Name"`,
 			Status:   "ongoing",
-			CoverURL: "https://s3.kappalib.rip/cover.jpg",
+			CoverURL: "https://cdn.kappalib.rip/cover.jpg",
 		},
 	}
 

@@ -1,10 +1,11 @@
 import { initAgeGate } from "./modules/age";
-import { initBookmarkButton, initBookmarksPage } from "./modules/bookmarks";
+import { initBookmarkButton, initBookmarksPage, initChaptersBookmarks } from "./modules/bookmarks";
 import { initCatalogPage, initCatalogPagination } from "./modules/catalog";
 import { initComments, initMyCommentsPage } from "./modules/comments";
 import { initDescription } from "./modules/description";
 import Dropdown from "./modules/dropdown";
 import { initHistoryPage } from "./modules/history";
+import { initListPage, initNovelListDropdown } from "./modules/list";
 import { initProfile, initProfileModal } from "./modules/profile";
 import { initReadingProgressSaver, refreshLastReadTotalChapters } from "./modules/progress";
 import { initSearch } from "./modules/search";
@@ -56,15 +57,18 @@ document.addEventListener("DOMContentLoaded", () => {
     initTimeTracker();
     initBookmarkButton();
     initBookmarksPage();
+    initNovelListDropdown();
+    initListPage();
+    initChaptersBookmarks();
 
     if (document.querySelector(".cr-wrapper")) {
       refreshLastReadTotalChapters();
     }
 
     document.querySelector(".markdown-help")?.addEventListener("click", (e) => {
-      const target = e.target as HTMLElement;
-      if (target.classList.contains("spoiler")) {
-        target.classList.toggle("revealed");
+      const spoiler = (e.target as HTMLElement).closest(".spoiler");
+      if (spoiler) {
+        spoiler.classList.toggle("revealed");
       }
     });
 
