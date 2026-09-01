@@ -844,7 +844,7 @@ a:hover {
           color: var(--tertiary);
           text-decoration: underline;
           &:hover {
-              color: var(--secondary);
+            color: var(--secondary);
           }
         }
       }
@@ -5008,8 +5008,8 @@ td:first-child {
 
 /* Catalog Content */
 .catalog-page {
-    min-height: 65vh;
-    min-height: 65dvh;
+  min-height: 65vh;
+  min-height: 65dvh;
 }
 
 #catalog-content.is-loading {
@@ -5042,7 +5042,7 @@ td:first-child {
       color: var(--tertiary);
       text-decoration: underline;
       &:hover {
-          color: var(--secondary);
+        color: var(--secondary);
       }
     }
   }
