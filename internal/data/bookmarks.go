@@ -61,7 +61,11 @@ func sanitizeBookmarkField(value, fallback string, maxLen int) string {
 		value = fallback
 	}
 	if runes := []rune(value); len(runes) > maxLen {
-		value = string(runes[:maxLen])
+		if maxLen > 3 {
+			value = string(runes[:maxLen-3]) + "..."
+		} else {
+			value = string(runes[:maxLen])
+		}
 	}
 	return value
 }
