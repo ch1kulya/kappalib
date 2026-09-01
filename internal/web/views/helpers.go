@@ -186,13 +186,13 @@ var ColorSchemeOptions = []ColorSchemeOption{
 }
 
 var ListStatuses = []ListStatusOption{
+	{Slug: "favorite", Label: "Избранное"},
+	{Slug: "reading", Label: "Читаю"},
+	{Slug: "rereading", Label: "Перечитываю"},
+	{Slug: "planned", Label: "Запланировано"},
+	{Slug: "on_hold", Label: "Отложено"},
 	{Slug: "completed", Label: "Прочитано"},
 	{Slug: "dropped", Label: "Брошено"},
-	{Slug: "on_hold", Label: "Отложено"},
-	{Slug: "planned", Label: "Запланировано"},
-	{Slug: "rereading", Label: "Перечитываю"},
-	{Slug: "reading", Label: "Читаю"},
-	{Slug: "favorite", Label: "Избранное"},
 }
 
 var FontURLs = map[string]string{

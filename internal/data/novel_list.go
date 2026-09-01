@@ -26,7 +26,7 @@ var queryUserListGetForUpdate string
 //go:embed sql/user_list_update.sql
 var queryUserListUpdate string
 
-var listStatuses = []string{"completed", "dropped", "on_hold", "planned", "rereading", "reading", "favorite"}
+var listStatuses = []string{"favorite", "reading", "rereading", "planned", "on_hold", "completed", "dropped"}
 
 func isValidListStatus(status string) bool {
 	for _, s := range listStatuses {
