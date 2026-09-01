@@ -1,6 +1,9 @@
 DROP TRIGGER IF EXISTS trg_update_source_chapter_stats_insert ON chapters;
+
 DROP TRIGGER IF EXISTS trg_update_source_chapter_stats_delete ON chapters;
+
 DROP TRIGGER IF EXISTS trg_update_source_chapter_stats_update ON chapters;
+
 DROP TRIGGER IF EXISTS trg_update_source_chapter_stats ON chapters;
 
 DROP INDEX IF EXISTS idx_sources_characters_count;
@@ -122,7 +125,9 @@ $$
 LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_update_source_chapter_stats ON chapters;
+
 CREATE TRIGGER trg_update_source_chapter_stats
     AFTER INSERT OR UPDATE OR DELETE ON chapters
     FOR EACH ROW
     EXECUTE FUNCTION update_source_chapter_stats ();
+
