@@ -149,12 +149,17 @@ func init() {
 func main() {
 	defer database.Close()
 
+	authSecure := os.Getenv("AUTH_SECURE") == "true"
+	if !authSecure {
+		logger.Warn("AUTH_SECURE is false")
+	}
+
 	authURL := os.Getenv("AUTH_URL")
 	userStore := auth.NewUserStore()
 	authService := auth.NewService(auth.Config{
 		Secret: os.Getenv("AUTH_SECRET"),
 		URL:    authURL,
-		Secure: os.Getenv("AUTH_SECURE") == "true",
+		Secure: authSecure,
 	}, userStore)
 
 	r := chi.NewRouter()

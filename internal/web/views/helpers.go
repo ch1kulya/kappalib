@@ -5,6 +5,7 @@ import (
 	"html"
 	"math"
 	"math/rand/v2"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -57,11 +58,29 @@ func DerefStr(s *string) string {
 	return *s
 }
 
-func ResolveCover(url *string) string {
-	if url != nil && *url != "" {
-		return *url
+const defaultCover = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect fill='%23ecf0f1' width='200' height='300'/%3E%3C/svg%3E"
+
+func ResolveCover(coverURL *string) string {
+	if coverURL == nil {
+		return defaultCover
 	}
-	return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect fill='%23ecf0f1' width='200' height='300'/%3E%3C/svg%3E"
+
+	trimmed := strings.TrimSpace(*coverURL)
+	if trimmed == "" {
+		return defaultCover
+	}
+
+	parsed, err := url.Parse(trimmed)
+	if err != nil {
+		return defaultCover
+	}
+
+	scheme := strings.ToLower(parsed.Scheme)
+	if (scheme != "http" && scheme != "https") || parsed.Host == "" {
+		return defaultCover
+	}
+
+	return trimmed
 }
 
 func CalculatePagination(current, total int) []int {
