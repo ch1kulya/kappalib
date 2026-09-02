@@ -24,14 +24,16 @@ templ Base(props BaseProps) {
 			}
 			if props.PrefetchURL != "" {
 				<link rel="prefetch" href={ props.PrefetchURL } as="document"/>
+				@templ.Raw(fmt.Sprintf(`<script type="speculationrules" nonce="%s">{"prerender":[{"source":"list","urls":[%q]}]}</script>`, templ.GetNonce(ctx), props.PrefetchURL))
 			}
+			<link rel="preload" href="/assets/fonts/InterVariable.woff2?v=4.1" as="font" type="font/woff2" crossorigin/>
 			<link rel="preconnect" href="https://cdn.kappalib.rip"/>
 			<link rel="preconnect" href="https://cdn.jsdelivr.net"/>
-			<link rel="preconnect" href="https://challenges.cloudflare.com"/>
-			<link rel="preconnect" href="https://smartcaptcha.yandexcloud.net"/>
-			<link rel="preconnect" href="https://fonts.googleapis.com"/>
-			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-			<link href="https://fonts.googleapis.com/css2?family=Datatype:wght@400;500;700&display=swap" rel="stylesheet"/>
+			if props.IsMyCommentsPage {
+				<link rel="preconnect" href="https://fonts.googleapis.com"/>
+				<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+				<link href="https://fonts.googleapis.com/css2?family=Datatype:wght@400;500;700&display=swap" rel="stylesheet"/>
+			}
 			<!-- Favicon -->
 			<link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico"/>
 			<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png"/>

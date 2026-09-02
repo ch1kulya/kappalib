@@ -4,9 +4,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/ch1kulya/kappalib/internal/cache"
 	"github.com/ch1kulya/kappalib/internal/models"
 	"github.com/ch1kulya/kappalib/internal/web/views"
 )
@@ -369,4 +371,51 @@ func TestGetReaderSettings(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestIsPrefetchOrPrerender(t *testing.T) {
+	tests := []struct {
+		purpose    string
+		secPurpose string
+		expected   bool
+	}{
+		{"", "", false},
+		{"prefetch", "", true},
+		{"", "prefetch", true},
+		{"", "prefetch;prerender", true},
+		{"", "prerender", true},
+		{"normal", "none", false},
+	}
+
+	for _, tt := range tests {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		if tt.purpose != "" {
+			req.Header.Set("Purpose", tt.purpose)
+		}
+		if tt.secPurpose != "" {
+			req.Header.Set("Sec-Purpose", tt.secPurpose)
+		}
+		actual := isPrefetchOrPrerender(req)
+		if actual != tt.expected {
+			t.Errorf("isPrefetchOrPrerender(Purpose=%q, Sec-Purpose=%q) = %v, want %v", tt.purpose, tt.secPurpose, actual, tt.expected)
+		}
+	}
+}
+
+func TestStaticPageCaching(t *testing.T) {
+	cache.C.Set("static_page:terms", "<p>cached terms content</p>", 1*time.Hour)
+
+	h := NewHandler()
+	handler := h.StaticPage("terms", "Пользовательское соглашение")
+
+	req := httptest.NewRequest(http.MethodGet, "/terms", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "cached terms content") {
+		t.Errorf("expected response to contain cached content, got %s", rec.Body.String())
+	}
 }

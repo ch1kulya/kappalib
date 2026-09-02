@@ -8,7 +8,7 @@ templ Novel(props NovelProps) {
 			<div class="novel-header" id="novel-header-area">
 				<div class="novel-cover-container">
 					<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(props.Novel.CoverURL)) }>
-						<img src={ ResolveCover(props.Novel.CoverURL) } alt={ props.Novel.TitleEn }/>
+						<img src={ ResolveCover(props.Novel.CoverURL) } alt={ props.Novel.TitleEn } fetchpriority="high" decoding="async"/>
 					</div>
 					<div class="dropdown novel-list-dropdown" data-novel-id={ props.Novel.ID }>
 						<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Добавить в список" title="Добавить в список">

@@ -4,10 +4,14 @@ import "fmt"
 
 templ CatalogGrid(props CatalogProps) {
 	<div class="novels-grid" id="catalog-grid">
-		for _, novel := range props.Novels {
+		for i, novel := range props.Novels {
 			<a href={ templ.SafeURL("/" + novel.ID) } class="novel-card">
 				<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(novel.CoverURL)) }>
-					<img src={ ResolveCover(novel.CoverURL) } alt={ novel.Title } loading="lazy"/>
+					if i < 4 {
+						<img src={ ResolveCover(novel.CoverURL) } alt={ novel.Title } decoding="async"/>
+					} else {
+						<img src={ ResolveCover(novel.CoverURL) } alt={ novel.Title } loading="lazy" decoding="async"/>
+					}
 				</div>
 				<div class="novel-card-info">
 					<h3>{ novel.Title }</h3>
