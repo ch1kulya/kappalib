@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/ch1kulya/kappalib/internal/auth"
+	"github.com/ch1kulya/kappalib/internal/cache"
 	"github.com/ch1kulya/kappalib/internal/data"
 	"github.com/ch1kulya/kappalib/internal/models"
 	"github.com/ch1kulya/kappalib/internal/templates"
@@ -415,7 +416,7 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("Purpose") != "prefetch" && r.Header.Get("Sec-Purpose") != "prefetch" {
+	if !isPrefetchOrPrerender(r) {
 		go data.IncrementNovelViews(context.Background(), id)
 	}
 
@@ -611,7 +612,7 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("Purpose") != "prefetch" && r.Header.Get("Sec-Purpose") != "prefetch" {
+	if !isPrefetchOrPrerender(r) {
 		go data.IncrementNovelViews(context.Background(), novelID)
 	}
 
@@ -733,31 +734,39 @@ func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) StaticPage(name, title string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const DOCS_URL = "https://cdn.kappalib.rip"
+		const docsURL = "https://cdn.kappalib.rip"
 
-		var content string
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, fmt.Sprintf("%s/%s.html", DOCS_URL, name), nil)
-		if err != nil {
-			content = "<div class='error'>Не удалось загрузить документ с сервера.</div>"
-		} else {
+		val, err := cache.C.GetOrFetch("static_page:"+name, 1*time.Hour, func() (any, error) {
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, fmt.Sprintf("%s/%s.html", docsURL, name), nil)
+			if err != nil {
+				return "", err
+			}
 			client := &http.Client{Timeout: 5 * time.Second}
 			resp, err := client.Do(req)
-			if err != nil || resp.StatusCode != http.StatusOK {
-				content = "<div class='error'>Не удалось загрузить документ с сервера.</div>"
-				if resp != nil {
-					_ = resp.Body.Close()
+			if err != nil {
+				return "", err
+			}
+			defer func() { _ = resp.Body.Close() }()
+			if resp.StatusCode != http.StatusOK {
+				return "", fmt.Errorf("unexpected status: %d", resp.StatusCode)
+			}
+			bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+			if err != nil {
+				return "", err
+			}
+			bodyStr := string(bodyBytes)
+			if start := strings.Index(bodyStr, "<body>"); start != -1 {
+				if end := strings.Index(bodyStr, "</body>"); end != -1 {
+					bodyStr = bodyStr[start+6 : end]
 				}
-			} else {
-				defer func() { _ = resp.Body.Close() }()
-				bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+			}
+			return bodyStr, nil
+		})
 
-				bodyStr := string(bodyBytes)
-				if start := strings.Index(bodyStr, "<body>"); start != -1 {
-					if end := strings.Index(bodyStr, "</body>"); end != -1 {
-						bodyStr = bodyStr[start+6 : end]
-					}
-				}
-				content = bodyStr
+		content := "<div class='error'>Не удалось загрузить документ с сервера.</div>"
+		if err == nil {
+			if s, ok := val.(string); ok && s != "" {
+				content = s
 			}
 		}
 
@@ -834,6 +843,14 @@ func isBot(ua string) bool {
 		}
 	}
 	return false
+}
+
+func isPrefetchOrPrerender(r *http.Request) bool {
+	if r.Header.Get("Purpose") == "prefetch" {
+		return true
+	}
+	secPurpose := r.Header.Get("Sec-Purpose")
+	return strings.Contains(secPurpose, "prefetch") || strings.Contains(secPurpose, "prerender")
 }
 
 func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
@@ -914,12 +931,13 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) MyComments(w http.ResponseWriter, r *http.Request) {
 	props := views.BaseProps{
-		Title:          "Мои комментарии — kappalib",
-		Description:    "Ваши комментарии к веб-новеллам.",
-		Canonical:      "https://kappalib.rip/comments",
-		Version:        h.assetVersion,
-		IsLoggedIn:     h.hasSession(r),
-		ReaderSettings: h.getReaderSettings(r),
+		Title:            "Мои комментарии — kappalib",
+		Description:      "Ваши комментарии к веб-новеллам.",
+		Canonical:        "https://kappalib.rip/comments",
+		Version:          h.assetVersion,
+		IsLoggedIn:       h.hasSession(r),
+		ReaderSettings:   h.getReaderSettings(r),
+		IsMyCommentsPage: true,
 	}
 	h.render(w, r, views.MyComments(props))
 }

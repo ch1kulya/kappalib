@@ -15,7 +15,7 @@ templ Home(props HomeProps) {
 				<div class="cr-card">
 					<a href={ templ.SafeURL("/" + props.LastRead.Novel.ID) } class="cr-poster-link">
 						<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(props.LastRead.Novel.CoverURL)) }>
-							<img src={ ResolveCover(props.LastRead.Novel.CoverURL) } alt={ props.LastRead.Novel.Title } loading="lazy"/>
+							<img src={ ResolveCover(props.LastRead.Novel.CoverURL) } alt={ props.LastRead.Novel.Title } fetchpriority="high" loading="eager" decoding="async"/>
 						</div>
 					</a>
 					<div class="cr-content">
@@ -89,10 +89,14 @@ templ Home(props HomeProps) {
 		</div>
 		<div id="catalog-content">
 			<div class="novels-grid">
-				for _, novel := range props.Novels {
+				for i, novel := range props.Novels {
 					<a href={ templ.SafeURL("/" + novel.ID) } class="novel-card">
 						<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(novel.CoverURL)) }>
-							<img src={ ResolveCover(novel.CoverURL) } alt={ novel.Title } loading="lazy"/>
+							if i < 4 {
+								<img src={ ResolveCover(novel.CoverURL) } alt={ novel.Title } decoding="async"/>
+							} else {
+								<img src={ ResolveCover(novel.CoverURL) } alt={ novel.Title } loading="lazy" decoding="async"/>
+							}
 						</div>
 						<div class="novel-card-info">
 							<h3>{ novel.Title }</h3>

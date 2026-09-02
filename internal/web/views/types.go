@@ -3,20 +3,21 @@ package views
 import "github.com/ch1kulya/kappalib/internal/models"
 
 type BaseProps struct {
-	Title          string
-	Description    string
-	Canonical      string
-	Version        string
-	Schema         string
-	OGImage        string
-	IsHomePage     bool
-	IsChapterPage  bool
-	IsAdult        bool
-	IsLoggedIn     bool
-	Novel          *models.Novel
-	PrefetchURL    string
-	ReaderSettings ReaderSettings
-	IsSevere       bool
+	Title            string
+	Description      string
+	Canonical        string
+	Version          string
+	Schema           string
+	OGImage          string
+	IsHomePage       bool
+	IsChapterPage    bool
+	IsAdult          bool
+	IsLoggedIn       bool
+	Novel            *models.Novel
+	PrefetchURL      string
+	ReaderSettings   ReaderSettings
+	IsSevere         bool
+	IsMyCommentsPage bool
 }
 
 type LastReadWidgetData struct {
