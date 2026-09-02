@@ -2009,6 +2009,9 @@ html {
   box-shadow: var(--shadow-primary);
   max-height: 300px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  scrollbar-color: var(--secondary) var(--outline);
 }
 
 .dropdown.active .dropdown-menu {
@@ -4120,6 +4123,9 @@ a.update-log-item:active {
   resize: none;
   overflow-y: hidden;
   transition: border-color 0.2s, box-shadow 0.2s;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  scrollbar-color: var(--secondary) var(--outline);
 }
 
 .comment-textarea:focus {
