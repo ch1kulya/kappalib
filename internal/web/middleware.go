@@ -16,7 +16,14 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const maxVisitors = 9999
+const (
+	maxVisitors            = 9999
+	visitorCleanupInterval = 2 * time.Minute
+	visitorExpiry          = 5 * time.Minute
+	visitorEmergencyExpiry = 1 * time.Minute
+	defaultRateLimit       = 10
+	defaultBurst           = 20
+)
 
 type visitor struct {
 	limiter  *rate.Limiter
@@ -24,13 +31,16 @@ type visitor struct {
 }
 
 type RateLimiter struct {
-	visitors map[string]*visitor
-	mu       sync.Mutex
+	visitors             map[string]*visitor
+	mu                   sync.Mutex
+	fallbackLimiter      *rate.Limiter
+	lastEmergencyCleanup time.Time
 }
 
 func NewRateLimiter() *RateLimiter {
 	rl := &RateLimiter{
-		visitors: make(map[string]*visitor),
+		visitors:        make(map[string]*visitor),
+		fallbackLimiter: rate.NewLimiter(rate.Limit(1), 1),
 	}
 	go rl.cleanupLoop()
 	return rl
@@ -40,35 +50,37 @@ func (rl *RateLimiter) getVisitor(ip string) *rate.Limiter {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	v, exists := rl.visitors[ip]
-	if !exists {
-		if len(rl.visitors) >= maxVisitors {
+	if v, exists := rl.visitors[ip]; exists {
+		v.lastSeen = time.Now()
+		return v.limiter
+	}
+
+	if len(rl.visitors) >= maxVisitors {
+		if time.Since(rl.lastEmergencyCleanup) > 10*time.Second {
+			rl.lastEmergencyCleanup = time.Now()
 			for k, val := range rl.visitors {
-				if time.Since(val.lastSeen) > 1*time.Minute {
+				if time.Since(val.lastSeen) > visitorEmergencyExpiry {
 					delete(rl.visitors, k)
 				}
 			}
-			if len(rl.visitors) >= maxVisitors {
-				return rate.NewLimiter(rate.Limit(1), 1)
-			}
 		}
-
-		limiter := rate.NewLimiter(rate.Limit(10), 20)
-		rl.visitors[ip] = &visitor{limiter, time.Now()}
-		return limiter
+		if len(rl.visitors) >= maxVisitors {
+			return rl.fallbackLimiter
+		}
 	}
 
-	v.lastSeen = time.Now()
-	return v.limiter
+	limiter := rate.NewLimiter(rate.Limit(defaultRateLimit), defaultBurst)
+	rl.visitors[ip] = &visitor{limiter: limiter, lastSeen: time.Now()}
+	return limiter
 }
 
 func (rl *RateLimiter) cleanupLoop() {
-	ticker := time.NewTicker(2 * time.Minute)
+	ticker := time.NewTicker(visitorCleanupInterval)
 	defer ticker.Stop()
 	for range ticker.C {
 		rl.mu.Lock()
 		for ip, v := range rl.visitors {
-			if time.Since(v.lastSeen) > 5*time.Minute {
+			if time.Since(v.lastSeen) > visitorExpiry {
 				delete(rl.visitors, ip)
 			}
 		}
@@ -76,13 +88,27 @@ func (rl *RateLimiter) cleanupLoop() {
 	}
 }
 
+func getClientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if idx := strings.Index(xff, ","); idx != -1 {
+			return strings.TrimSpace(xff[:idx])
+		}
+		return strings.TrimSpace(xff)
+	}
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return strings.TrimSpace(xri)
+	}
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
+}
+
 func RateLimitMiddleware(rl *RateLimiter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				ip = r.RemoteAddr
-			}
+			ip := getClientIP(r)
 			limiter := rl.getVisitor(ip)
 			if !limiter.Allow() {
 				logger.Warn("Rate limit exceeded for IP: %s", ip)
