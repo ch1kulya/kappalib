@@ -61,8 +61,7 @@ templ Base(props BaseProps) {
 				}
 			}
 			<link rel="stylesheet" href={ fmt.Sprintf("/assets/dist/styles/main.css?v=%s", props.Version) }/>
-			<script defer src="https://stats.kappalib.rip/script.js" data-website-id="752a2779-b8fc-48cf-9a14-68cf76c63ecd" data-tag={ props.ReaderSettings.ColorScheme } data-performance="true"></script>
-			<script defer src="https://stats.kappalib.rip/recorder.js" data-website-id="752a2779-b8fc-48cf-9a14-68cf76c63ecd"></script>
+			@initUmami(props.ReaderSettings.ColorScheme)
 		</head>
 		<body>
 			<div id="app">
@@ -227,4 +226,33 @@ templ AgeModal(props BaseProps) {
 	if props.IsAdult {
 		@showAgeModalScript()
 	}
+}
+
+script initUmami(colorScheme string) {
+	(function() {
+		function load() {
+			var s1 = document.createElement("script");
+			s1.src = "https://stats.kappalib.rip/script.js";
+			s1.setAttribute("data-website-id", "752a2779-b8fc-48cf-9a14-68cf76c63ecd");
+			if (colorScheme && colorScheme !== "default") {
+				s1.setAttribute("data-tag", colorScheme);
+			}
+			s1.setAttribute("data-performance", "true");
+			s1.onload = function() {
+				window.dispatchEvent(new CustomEvent("umami:ready"));
+			};
+			document.head.appendChild(s1);
+
+			var s2 = document.createElement("script");
+			s2.src = "https://stats.kappalib.rip/recorder.js";
+			s2.setAttribute("data-website-id", "752a2779-b8fc-48cf-9a14-68cf76c63ecd");
+			document.head.appendChild(s2);
+		}
+
+		if (document.prerendering) {
+			document.addEventListener("prerenderingchange", load, { once: true });
+		} else {
+			load();
+		}
+	})();
 }

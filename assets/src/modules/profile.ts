@@ -1,4 +1,4 @@
-import { identifyUmami, trackEvent } from "./analytics";
+import { clearIdentifiedUmami, identifyUmami, trackEvent } from "./analytics";
 import { initComments } from "./comments";
 import { refreshHistory } from "./history";
 import { refreshLastReadTotalChapters } from "./progress";
@@ -212,6 +212,7 @@ class ProfileManager {
   }
 
   private clearLocal(): void {
+    clearIdentifiedUmami();
     this.profileId = null;
     this.cachedProfile = null;
     localStorage.removeItem(PROFILE_ID_KEY);
