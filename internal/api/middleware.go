@@ -18,8 +18,8 @@ const (
 	visitorCleanupInterval = 2 * time.Minute
 	visitorExpiry          = 5 * time.Minute
 	visitorEmergencyExpiry = 1 * time.Minute
-	defaultRateLimit       = 3
-	defaultBurst           = 9
+	defaultRateLimit       = 20
+	defaultBurst           = 40
 )
 
 type visitor struct {
@@ -28,15 +28,18 @@ type visitor struct {
 }
 
 type RateLimiter struct {
-	visitors map[string]*visitor
-	mu       sync.Mutex
-	apiToken string
+	visitors             map[string]*visitor
+	mu                   sync.Mutex
+	apiToken             string
+	fallbackLimiter      *rate.Limiter
+	lastEmergencyCleanup time.Time
 }
 
 func NewRateLimiter() *RateLimiter {
 	rl := &RateLimiter{
-		visitors: make(map[string]*visitor),
-		apiToken: os.Getenv("API_TOKEN"),
+		visitors:        make(map[string]*visitor),
+		apiToken:        os.Getenv("API_TOKEN"),
+		fallbackLimiter: rate.NewLimiter(rate.Limit(1), 1),
 	}
 	if rl.apiToken == "" {
 		logger.Warn("API_TOKEN is not set")
@@ -69,13 +72,16 @@ func (rl *RateLimiter) getVisitor(ip string) *rate.Limiter {
 	}
 
 	if len(rl.visitors) >= maxVisitors {
-		for k, v := range rl.visitors {
-			if time.Since(v.lastSeen) > visitorEmergencyExpiry {
-				delete(rl.visitors, k)
+		if time.Since(rl.lastEmergencyCleanup) > 10*time.Second {
+			rl.lastEmergencyCleanup = time.Now()
+			for k, v := range rl.visitors {
+				if time.Since(v.lastSeen) > visitorEmergencyExpiry {
+					delete(rl.visitors, k)
+				}
 			}
 		}
 		if len(rl.visitors) >= maxVisitors {
-			return rate.NewLimiter(rate.Limit(1), 1)
+			return rl.fallbackLimiter
 		}
 	}
 
@@ -92,7 +98,7 @@ func getClientIP(r *http.Request) string {
 		return strings.TrimSpace(xff)
 	}
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
+		return strings.TrimSpace(xri)
 	}
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
