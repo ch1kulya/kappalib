@@ -1,13 +1,19 @@
 {$KAPPA_DOMAIN} {
     import ai-bots.caddy
     import geoblock.caddy
-    reverse_proxy kappalib:1666
+    reverse_proxy kappalib:1666 {
+        lb_try_duration 10s
+        lb_try_interval 250ms
+    }
 }
 
 www.{$KAPPA_DOMAIN} {
     import ai-bots.caddy
     import geoblock.caddy
-    reverse_proxy kappalib:1666
+    reverse_proxy kappalib:1666 {
+        lb_try_duration 10s
+        lb_try_interval 250ms
+    }
 }
 
 stats.{$UTILS_DOMAIN} {

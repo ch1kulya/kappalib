@@ -23,8 +23,11 @@ if [ ! -f "GeoLite2-Country.mmdb" ] || [ -n "$(find GeoLite2-Country.mmdb -mtime
 	mv GeoLite2-Country.mmdb.tmp GeoLite2-Country.mmdb
 fi
 
+echo "Building caddy image ahead of time..."
+docker compose build caddy
+
 echo "Starting containers..."
-docker compose up -d --build --remove-orphans
+docker compose up -d --remove-orphans
 
 echo "Waiting for all containers to become healthy..."
 TIMEOUT=120
