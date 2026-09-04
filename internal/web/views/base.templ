@@ -1,6 +1,10 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/ch1kulya/kappalib/internal/models"
+)
 
 templ Base(props BaseProps) {
 	<!DOCTYPE html>
@@ -66,6 +70,9 @@ templ Base(props BaseProps) {
 		<body>
 			<div id="app">
 				@Header(props)
+				if props.GlobalAnnouncement != nil {
+					@GlobalAnnouncementBar(props.GlobalAnnouncement)
+				}
 				@AgeModal(props)
 				@Profile(props.IsLoggedIn)
 				@Settings()
@@ -255,4 +262,34 @@ script initUmami(colorScheme string) {
 			load();
 		}
 	})();
+}
+
+templ announcementTrack(text string) {
+	<div class="global-announcement-track">
+		for range 10 {
+			<span class="global-announcement-item">{ text }</span>
+		}
+		for range 10 {
+			<span class="global-announcement-item" aria-hidden="true">{ text }</span>
+		}
+	</div>
+}
+
+templ GlobalAnnouncementBar(ann *models.GlobalAnnouncement) {
+	if ann.URL != nil && *ann.URL != "" {
+		<a
+			href={ templ.SafeURL(*ann.URL) }
+			class="global-announcement"
+			if isExternalURL(*ann.URL) {
+				target="_blank"
+				rel="noopener noreferrer"
+			}
+		>
+			@announcementTrack(ann.Text)
+		</a>
+	} else {
+		<div class="global-announcement">
+			@announcementTrack(ann.Text)
+		</div>
+	}
 }

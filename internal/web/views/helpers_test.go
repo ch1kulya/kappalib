@@ -105,3 +105,22 @@ func TestResolveCover(t *testing.T) {
 func ptr(s string) *string {
 	return &s
 }
+
+func TestIsExternalURL(t *testing.T) {
+	tests := []struct {
+		url      string
+		expected bool
+	}{
+		{"http://example.com", true},
+		{"https://example.com/page", true},
+		{"/updates", false},
+		{"catalog", false},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		if got := isExternalURL(tt.url); got != tt.expected {
+			t.Errorf("isExternalURL(%q) = %v, want %v", tt.url, got, tt.expected)
+		}
+	}
+}

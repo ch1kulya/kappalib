@@ -107,6 +107,11 @@ func (h *Handler) novelListStatus(r *http.Request, novelID string) string {
 	return status
 }
 
+func (h *Handler) globalAnnouncement(ctx context.Context) *models.GlobalAnnouncement {
+	ann, _ := data.GetGlobalAnnouncement(ctx)
+	return ann
+}
+
 func NewHandler() *Handler {
 	b := make([]byte, 4)
 	if _, err := rand.Read(b); err != nil {
@@ -126,11 +131,12 @@ func (h *Handler) renderError(w http.ResponseWriter, r *http.Request, code int, 
 	w.WriteHeader(code)
 	props := views.ErrorProps{
 		BaseProps: views.BaseProps{
-			Title:          fmt.Sprintf("%d - %s", code, title),
-			Description:    message,
-			Version:        h.assetVersion,
-			IsLoggedIn:     h.hasSession(r),
-			ReaderSettings: h.getReaderSettings(r),
+			Title:              fmt.Sprintf("%d - %s", code, title),
+			Description:        message,
+			Version:            h.assetVersion,
+			IsLoggedIn:         h.hasSession(r),
+			ReaderSettings:     h.getReaderSettings(r),
+			GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 		},
 		ErrorCode:    code,
 		ErrorTitle:   title,
@@ -505,17 +511,18 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 
 	props := views.NovelProps{
 		BaseProps: views.BaseProps{
-			Title:          title,
-			Description:    desc,
-			Canonical:      canonical,
-			OGImage:        ogImage,
-			Version:        h.assetVersion,
-			IsAdult:        isAdult,
-			IsLoggedIn:     h.hasSession(r),
-			IsSevere:       isSevere,
-			Schema:         schema,
-			PrefetchURL:    prefetchURL,
-			ReaderSettings: h.getReaderSettings(r),
+			Title:              title,
+			Description:        desc,
+			Canonical:          canonical,
+			OGImage:            ogImage,
+			Version:            h.assetVersion,
+			IsAdult:            isAdult,
+			IsLoggedIn:         h.hasSession(r),
+			IsSevere:           isSevere,
+			Schema:             schema,
+			PrefetchURL:        prefetchURL,
+			ReaderSettings:     h.getReaderSettings(r),
+			GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 		},
 		Novel:           novel,
 		Chapters:        chapters.Chapters,
@@ -575,14 +582,15 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 
 	props := views.HomeProps{
 		BaseProps: views.BaseProps{
-			Title:          title,
-			Description:    description,
-			Canonical:      canonical,
-			Version:        h.assetVersion,
-			IsLoggedIn:     h.hasSession(r),
-			Schema:         schema,
-			ReaderSettings: h.getReaderSettings(r),
-			IsHomePage:     true,
+			Title:              title,
+			Description:        description,
+			Canonical:          canonical,
+			Version:            h.assetVersion,
+			IsLoggedIn:         h.hasSession(r),
+			Schema:             schema,
+			ReaderSettings:     h.getReaderSettings(r),
+			IsHomePage:         true,
+			GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 		},
 		Novels:          dataResp.Novels,
 		Page:            page,
@@ -686,18 +694,19 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 
 	props := views.ChapterProps{
 		BaseProps: views.BaseProps{
-			Title:          chapterTitle,
-			Description:    description,
-			Canonical:      canonical,
-			Version:        h.assetVersion,
-			IsChapterPage:  true,
-			IsAdult:        isAdult,
-			IsLoggedIn:     h.hasSession(r),
-			IsSevere:       isSevere,
-			Novel:          novel,
-			Schema:         schema,
-			PrefetchURL:    prefetchURL,
-			ReaderSettings: h.getReaderSettings(r),
+			Title:              chapterTitle,
+			Description:        description,
+			Canonical:          canonical,
+			Version:            h.assetVersion,
+			IsChapterPage:      true,
+			IsAdult:            isAdult,
+			IsLoggedIn:         h.hasSession(r),
+			IsSevere:           isSevere,
+			Novel:              novel,
+			Schema:             schema,
+			PrefetchURL:        prefetchURL,
+			ReaderSettings:     h.getReaderSettings(r),
+			GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 		},
 		Novel:         novel,
 		Chapter:       chapter,
@@ -718,12 +727,13 @@ func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
 
 	props := views.UpdatesProps{
 		BaseProps: views.BaseProps{
-			Title:          title,
-			Description:    description,
-			Canonical:      "https://kappalib.rip/updates",
-			Version:        h.assetVersion,
-			IsLoggedIn:     h.hasSession(r),
-			ReaderSettings: h.getReaderSettings(r),
+			Title:              title,
+			Description:        description,
+			Canonical:          "https://kappalib.rip/updates",
+			Version:            h.assetVersion,
+			IsLoggedIn:         h.hasSession(r),
+			ReaderSettings:     h.getReaderSettings(r),
+			GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 		},
 		Updates:         allUpdates,
 		PinnedAppUpdate: pinnedAppUpdate,
@@ -772,12 +782,13 @@ func (h *Handler) StaticPage(name, title string) http.HandlerFunc {
 
 		props := views.DocumentProps{
 			BaseProps: views.BaseProps{
-				Title:          title,
-				Description:    title,
-				Canonical:      fmt.Sprintf("https://kappalib.rip/%s", name),
-				Version:        h.assetVersion,
-				IsLoggedIn:     h.hasSession(r),
-				ReaderSettings: h.getReaderSettings(r),
+				Title:              title,
+				Description:        title,
+				Canonical:          fmt.Sprintf("https://kappalib.rip/%s", name),
+				Version:            h.assetVersion,
+				IsLoggedIn:         h.hasSession(r),
+				ReaderSettings:     h.getReaderSettings(r),
+				GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 			},
 			Content: content,
 		}
@@ -897,12 +908,13 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 
 	props := views.CatalogProps{
 		BaseProps: views.BaseProps{
-			Title:          title,
-			Description:    description,
-			Canonical:      canonical,
-			Version:        h.assetVersion,
-			IsLoggedIn:     h.hasSession(r),
-			ReaderSettings: h.getReaderSettings(r),
+			Title:              title,
+			Description:        description,
+			Canonical:          canonical,
+			Version:            h.assetVersion,
+			IsLoggedIn:         h.hasSession(r),
+			ReaderSettings:     h.getReaderSettings(r),
+			GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 		},
 		Novels:      dataResp.Novels,
 		Page:        page,
@@ -919,49 +931,53 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	props := views.BaseProps{
-		Title:          "История чтения — kappalib",
-		Description:    "История прочитанных веб-новелл и ранобэ.",
-		Canonical:      "https://kappalib.rip/history",
-		Version:        h.assetVersion,
-		IsLoggedIn:     h.hasSession(r),
-		ReaderSettings: h.getReaderSettings(r),
+		Title:              "История чтения — kappalib",
+		Description:        "История прочитанных веб-новелл и ранобэ.",
+		Canonical:          "https://kappalib.rip/history",
+		Version:            h.assetVersion,
+		IsLoggedIn:         h.hasSession(r),
+		ReaderSettings:     h.getReaderSettings(r),
+		GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 	}
 	h.render(w, r, views.History(props))
 }
 
 func (h *Handler) MyComments(w http.ResponseWriter, r *http.Request) {
 	props := views.BaseProps{
-		Title:            "Мои комментарии — kappalib",
-		Description:      "Ваши комментарии к веб-новеллам.",
-		Canonical:        "https://kappalib.rip/comments",
-		Version:          h.assetVersion,
-		IsLoggedIn:       h.hasSession(r),
-		ReaderSettings:   h.getReaderSettings(r),
-		IsMyCommentsPage: true,
+		Title:              "Мои комментарии — kappalib",
+		Description:        "Ваши комментарии к веб-новеллам.",
+		Canonical:          "https://kappalib.rip/comments",
+		Version:            h.assetVersion,
+		IsLoggedIn:         h.hasSession(r),
+		ReaderSettings:     h.getReaderSettings(r),
+		IsMyCommentsPage:   true,
+		GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 	}
 	h.render(w, r, views.MyComments(props))
 }
 
 func (h *Handler) Bookmarks(w http.ResponseWriter, r *http.Request) {
 	props := views.BaseProps{
-		Title:          "Мои закладки — kappalib",
-		Description:    "Сохранённые веб-новеллы и ранобэ.",
-		Canonical:      "https://kappalib.rip/bookmarks",
-		Version:        h.assetVersion,
-		IsLoggedIn:     h.hasSession(r),
-		ReaderSettings: h.getReaderSettings(r),
+		Title:              "Мои закладки — kappalib",
+		Description:        "Сохранённые веб-новеллы и ранобэ.",
+		Canonical:          "https://kappalib.rip/bookmarks",
+		Version:            h.assetVersion,
+		IsLoggedIn:         h.hasSession(r),
+		ReaderSettings:     h.getReaderSettings(r),
+		GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 	}
 	h.render(w, r, views.Bookmarks(props))
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	props := views.BaseProps{
-		Title:          "Мой список — kappalib",
-		Description:    "Личный список веб-новелл.",
-		Canonical:      "https://kappalib.rip/list",
-		Version:        h.assetVersion,
-		IsLoggedIn:     h.hasSession(r),
-		ReaderSettings: h.getReaderSettings(r),
+		Title:              "Мой список — kappalib",
+		Description:        "Личный список веб-новелл.",
+		Canonical:          "https://kappalib.rip/list",
+		Version:            h.assetVersion,
+		IsLoggedIn:         h.hasSession(r),
+		ReaderSettings:     h.getReaderSettings(r),
+		GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 	}
 	h.render(w, r, views.List(props))
 }

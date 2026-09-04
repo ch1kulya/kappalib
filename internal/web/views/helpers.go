@@ -428,3 +428,7 @@ func buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSe
 func shouldShowAnnouncement() bool {
 	return rand.IntN(7) == 0
 }
+
+func isExternalURL(rawURL string) bool {
+	return strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://")
+}
