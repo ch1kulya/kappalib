@@ -17,9 +17,10 @@ git reset --hard origin/main
 echo "Pulling docker images..."
 docker compose pull
 
-if [ ! -f "GeoLite2-Country.mmdb" ]; then
-	echo "::error::GeoLite2-Country.mmdb not found in ${TARGET_DIR}"
-	exit 1
+if [ ! -f "GeoLite2-Country.mmdb" ] || [ -n "$(find GeoLite2-Country.mmdb -mtime +7 2>/dev/null)" ]; then
+	echo "Downloading GeoLite2-Country.mmdb..."
+	curl -fsSL -o GeoLite2-Country.mmdb.tmp https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb
+	mv GeoLite2-Country.mmdb.tmp GeoLite2-Country.mmdb
 fi
 
 echo "Starting containers..."
