@@ -1,6 +1,8 @@
 services:
   caddy:
-    image: public.ecr.aws/docker/library/caddy:2-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
     restart: always
     container_name: caddy
     ports:
@@ -11,6 +13,8 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./ai-bots.caddy:/etc/caddy/ai-bots.caddy:ro
+      - ./geoblock.caddy:/etc/caddy/geoblock.caddy:ro
+      - ./GeoLite2-Country.mmdb:/etc/caddy/GeoLite2-Country.mmdb:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
