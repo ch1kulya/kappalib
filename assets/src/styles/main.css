@@ -226,6 +226,111 @@ a:hover {
   background: var(--bg-primary);
 }
 
+.global-announcement {
+  display: block;
+  width: 100%;
+  background: var(--accent-primary);
+  color: var(--accent-text);
+  border-bottom: 1px solid var(--accent-border);
+  box-shadow: var(--accent-shadow-primary);
+  text-decoration: none;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  position: relative;
+  z-index: 50;
+  overflow: hidden;
+  transition: opacity 0.2s ease;
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 32px,
+    #000 calc(100% - 32px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 32px,
+    #000 calc(100% - 32px),
+    transparent 100%
+  );
+}
+
+a.global-announcement {
+  cursor: pointer;
+  &:hover {
+    opacity: 0.92;
+    color: var(--accent-text);
+  }
+  .global-announcement-item:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+.global-announcement-track {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.global-announcement-item {
+  padding: 0.25rem 2.5rem;
+  white-space: nowrap;
+  font-weight: 500;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.global-announcement-item:not(:first-child) {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .global-announcement-track {
+    width: fit-content;
+    justify-content: flex-start;
+    animation: ticker 150s linear infinite;
+    will-change: transform;
+    -webkit-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+  }
+
+  .global-announcement-item {
+    flex-shrink: 0;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  .global-announcement-item:not(:first-child) {
+    display: block;
+  }
+
+  .global-announcement:hover .global-announcement-track {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .global-announcement-track {
+    animation: none !important;
+  }
+}
+
 .header-content {
   max-width: 800px;
   margin: 0 auto;

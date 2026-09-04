@@ -313,6 +313,12 @@ type Announcement struct {
 	ActionURL   *string `json:"action_url"`
 }
 
+type GlobalAnnouncement struct {
+	ID   int     `json:"id"`
+	Text string  `json:"text"`
+	URL  *string `json:"url,omitempty"`
+}
+
 type Bookmark struct {
 	ID        string `json:"id"`
 	ChapterID string `json:"chapterId"`
