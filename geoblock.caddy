@@ -1,0 +1,9 @@
+@geoblock {
+	maxmind_geolocation {
+		db_path "/etc/caddy/GeoLite2-Country.mmdb"
+		allow_countries CN SG HK
+	}
+}
+handle @geoblock {
+	abort
+}

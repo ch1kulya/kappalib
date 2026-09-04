@@ -17,8 +17,13 @@ git reset --hard origin/main
 echo "Pulling docker images..."
 docker compose pull
 
+if [ ! -f "GeoLite2-Country.mmdb" ]; then
+	echo "::error::GeoLite2-Country.mmdb not found in ${TARGET_DIR}"
+	exit 1
+fi
+
 echo "Starting containers..."
-docker compose up -d --remove-orphans
+docker compose up -d --build --remove-orphans
 
 echo "Waiting for all containers to become healthy..."
 TIMEOUT=120
