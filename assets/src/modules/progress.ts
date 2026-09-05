@@ -81,6 +81,15 @@ export function initReadingProgressSaver(): void {
 
   if (!tracker) return;
 
+  if (document.prerendering) {
+    document.addEventListener(
+      "prerenderingchange",
+      () => initReadingProgressSaver(),
+      { once: true },
+    );
+    return;
+  }
+
   const novelId = tracker.dataset.novelId;
   const currentChapterId = tracker.dataset.chapterId;
   const currentChapterNumStr = tracker.dataset.chapterNum;
