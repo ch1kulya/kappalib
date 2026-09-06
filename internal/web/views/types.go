@@ -39,6 +39,7 @@ type HomeProps struct {
 	LastRead        *LastReadWidgetData
 	LatestUpdates   []models.HomeUpdateItem
 	PinnedAppUpdate *models.AppUpdate
+	EditorsPick     []models.NovelSummary
 }
 
 type NovelProps struct {

@@ -554,6 +554,11 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	editorsPick, err := data.GetEditorsPick(r.Context())
+	if err != nil {
+		logger.Error("Failed to fetch editors pick: %v", err)
+	}
+
 	latestUpdates, pinnedAppUpdate, _ := buildFeed(r.Context(), true)
 
 	canonical := "https://kappalib.rip"
@@ -599,6 +604,7 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 		LastRead:        cookieData.LastReadWidget,
 		LatestUpdates:   latestUpdates,
 		PinnedAppUpdate: pinnedAppUpdate,
+		EditorsPick:     editorsPick,
 	}
 
 	h.render(w, r, views.Home(props))

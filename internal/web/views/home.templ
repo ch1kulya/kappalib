@@ -52,6 +52,26 @@ templ Home(props HomeProps) {
 				</div>
 			</div>
 		}
+		if len(props.EditorsPick) > 0 {
+			<div class="editors-pick-wrapper">
+				<div class="chapters-header" style="margin-bottom: 1.5rem;">
+					<h2 style="margin-bottom: 0;">Выбор редакции</h2>
+				</div>
+				<div class="editors-pick-grid">
+					for _, novel := range props.EditorsPick {
+						<a href={ templ.SafeURL("/" + novel.ID) } class="novel-card">
+							<div class="poster-wrapper" style={ fmt.Sprintf("--bg-url: url(%s)", ResolveCover(novel.CoverURL)) }>
+								<img src={ ResolveCover(novel.CoverURL) } alt={ novel.Title } decoding="async"/>
+							</div>
+							<div class="novel-card-info">
+								<h3>{ novel.Title }</h3>
+								<p class="author">{ novel.Author }</p>
+							</div>
+						</a>
+					}
+				</div>
+			</div>
+		}
 		<div class="chapters-header" style="margin-bottom: 1.5rem;">
 			<a href="/catalog" class="catalog-title-link" id="catalog-title">
 				<h2 style="margin-bottom: 0;">Каталог</h2>

@@ -996,6 +996,42 @@ a.global-announcement {
   }
 }
 
+/* Editors Pick Grid */
+.editors-pick-wrapper {
+  container-type: inline-size;
+}
+
+.editors-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+@container (max-width: 687px) {
+  .editors-pick-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .editors-pick-grid .novel-card:nth-child(n+4) {
+    display: none;
+  }
+}
+
+@container (max-width: 511px) {
+  .editors-pick-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .editors-pick-grid .novel-card:nth-child(n+3) {
+    display: none;
+  }
+}
+
+@container (max-width: 400px) {
+  .editors-pick-grid {
+    gap: 0.75rem;
+  }
+}
+
 .novel-card {
   display: flex;
   flex-direction: column;

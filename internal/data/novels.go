@@ -36,6 +36,9 @@ var queryNovelsCatalogSearchCount string
 //go:embed sql/novels_catalog_search_tags.sql
 var queryNovelsCatalogSearchTags string
 
+//go:embed sql/novels_editors_pick.sql
+var queryNovelsEditorsPick string
+
 func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 	key := fmt.Sprintf("novel:%s", id)
 
@@ -143,6 +146,40 @@ func GetNovelsByIDs(ctx context.Context, ids []string) ([]models.NovelSummary, e
 	}
 
 	return novels, nil
+}
+
+func GetEditorsPick(ctx context.Context) ([]models.NovelSummary, error) {
+	value, err := cache.C.GetOrFetch("editors_pick", 10*time.Minute, func() (any, error) {
+		dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		rows, err := database.DB.Query(dbCtx, queryNovelsEditorsPick)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var novels []models.NovelSummary
+		for rows.Next() {
+			var n models.NovelSummary
+			if err := rows.Scan(
+				&n.ID, &n.Title, &n.TitleEn, &n.Author,
+				&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
+				&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
+				&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity,
+			); err != nil {
+				return nil, err
+			}
+			novels = append(novels, n)
+		}
+
+		return novels, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return value.([]models.NovelSummary), nil
 }
 
 func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, error) {
