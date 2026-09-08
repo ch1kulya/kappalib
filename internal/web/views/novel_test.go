@@ -1,8 +1,10 @@
 package views
 
 import (
+	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ch1kulya/kappalib/internal/models"
 )
@@ -22,7 +24,7 @@ func TestNovelRendersListStatusIcon(t *testing.T) {
 			ListStatus: listStatus,
 		}
 		var sb strings.Builder
-		if err := Novel(props).Render(t.Context(), &sb); err != nil {
+		if err := Novel(props).Render(context.Background(), &sb); err != nil {
 			t.Fatalf("render failed: %v", err)
 		}
 		return sb.String()
@@ -54,5 +56,70 @@ func TestNovelRendersListStatusIcon(t *testing.T) {
 	}
 	if !strings.Contains(withStatus, `class="ls-remove-wrap" style="display: block;"`) {
 		t.Error("status set should show remove wrap")
+	}
+}
+
+func TestNovelRendersAbandonedBadge(t *testing.T) {
+	fourMonthsAgo := time.Now().AddDate(0, -4, 0)
+	oneMonthAgo := time.Now().AddDate(0, -1, 0)
+
+	tests := []struct {
+		name        string
+		novel       *models.Novel
+		shouldExist bool
+	}{
+		{
+			name: "abandoned ongoing shows badge",
+			novel: &models.Novel{
+				ID:            "nvl_abandoned",
+				Title:         "Abandoned Novel",
+				Status:        "ongoing",
+				LastChapterAt: &fourMonthsAgo,
+			},
+			shouldExist: true,
+		},
+		{
+			name: "active ongoing does not show badge",
+			novel: &models.Novel{
+				ID:            "nvl_active",
+				Title:         "Active Novel",
+				Status:        "ongoing",
+				LastChapterAt: &oneMonthAgo,
+			},
+			shouldExist: false,
+		},
+		{
+			name: "completed novel does not show badge",
+			novel: &models.Novel{
+				ID:            "nvl_completed",
+				Title:         "Completed Novel",
+				Status:        "completed",
+				LastChapterAt: &fourMonthsAgo,
+			},
+			shouldExist: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			props := NovelProps{
+				BaseProps: BaseProps{
+					Title:          "t",
+					Description:    "d",
+					Version:        "test",
+					ReaderSettings: DefaultReaderSettings,
+				},
+				Novel: tt.novel,
+			}
+			var sb strings.Builder
+			if err := Novel(props).Render(context.Background(), &sb); err != nil {
+				t.Fatalf("render failed: %v", err)
+			}
+			output := sb.String()
+			hasBadge := strings.Contains(output, `<span class="badge badge-danger">Заброшено</span>`)
+			if hasBadge != tt.shouldExist {
+				t.Errorf("render abandoned badge = %v, want %v", hasBadge, tt.shouldExist)
+			}
+		})
 	}
 }

@@ -85,6 +85,9 @@ templ Novel(props NovelProps) {
 						<span class="badge">{ props.Novel.Author }</span>
 						<span class="badge">{ fmt.Sprintf("%d", props.Novel.YearStart) }</span>
 						<span class="badge">{ MapStatus(props.Novel.Status) }</span>
+						if props.Novel.IsAbandoned() {
+							<span class="badge badge-danger">Заброшено</span>
+						}
 						if props.Novel.AgeRating != nil && *props.Novel.AgeRating != "" {
 							<span class={ "badge", templ.KV("badge-danger", *props.Novel.AgeRating == "18+") }>{ *props.Novel.AgeRating }</span>
 						}

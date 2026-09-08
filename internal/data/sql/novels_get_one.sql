@@ -16,7 +16,14 @@ SELECT
     has_sexual_violence,
     has_graphic_sex,
     has_profanity,
-    alt_titles
+    alt_titles,
+    (
+        SELECT
+            max(created_at)
+        FROM
+            chapters
+        WHERE
+            novel_id = novels.id) AS last_chapter_at
 FROM
     novels
 WHERE

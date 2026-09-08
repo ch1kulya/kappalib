@@ -1,27 +1,31 @@
 package models
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type Novel struct {
-	ID                string    `json:"id"`
-	Title             string    `json:"title"`
-	TitleEn           string    `json:"title_en"`
-	Author            string    `json:"author"`
-	YearStart         int       `json:"year_start"`
-	YearEnd           *int      `json:"year_end"`
-	Status            string    `json:"status"`
-	Description       string    `json:"description"`
-	AgeRating         *string   `json:"age_rating"`
-	CoverURL          *string   `json:"cover_url"`
-	CreatedAt         time.Time `json:"created_at"`
-	ChapterCount      int       `json:"chapter_count"`
-	HasSelfHarm       bool      `json:"has_self_harm"`
-	HasDrugUsage      bool      `json:"has_drug_usage"`
-	HasSexualViolence bool      `json:"has_sexual_violence"`
-	HasGraphicSex     bool      `json:"has_graphic_sex"`
-	HasProfanity      bool      `json:"has_profanity"`
-	AltTitles         []string  `json:"alt_titles"`
-	Tags              []Tag     `json:"tags"`
+	ID                string     `json:"id"`
+	Title             string     `json:"title"`
+	TitleEn           string     `json:"title_en"`
+	Author            string     `json:"author"`
+	YearStart         int        `json:"year_start"`
+	YearEnd           *int       `json:"year_end"`
+	Status            string     `json:"status"`
+	Description       string     `json:"description"`
+	AgeRating         *string    `json:"age_rating"`
+	CoverURL          *string    `json:"cover_url"`
+	CreatedAt         time.Time  `json:"created_at"`
+	ChapterCount      int        `json:"chapter_count"`
+	HasSelfHarm       bool       `json:"has_self_harm"`
+	HasDrugUsage      bool       `json:"has_drug_usage"`
+	HasSexualViolence bool       `json:"has_sexual_violence"`
+	HasGraphicSex     bool       `json:"has_graphic_sex"`
+	HasProfanity      bool       `json:"has_profanity"`
+	AltTitles         []string   `json:"alt_titles"`
+	Tags              []Tag      `json:"tags"`
+	LastChapterAt     *time.Time `json:"last_chapter_at,omitempty"`
 }
 
 type Tag struct {
@@ -31,6 +35,17 @@ type Tag struct {
 
 func (n *Novel) HasContentWarnings() bool {
 	return n.HasSelfHarm || n.HasSexualViolence || n.HasGraphicSex || n.HasProfanity || n.HasDrugUsage
+}
+
+func (n *Novel) IsAbandoned() bool {
+	if !strings.EqualFold(n.Status, "ongoing") {
+		return false
+	}
+	cutoff := time.Now().AddDate(0, -3, 0)
+	if n.LastChapterAt != nil {
+		return n.LastChapterAt.Before(cutoff)
+	}
+	return n.CreatedAt.Before(cutoff)
 }
 
 type NovelSummary struct {
