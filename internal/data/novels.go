@@ -51,6 +51,7 @@ func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
 			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity,
 			&altTitlesJSON,
+			&n.LastChapterAt,
 		)
 		if err != nil {
 			return nil, err
