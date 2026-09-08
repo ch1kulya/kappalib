@@ -66,7 +66,8 @@ per_source AS (
     FROM
         new_pairs
     GROUP BY
-        source_id)
+        source_id
+)
 UPDATE
     sources s
 SET
@@ -135,7 +136,8 @@ per_source AS (
     FROM
         gone_pairs
     GROUP BY
-        source_id)
+        source_id
+)
 UPDATE
     sources s
 SET
@@ -225,7 +227,8 @@ per_source AS (
     FROM
         gone_pairs
     GROUP BY
-        source_id)
+        source_id
+)
 UPDATE
     sources s
 SET
@@ -280,7 +283,8 @@ per_source AS (
     FROM
         new_pairs
     GROUP BY
-        source_id)
+        source_id
+)
 UPDATE
     sources s
 SET
