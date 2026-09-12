@@ -365,7 +365,7 @@ const viewer = new ImageViewer({
 });
 
 export function initImageViewer() {
-  const poster: HTMLElement | null = document.querySelector('.poster-wrapper img')
+  const poster: HTMLElement | null = document.querySelector('.novel-cover-container img')
   const commentsList: HTMLElement | null = document.querySelector('.comments-list')
   const chapterContent: HTMLElement | null = document.querySelector('.chapter-content')
   
