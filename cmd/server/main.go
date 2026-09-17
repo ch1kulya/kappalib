@@ -122,6 +122,9 @@ func init() {
 	if os.Getenv("SHOW_USER_AGENT") == "true" {
 		logger.SetShowUserAgent(true)
 	}
+	if os.Getenv("SHOW_IP") == "true" {
+		logger.SetShowIP(true)
+	}
 	logger.Info("Initializing application...")
 
 	if err := validateEnv(); err != nil {

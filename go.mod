@@ -4,7 +4,7 @@ go 1.27.0
 
 require (
 	github.com/a-h/templ v0.3.1020
-	github.com/ch1kulya/logger v1.1.3
+	github.com/ch1kulya/logger v1.1.4
 	github.com/danielgtaylor/huma/v2 v2.37.3
 	github.com/evanw/esbuild v0.28.0
 	github.com/go-chi/chi/v5 v5.2.5
