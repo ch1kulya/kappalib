@@ -50,6 +50,7 @@ services:
       - S3_USE_SSL=${KAPPA_S3_USE_SSL}
       - INDEX_NOW_KEY
       - SHOW_USER_AGENT
+      - SHOW_IP
       - AUTH_SECRET
       - AUTH_URL
       - AUTH_SECURE
