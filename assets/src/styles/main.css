@@ -5367,3 +5367,76 @@ td:first-child {
   border: 1px solid var(--border);
   box-shadow: var(--shadow-primary);
 }
+
+/* Image Viewer */
+.viewer {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .92);
+  overflow: hidden;
+  display: none;
+  touch-action: none;
+  cursor: pointer;
+  z-index: 99;
+}
+
+.viewer.open { display: block; }
+
+.viewer-img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center center;
+  transform: translate(-50%, -50%);
+  max-width: none;
+  max-height: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: none;
+  will-change: transform;
+  cursor: zoom-in;
+}
+
+.viewer-img.is-zoomed { cursor: zoom-out; }
+.viewer-img.is-dragging { cursor: grabbing; }
+
+.viewer-panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(30, 30, 30, .85);
+  border: 1px solid rgba(255, 255, 255, .12);
+  backdrop-filter: blur(6px);
+}
+
+.viewer-panel button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewer-panel button:hover { background: rgba(255, 255, 255, .2); }
+.viewer-panel button:active { background: rgba(255, 255, 255, .3); }
+
+.viewer-scale {
+  min-width: 58px;
+  text-align: center;
+  color: #fff;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
