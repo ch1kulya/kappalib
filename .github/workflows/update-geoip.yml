@@ -1,0 +1,31 @@
+name: Update GeoIP Database
+
+on:
+  schedule:
+    - cron: "0 3 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-geoip:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://kappalib.rip
+
+    steps:
+      - name: Update GeoIP via SSH on VPS
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            test -d /opt/kappalib || { echo "::error::Directory /opt/kappalib does not exist on VPS"; exit 1; }
+            cd /opt/kappalib
+            git fetch origin main
+            git reset --hard origin/main
+            bash .github/scripts/update-geoip.sh
