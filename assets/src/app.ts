@@ -5,6 +5,7 @@ import { initComments, initMyCommentsPage } from "./modules/comments";
 import { initDescription } from "./modules/description";
 import Dropdown from "./modules/dropdown";
 import { initHistoryPage } from "./modules/history";
+import { initImageViewer } from "./modules/image-viever";
 import { initListPage, initNovelListDropdown } from "./modules/list";
 import { initProfile, initProfileModal } from "./modules/profile";
 import { initReadingProgressSaver, refreshLastReadTotalChapters } from "./modules/progress";
@@ -60,6 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initNovelListDropdown();
     initListPage();
     initChaptersBookmarks();
+    initImageViewer();
 
     if (document.querySelector(".cr-wrapper")) {
       refreshLastReadTotalChapters();
