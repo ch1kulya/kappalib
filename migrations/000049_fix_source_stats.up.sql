@@ -18,7 +18,8 @@ BEGIN
         WHERE
             source_id IS NOT NULL
         GROUP BY
-            source_id)
+            source_id
+    )
     UPDATE
         sources s
     SET
@@ -36,45 +37,46 @@ BEGIN
             new_rows
         WHERE
             source_id IS NOT NULL
-),
-new_pairs AS (
-    SELECT
-        p.source_id
+    ),
+    new_pairs AS (
+        SELECT
+            p.source_id
+        FROM
+            pairs p
+        WHERE
+            NOT EXISTS (
+                SELECT
+                    1
+                FROM
+                    chapters c
+                WHERE
+                    c.novel_id = p.novel_id
+                    AND c.source_id = p.source_id
+                    AND NOT EXISTS (
+                        SELECT
+                            1
+                        FROM
+                            new_rows nr
+                        WHERE
+                            nr.id = c.id))
+    ),
+    per_source AS (
+        SELECT
+            source_id,
+            COUNT(*) AS novels_delta
+        FROM
+            new_pairs
+        GROUP BY
+            source_id
+    )
+    UPDATE
+        sources s
+    SET
+        novels_count = s.novels_count + ps.novels_delta
     FROM
-        pairs p
+        per_source ps
     WHERE
-        NOT EXISTS (
-            SELECT
-                1
-            FROM
-                chapters c
-            WHERE
-                c.novel_id = p.novel_id
-                AND c.source_id = p.source_id
-                AND NOT EXISTS (
-                    SELECT
-                        1
-                    FROM
-                        new_rows nr
-                    WHERE
-                        nr.id = c.id))
-),
-per_source AS (
-    SELECT
-        source_id,
-        COUNT(*) AS novels_delta
-    FROM
-        new_pairs
-    GROUP BY
-        source_id)
-UPDATE
-    sources s
-SET
-    novels_count = s.novels_count + ps.novels_delta
-FROM
-    per_source ps
-WHERE
-    s.id = ps.source_id;
+        s.id = ps.source_id;
     RETURN NULL;
 END;
 $$
@@ -94,7 +96,8 @@ BEGIN
         WHERE
             source_id IS NOT NULL
         GROUP BY
-            source_id)
+            source_id
+    )
     UPDATE
         sources s
     SET
@@ -112,38 +115,39 @@ BEGIN
             old_rows
         WHERE
             source_id IS NOT NULL
-),
-gone_pairs AS (
-    SELECT
-        p.source_id
+    ),
+    gone_pairs AS (
+        SELECT
+            p.source_id
+        FROM
+            pairs p
+        WHERE
+            NOT EXISTS (
+                SELECT
+                    1
+                FROM
+                    chapters c
+                WHERE
+                    c.novel_id = p.novel_id
+                    AND c.source_id = p.source_id)
+    ),
+    per_source AS (
+        SELECT
+            source_id,
+            COUNT(*) AS novels_delta
+        FROM
+            gone_pairs
+        GROUP BY
+            source_id
+    )
+    UPDATE
+        sources s
+    SET
+        novels_count = GREATEST (0, s.novels_count - ps.novels_delta)
     FROM
-        pairs p
+        per_source ps
     WHERE
-        NOT EXISTS (
-            SELECT
-                1
-            FROM
-                chapters c
-            WHERE
-                c.novel_id = p.novel_id
-                AND c.source_id = p.source_id)
-),
-per_source AS (
-    SELECT
-        source_id,
-        COUNT(*) AS novels_delta
-    FROM
-        gone_pairs
-    GROUP BY
-        source_id)
-UPDATE
-    sources s
-SET
-    novels_count = GREATEST (0, s.novels_count - ps.novels_delta)
-FROM
-    per_source ps
-WHERE
-    s.id = ps.source_id;
+        s.id = ps.source_id;
     RETURN NULL;
 END;
 $$
@@ -164,36 +168,37 @@ BEGIN
             source_id IS NOT NULL
         GROUP BY
             source_id
-),
-new_side AS (
-    SELECT
-        source_id,
-        COUNT(*) AS chapters_delta,
-        COALESCE(SUM(LENGTH(content)), 0) AS chars_delta
+    ),
+    new_side AS (
+        SELECT
+            source_id,
+            COUNT(*) AS chapters_delta,
+            COALESCE(SUM(LENGTH(content)), 0) AS chars_delta
+        FROM
+            new_rows
+        WHERE
+            source_id IS NOT NULL
+        GROUP BY
+            source_id
+    ),
+    deltas AS (
+        SELECT
+            COALESCE(o.source_id, n.source_id) AS source_id,
+            COALESCE(n.chapters_delta, 0) - COALESCE(o.chapters_delta, 0) AS chapters_delta,
+            COALESCE(n.chars_delta, 0) - COALESCE(o.chars_delta, 0) AS chars_delta
+        FROM
+            old_side o
+        FULL JOIN new_side n ON n.source_id = o.source_id
+    )
+    UPDATE
+        sources s
+    SET
+        chapters_count = GREATEST (0, s.chapters_count + d.chapters_delta),
+        characters_count = GREATEST (0, s.characters_count + d.chars_delta)
     FROM
-        new_rows
+        deltas d
     WHERE
-        source_id IS NOT NULL
-    GROUP BY
-        source_id
-),
-deltas AS (
-    SELECT
-        COALESCE(o.source_id, n.source_id) AS source_id,
-        COALESCE(n.chapters_delta, 0) - COALESCE(o.chapters_delta, 0) AS chapters_delta,
-        COALESCE(n.chars_delta, 0) - COALESCE(o.chars_delta, 0) AS chars_delta
-    FROM
-        old_side o
-        FULL JOIN new_side n ON n.source_id = o.source_id)
-UPDATE
-    sources s
-SET
-    chapters_count = GREATEST (0, s.chapters_count + d.chapters_delta),
-    characters_count = GREATEST (0, s.characters_count + d.chars_delta)
-FROM
-    deltas d
-WHERE
-    s.id = d.source_id;
+        s.id = d.source_id;
     WITH pairs AS (
         SELECT DISTINCT
             source_id,
@@ -202,38 +207,39 @@ WHERE
             old_rows
         WHERE
             source_id IS NOT NULL
-),
-gone_pairs AS (
-    SELECT
-        p.source_id
+    ),
+    gone_pairs AS (
+        SELECT
+            p.source_id
+        FROM
+            pairs p
+        WHERE
+            NOT EXISTS (
+                SELECT
+                    1
+                FROM
+                    chapters c
+                WHERE
+                    c.novel_id = p.novel_id
+                    AND c.source_id = p.source_id)
+    ),
+    per_source AS (
+        SELECT
+            source_id,
+            COUNT(*) AS novels_delta
+        FROM
+            gone_pairs
+        GROUP BY
+            source_id
+    )
+    UPDATE
+        sources s
+    SET
+        novels_count = GREATEST (0, s.novels_count - ps.novels_delta)
     FROM
-        pairs p
+        per_source ps
     WHERE
-        NOT EXISTS (
-            SELECT
-                1
-            FROM
-                chapters c
-            WHERE
-                c.novel_id = p.novel_id
-                AND c.source_id = p.source_id)
-),
-per_source AS (
-    SELECT
-        source_id,
-        COUNT(*) AS novels_delta
-    FROM
-        gone_pairs
-    GROUP BY
-        source_id)
-UPDATE
-    sources s
-SET
-    novels_count = GREATEST (0, s.novels_count - ps.novels_delta)
-FROM
-    per_source ps
-WHERE
-    s.id = ps.source_id;
+        s.id = ps.source_id;
     WITH pairs AS (
         SELECT DISTINCT
             source_id,
@@ -242,53 +248,54 @@ WHERE
             new_rows
         WHERE
             source_id IS NOT NULL
-),
-new_pairs AS (
-    SELECT
-        p.source_id
+    ),
+    new_pairs AS (
+        SELECT
+            p.source_id
+        FROM
+            pairs p
+        WHERE
+            NOT EXISTS (
+                SELECT
+                    1
+                FROM
+                    chapters c
+                WHERE
+                    c.novel_id = p.novel_id
+                    AND c.source_id = p.source_id
+                    AND NOT EXISTS (
+                        SELECT
+                            1
+                        FROM
+                            new_rows nr
+                        WHERE
+                            nr.id = c.id))
+                    AND NOT EXISTS (
+                        SELECT
+                            1
+                        FROM
+                            old_rows orr
+                        WHERE
+                            orr.novel_id = p.novel_id
+                            AND orr.source_id = p.source_id)
+    ),
+    per_source AS (
+        SELECT
+            source_id,
+            COUNT(*) AS novels_delta
+        FROM
+            new_pairs
+        GROUP BY
+            source_id
+    )
+    UPDATE
+        sources s
+    SET
+        novels_count = s.novels_count + ps.novels_delta
     FROM
-        pairs p
+        per_source ps
     WHERE
-        NOT EXISTS (
-            SELECT
-                1
-            FROM
-                chapters c
-            WHERE
-                c.novel_id = p.novel_id
-                AND c.source_id = p.source_id
-                AND NOT EXISTS (
-                    SELECT
-                        1
-                    FROM
-                        new_rows nr
-                    WHERE
-                        nr.id = c.id))
-                AND NOT EXISTS (
-                    SELECT
-                        1
-                    FROM
-                        old_rows orr
-                    WHERE
-                        orr.novel_id = p.novel_id
-                        AND orr.source_id = p.source_id)
-),
-per_source AS (
-    SELECT
-        source_id,
-        COUNT(*) AS novels_delta
-    FROM
-        new_pairs
-    GROUP BY
-        source_id)
-UPDATE
-    sources s
-SET
-    novels_count = s.novels_count + ps.novels_delta
-FROM
-    per_source ps
-WHERE
-    s.id = ps.source_id;
+        s.id = ps.source_id;
     RETURN NULL;
 END;
 $$
