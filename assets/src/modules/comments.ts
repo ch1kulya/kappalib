@@ -1,5 +1,5 @@
 import { trackEvent } from "./analytics";
-import { getAvatarUrl, profileManager, updateProfileBadges } from "./profile";
+import { getAvatarUrl, profileManager, updateProfileBadges, xsrfHeaders } from "./profile";
 import { getSettings } from "./settings";
 
 const API_URL = process.env.API_URL;
@@ -1231,7 +1231,7 @@ async function handleVote(btn: HTMLElement): Promise<void> {
   try {
     const res = await fetch(`${API_URL}/comments/${commentId}/vote`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: xsrfHeaders({ "Content-Type": "application/json" }),
       credentials: "include",
       body: JSON.stringify({ value }),
     });
@@ -1380,7 +1380,7 @@ async function sendCommentPayload(
 
   let res = await fetch(url, {
     method: method,
-    headers: { "Content-Type": "application/json" },
+    headers: xsrfHeaders({ "Content-Type": "application/json" }),
     credentials: "include",
     body: JSON.stringify(payload),
   });
@@ -1401,7 +1401,7 @@ async function sendCommentPayload(
         payload.smart_captcha_token = smartCaptchaTok;
         res = await fetch(url, {
           method: method,
-          headers: { "Content-Type": "application/json" },
+          headers: xsrfHeaders({ "Content-Type": "application/json" }),
           credentials: "include",
           body: JSON.stringify(payload),
         });
@@ -1957,6 +1957,7 @@ async function handleDeleteComment(
   try {
     const res = await fetch(`${API_URL}/comments/${commentId}`, {
       method: "DELETE",
+      headers: xsrfHeaders(),
       credentials: "include",
     });
 
@@ -2035,6 +2036,7 @@ async function handleDeleteAnswer(
   try {
     const res = await fetch(`${API_URL}/comment-answers/${answerId}`, {
       method: "DELETE",
+      headers: xsrfHeaders(),
       credentials: "include",
     });
 
@@ -2066,6 +2068,7 @@ async function handleDeleteMyAnswer(answerId: string): Promise<void> {
   try {
     const res = await fetch(`${API_URL}/comment-answers/${answerId}`, {
       method: "DELETE",
+      headers: xsrfHeaders(),
       credentials: "include",
     });
 
@@ -2315,7 +2318,7 @@ async function uploadCommentImage(
   try {
     const res = await fetch(`${API_URL}/comments/image`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: xsrfHeaders({ "Content-Type": "application/json" }),
       credentials: "include",
       body: JSON.stringify({ image: base64 }),
       signal: uploadAbortController.signal,

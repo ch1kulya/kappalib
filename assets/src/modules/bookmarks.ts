@@ -1,6 +1,6 @@
 import { trackEvent } from "./analytics";
 import Dropdown from "./dropdown";
-import { profileManager } from "./profile";
+import { profileManager, xsrfHeaders } from "./profile";
 import { uiManager } from "./ui";
 
 const API_URL = process.env.API_URL;
@@ -395,7 +395,7 @@ function renderBookmarkForm(): void {
             {
               method: "PATCH",
               credentials: "include",
-              headers: { "Content-Type": "application/json" },
+              headers: xsrfHeaders({ "Content-Type": "application/json" }),
               body: JSON.stringify({ value, category }),
             },
           );
@@ -409,7 +409,7 @@ function renderBookmarkForm(): void {
           const res = await fetch(`${API_URL}/bookmarks`, {
             method: "POST",
             credentials: "include",
-            headers: { "Content-Type": "application/json" },
+            headers: xsrfHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
               chapterId: currentCtx!.chapterId,
               category,
@@ -431,6 +431,7 @@ function renderBookmarkForm(): void {
         const res = await fetch(`${API_URL}/bookmarks/${currentBookmark.id}`, {
           method: "DELETE",
           credentials: "include",
+          headers: xsrfHeaders(),
         });
         if (res.ok) {
           trackEvent("bookmark_delete");
@@ -506,7 +507,7 @@ async function saveCategoriesEdit(
           fetch(`${API_URL}/bookmarks/category/${encodeURIComponent(oldName)}`, {
             method: "PATCH",
             credentials: "include",
-            headers: { "Content-Type": "application/json" },
+            headers: xsrfHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ newName }),
           }),
         );
@@ -780,7 +781,7 @@ async function loadBookmarksPage(
             const res = await fetch(`${API_URL}/bookmarks/${bm.id}`, {
               method: "PATCH",
               credentials: "include",
-              headers: { "Content-Type": "application/json" },
+              headers: xsrfHeaders({ "Content-Type": "application/json" }),
               body: JSON.stringify({ value, category }),
             });
             if (!res.ok) {
@@ -821,6 +822,7 @@ async function loadBookmarksPage(
         const res = await fetch(`${API_URL}/bookmarks/${bm.id}`, {
           method: "DELETE",
           credentials: "include",
+          headers: xsrfHeaders(),
         });
         if (!res.ok) {
           console.error("Failed to delete bookmark:", res.status);

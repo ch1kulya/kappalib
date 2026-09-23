@@ -789,4 +789,4 @@ function updateActiveToggle(container: HTMLElement, activeValue: string): void {
   });
 }
 
-export { COLOR_SCHEME_OPTIONS, FONT_OPTIONS, getSettings };
+export { COLOR_SCHEME_OPTIONS, FONT_OPTIONS, getCookie, getSettings };

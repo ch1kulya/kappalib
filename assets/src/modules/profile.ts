@@ -2,7 +2,7 @@ import { clearIdentifiedUmami, identifyUmami, trackEvent } from "./analytics";
 import { initComments } from "./comments";
 import { refreshHistory } from "./history";
 import { refreshLastReadTotalChapters } from "./progress";
-import { settingsManager } from "./settings";
+import { getCookie, settingsManager } from "./settings";
 import { uiManager } from "./ui";
 
 const API_URL = process.env.API_URL;
@@ -108,7 +108,7 @@ class ProfileManager {
     try {
       const res = await fetch(`${API_URL}/profile/sync-cookies`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: xsrfHeaders({ "Content-Type": "application/json" }),
         credentials: "include",
         body: JSON.stringify({ cookies }),
       });
@@ -128,7 +128,7 @@ class ProfileManager {
     try {
       const res = await fetch(`${API_URL}/profile/${this.profileId}/name`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: xsrfHeaders({ "Content-Type": "application/json" }),
         credentials: "include",
         body: JSON.stringify({ display_name: newName }),
       });
@@ -149,7 +149,7 @@ class ProfileManager {
 
       const res = await fetch(`${API_URL}/profile/${this.profileId}/avatar`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: xsrfHeaders({ "Content-Type": "application/json" }),
         credentials: "include",
         body: JSON.stringify({ image: base64 }),
       });
@@ -187,6 +187,7 @@ class ProfileManager {
     try {
       const res = await fetch(`${API_URL}/profile/${this.profileId}`, {
         method: "DELETE",
+        headers: xsrfHeaders(),
         credentials: "include",
       });
       if (res.ok) {
@@ -204,6 +205,7 @@ class ProfileManager {
     try {
       await fetch(`${API_URL}/profile/logout`, {
         method: "POST",
+        headers: xsrfHeaders(),
         credentials: "include",
       });
     } catch {}
@@ -364,6 +366,11 @@ export function setKappalibCookie(name: string, value: string): void {
   if (profileManager.isLoggedIn()) {
     profileManager.syncCookiesToServer();
   }
+}
+
+export function xsrfHeaders(headers: Record<string, string> = {}): Record<string, string> {
+  const token = getCookie("XSRF-TOKEN");
+  return token ? { ...headers, "X-XSRF-TOKEN": token } : headers;
 }
 
 function cloneTemplate(id: string): DocumentFragment {
