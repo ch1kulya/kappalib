@@ -30,7 +30,8 @@ Reuse existing components instead of creating new ones.
 **Never commit anything** — agents may not run git add, git commit, or create commits.
 **Only run tests**: `go test -v -race ./...`.
 **Only run templ fmt when done with .templ files**: `templ fmt -fail .`.
-Never run applications, migrations, builds, dev servers, or any other commands.
+**Read-only `gh` allowed**: `gh issue list/view`, `gh pr list/view`, `gh api` GET requests.
+Never run applications, migrations, builds, dev servers, or any commands beyond those listed above.
 Verify by reading code.
 
 ## Security

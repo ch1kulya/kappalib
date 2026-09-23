@@ -30,7 +30,6 @@ func NewService(cfg Config, userStore *UserStore) *Service {
 		CookieDuration: 30 * 24 * time.Hour,
 		ClaimsUpd:      token.ClaimsUpdFunc(userStore.Update),
 		SecureCookies:  cfg.Secure,
-		DisableXSRF:    true,
 		SameSiteCookie: http.SameSiteLaxMode,
 		JWTCookieName:  "kpl_session",
 		Issuer:         "kappalib",
@@ -39,6 +38,7 @@ func NewService(cfg Config, userStore *UserStore) *Service {
 		Validator: token.ValidatorFunc(func(_ string, claims token.Claims) bool {
 			return claims.User != nil
 		}),
+		XSRFIgnoreMethods: []string{http.MethodGet, http.MethodHead, http.MethodOptions},
 	}
 
 	svc := auth.NewService(opts)

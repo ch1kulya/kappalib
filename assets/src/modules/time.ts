@@ -1,4 +1,4 @@
-import { profileManager } from "./profile";
+import { profileManager, xsrfHeaders } from "./profile";
 
 const API_URL = process.env.API_URL;
 const INACTIVITY_TIMEOUT_MS = 45000;
@@ -99,9 +99,9 @@ class ActiveTimeTracker {
     try {
       const res = await fetch(`${API_URL}/stats/time`, {
         method: "POST",
-        headers: {
+        headers: xsrfHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify({ seconds: secondsToSend }),
         credentials: "include",
         keepalive: isUnload,

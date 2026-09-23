@@ -1,5 +1,5 @@
 import { trackEvent } from "./analytics";
-import { profileManager } from "./profile";
+import { profileManager, xsrfHeaders } from "./profile";
 
 const API_URL = process.env.API_URL;
 
@@ -99,6 +99,7 @@ async function removeFromList(novelId: string): Promise<boolean> {
     const res = await fetch(`${API_URL}/list/${encodeURIComponent(novelId)}`, {
       method: "DELETE",
       credentials: "include",
+      headers: xsrfHeaders(),
     });
     if (res.ok) {
       cachedList = null;
@@ -315,7 +316,7 @@ function initNovelListDropdownInstance(dropdownEl: HTMLElement): void {
       const res = await fetch(`${API_URL}/list`, {
         method: "PUT",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: xsrfHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ novelId, status: slug }),
       });
       if (!res.ok) {
