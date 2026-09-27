@@ -3,7 +3,6 @@ package data
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -33,6 +32,9 @@ var queryUsersUpdateAvatar string
 
 //go:embed sql/users_update_display_name.sql
 var queryUsersUpdateDisplayName string
+
+//go:embed sql/users_unread_notifications.sql
+var queryUsersUnreadNotifications string
 
 var (
 	cookieNameRegex  = regexp.MustCompile(`^kappalib_[a-z0-9_]{1,50}$`)
@@ -245,41 +247,9 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 
 	profile.AvatarUpdatedAt = avatarUpdatedAt.Unix()
 
-	var lastSeen sql.NullTime
-	if err := database.DB.QueryRow(dbCtx,
-		`SELECT notifications_last_seen FROM users WHERE id = $1`, profileID,
-	).Scan(&lastSeen); err != nil {
-		logger.Warn("Failed to get notifications_last_seen for user %s: %v", profileID, err)
-	}
-
-	threshold := time.Now().AddDate(-1, 0, 0)
-	if lastSeen.Valid {
-		threshold = lastSeen.Time
-	}
-
-	var unreadCount int
-	if err := database.DB.QueryRow(dbCtx, `
-		SELECT COUNT(*)
-		FROM comment_answers ca
-		JOIN comments c ON ca.comment_id = c.id
-		WHERE ca.user_id != $1
-		  AND c.status = 'approved'
-		  AND ca.status = 'approved'
-		  AND ca.created_at > $2
-		  AND (
-		    c.user_id = $1
-		    OR EXISTS (
-		      SELECT 1
-		      FROM comment_answers my_ca
-		      WHERE my_ca.comment_id = ca.comment_id
-		        AND my_ca.user_id = $1
-		        AND my_ca.status != 'deleted'
-		    )
-		  )
-	`, profileID, threshold).Scan(&unreadCount); err != nil {
+	if err := database.DB.QueryRow(dbCtx, queryUsersUnreadNotifications, profileID).Scan(&profile.UnreadNotifications); err != nil {
 		logger.Warn("Failed to count unread notifications for user %s: %v", profileID, err)
 	}
-	profile.UnreadNotifications = unreadCount
 
 	if _, err := database.DB.Exec(dbCtx,
 		`UPDATE users SET last_active_at = now() WHERE id = $1`, profileID,
@@ -346,6 +316,7 @@ func DeleteProfile(ctx context.Context, userID string) error {
 		return ErrProfileNotFound
 	}
 
+	InvalidateUserProfile(userID)
 	logger.Info("Profile deleted: %s", userID)
 	return nil
 }
@@ -385,6 +356,7 @@ func UpdateDisplayName(ctx context.Context, userID, newName string) (*models.Pro
 		return nil, err
 	}
 
+	InvalidateUserProfile(userID)
 	logger.Debug("Updated display name for %s: %s", userID, validName)
 
 	return GetProfile(ctx, userID)
@@ -429,6 +401,7 @@ func UpdateAvatar(ctx context.Context, userID string, imageData []byte) (*models
 		return nil, err
 	}
 
+	InvalidateUserProfile(userID)
 	return GetProfile(ctx, userID)
 }
 

@@ -1,0 +1,147 @@
+package views
+
+import (
+	"strconv"
+
+	"github.com/ch1kulya/kappalib/internal/models"
+)
+
+templ UserProfile(props UserProfileProps) {
+	@Base(props.BaseProps) {
+		<div class="user-profile-page" data-owner={ boolToString(props.IsOwner) }>
+			<section class="up-header">
+				if props.IsOwner {
+					<div class="up-avatar-wrapper" id="up-avatar-wrapper" title="Изменить аватар" role="button" tabindex="0" aria-label="Изменить аватар">
+						@userProfileAvatar(props.Page.Profile)
+						<div class="pc-avatar-overlay" id="up-avatar-overlay">
+							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg>
+						</div>
+						<input type="file" id="up-avatar-input" accept="image/jpeg,image/png" style="display:none"/>
+					</div>
+				} else {
+					@userProfileAvatar(props.Page.Profile)
+				}
+				<div class="up-info">
+					<div class="up-name-row">
+						<h1
+							class={ "up-name", templ.KV("up-name-editable", props.IsOwner) }
+							id="up-name-text"
+							if props.IsOwner {
+								tabindex="0"
+								title="Изменить имя"
+							}
+						>{ props.Page.Profile.DisplayName }</h1>
+						if props.IsOwner {
+							<input type="text" class="up-name-input" id="up-name-input" maxlength="15" aria-label="Новое имя" style="display:none"/>
+						}
+					</div>
+					<span class="up-meta" id="up-meta">
+						<svg class="up-meta-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13H3"></path><path d="M16 17H3"></path><path d="m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6"></path><circle cx="9" cy="7" r="2"></circle></svg>
+						<span>{ FormatDate(props.Page.Profile.CreatedAt) + " г." }</span>
+					</span>
+				</div>
+			</section>
+			<section class="up-section">
+				<div class="chapters-header up-section-header">
+					<h2>Активность</h2>
+				</div>
+				@ActivityHeatmapView(props.Heatmap)
+			</section>
+			<section class="up-section">
+				<div class="chapters-header up-section-header">
+					<h2>Достижения</h2>
+					<button
+						type="button"
+						class="btn-text btn-help"
+						data-tip-title="Как получить достижения"
+						data-tip="Достижения за активность выдаются автоматически. Для бейджей за звезду на GitHub, донат и вклад в проект нужно подтверждение: отправьте его через любой канал связи."
+					>Как получить?</button>
+				</div>
+				<div class="up-achievements">
+					for _, badge := range props.Page.Badges {
+						@AchievementBadge(badge.Icon, badge.Title, badge.Description, 0)
+					}
+					for _, achievement := range props.Page.Achievements {
+						@AchievementBadge(achievement.Icon, achievement.Title, achievement.Description, achievement.Tier)
+					}
+				</div>
+			</section>
+			@ProfileCommentsSection(props.Page.Profile.ID)
+		</div>
+	}
+}
+
+templ userProfileAvatar(profile models.ProfilePublic) {
+	<img
+		class="up-avatar"
+		id="up-avatar-img"
+		src={ AvatarURL(profile.ID, profile.HasCustomAvatar, profile.AvatarSeed, profile.AvatarUpdatedAt) }
+		alt={ profile.DisplayName }
+		decoding="async"
+	/>
+}
+
+templ ActivityHeatmapView(heatmap ActivityHeatmap) {
+	<div class="up-heatmap">
+		<div class="up-heatmap-scroll">
+			<div class="up-heatmap-body" style={ heatmapBodyStyle(len(heatmap.Weeks)) }>
+				<div class="up-heatmap-weekdays" aria-hidden="true">
+					<span></span>
+					<span>Пн</span>
+					<span></span>
+					<span>Ср</span>
+					<span></span>
+					<span>Пт</span>
+					<span></span>
+				</div>
+				<div class="up-heatmap-main">
+					<div class="up-heatmap-months" aria-hidden="true">
+						for _, month := range heatmap.Months {
+							<span class="up-heatmap-month" style={ heatmapColumnStyle(month.Column) }>{ month.Label }</span>
+						}
+					</div>
+					<div class="up-heatmap-grid" role="img" aria-label={ heatmapSummary(heatmap.TotalSeconds) }>
+						for _, week := range heatmap.Weeks {
+							for _, cell := range week {
+								if cell.Empty {
+									<span class="up-heatmap-cell up-heatmap-cell-empty"></span>
+								} else {
+									<span class="up-heatmap-cell" data-level={ strconv.Itoa(cell.Level) } data-tip={ heatmapCellLabel(cell) }></span>
+								}
+							}
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="up-heatmap-footer">
+			<span class="up-heatmap-summary">{ heatmapSummary(heatmap.TotalSeconds) }</span>
+			<div class="up-heatmap-legend" aria-hidden="true">
+				<span>Меньше</span>
+				for level := range len(heatmapLevelThresholds) + 1 {
+					<span class="up-heatmap-cell" data-level={ strconv.Itoa(level) }></span>
+				}
+				<span>Больше</span>
+			</div>
+		</div>
+	</div>
+}
+
+templ AchievementBadge(icon, title, description string, tier int) {
+	<div
+		class="up-achievement"
+		data-icon={ icon }
+		data-tip-title={ title }
+		data-tip={ description }
+		role="img"
+		aria-label={ title + ": " + description }
+		tabindex="0"
+	>
+		<span class="up-achievement-badge">
+			@IconBadge(icon, "up-achievement-icon")
+		</span>
+		if tier > 1 {
+			<span class="up-achievement-tier" aria-hidden="true">{ achievementTierLabel(tier) }</span>
+		}
+	</div>
+}

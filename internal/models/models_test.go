@@ -82,3 +82,19 @@ func TestNovel_IsAbandoned(t *testing.T) {
 		})
 	}
 }
+
+func TestSetAuthor(t *testing.T) {
+	author := ProfilePublic{DisplayName: "Мудрый Лис", AvatarSeed: "seed", HasCustomAvatar: true, AvatarUpdatedAt: 42}
+
+	var c Comment
+	c.SetAuthor(author)
+	if c.UserDisplayName != "Мудрый Лис" || c.UserAvatarSeed != "seed" || !c.UserHasCustomAvatar || c.UserAvatarUpdatedAt != 42 {
+		t.Errorf("Comment.SetAuthor did not copy fields: %+v", c)
+	}
+
+	var a CommentAnswer
+	a.SetAuthor(author)
+	if a.UserDisplayName != "Мудрый Лис" || a.UserAvatarSeed != "seed" || !a.UserHasCustomAvatar || a.UserAvatarUpdatedAt != 42 {
+		t.Errorf("CommentAnswer.SetAuthor did not copy fields: %+v", a)
+	}
+}

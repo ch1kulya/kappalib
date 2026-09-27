@@ -1,6 +1,7 @@
 SELECT
     c.id,
-    c.chapter_id,
+    COALESCE(c.chapter_id, ''),
+    COALESCE(c.profile_id, ''),
     COALESCE(c.content_html, ''),
     COALESCE(u.display_name, '')
 FROM

@@ -1,6 +1,10 @@
 package views
 
-import "github.com/ch1kulya/kappalib/internal/models"
+import (
+	"time"
+
+	"github.com/ch1kulya/kappalib/internal/models"
+)
 
 type BaseProps struct {
 	Title              string
@@ -119,4 +123,29 @@ type UpdatesProps struct {
 	BaseProps
 	Updates         []models.HomeUpdateItem
 	PinnedAppUpdate *models.AppUpdate
+}
+
+type HeatmapCell struct {
+	Date    time.Time
+	Seconds int
+	Level   int
+	Empty   bool
+}
+
+type HeatmapMonth struct {
+	Label  string
+	Column int
+}
+
+type ActivityHeatmap struct {
+	Weeks        [][]HeatmapCell
+	Months       []HeatmapMonth
+	TotalSeconds int
+}
+
+type UserProfileProps struct {
+	BaseProps
+	Page    *models.UserProfilePage
+	Heatmap ActivityHeatmap
+	IsOwner bool
 }

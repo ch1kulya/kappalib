@@ -496,6 +496,11 @@ function renderLoggedInView(profile: ProfilePublic): void {
     }),
   );
 
+  const profileLink = content.querySelector<HTMLAnchorElement>("#pc-profile-link");
+  if (profileLink) {
+    profileLink.href = `/${profile.id}`;
+  }
+
   const commentsBtn = content.querySelector("a[href=\"/comments\"]");
   const count = profile.unread_notifications || 0;
   if (commentsBtn && count > 0) {
@@ -508,21 +513,58 @@ function renderLoggedInView(profile: ProfilePublic): void {
   initProfileInteractions(profile);
 }
 
-function initProfileInteractions(profile: ProfilePublic): void {
-  const avatarWrapper = document.getElementById("pc-avatar-img")?.parentElement;
-  const avatarInput = document.getElementById(
-    "pc-avatar-input",
-  ) as HTMLInputElement;
-  const nameText = document.getElementById("pc-name-text");
-  const nameInput = document.getElementById(
-    "pc-name-input",
-  ) as HTMLInputElement;
+export interface ProfileEditorElements {
+  avatarWrapper: HTMLElement | null;
+  avatarImg: HTMLImageElement | null;
+  avatarOverlay: HTMLElement | null;
+  avatarInput: HTMLInputElement | null;
+  nameText: HTMLElement | null;
+  nameInput: HTMLInputElement | null;
+  meta: HTMLElement | null;
+}
+
+function mapErrorToRussian(error: string): string {
+  const lower = error.toLowerCase();
+  if (lower.includes("empty")) return "Пустое имя";
+  if (lower.includes("too long") || lower.includes("15")) return "Слишком длинное";
+  if (lower.includes("invalid") || lower.includes("character")) return "Недопустимые символы";
+  return "Ошибка";
+}
+
+export function bindProfileEditor(
+  elements: ProfileEditorElements,
+  displayName: string,
+  onUpdate?: (profile: ProfilePublic) => void,
+): void {
+  const { avatarWrapper, avatarImg, avatarOverlay, avatarInput, nameText, nameInput, meta } = elements;
+  const metaHTML = meta?.innerHTML ?? "";
 
   let isSavingName = false;
-  let currentProfile = profile;
+  let restoreNameFocus = false;
+  let currentName = displayName;
 
-  avatarWrapper?.addEventListener("click", () => {
+  const isActivationKey = (e: KeyboardEvent): boolean => e.key === "Enter" || e.key === " ";
+
+  const openAvatarPicker = (): void => {
     avatarInput?.click();
+  };
+
+  const startNameEdit = (): void => {
+    if (!nameText || !nameInput) return;
+    restoreMeta();
+    nameText.style.display = "none";
+    nameInput.style.display = "block";
+    nameInput.value = "";
+    nameInput.placeholder = currentName;
+    nameInput.focus();
+  };
+
+  avatarWrapper?.addEventListener("click", openAvatarPicker);
+  avatarWrapper?.addEventListener("keydown", (e) => {
+    if (isActivationKey(e)) {
+      e.preventDefault();
+      openAvatarPicker();
+    }
   });
 
   avatarInput?.addEventListener("change", async () => {
@@ -535,33 +577,28 @@ function initProfileInteractions(profile: ProfilePublic): void {
       return;
     }
 
-    const avatarImg = document.getElementById(
-      "pc-avatar-img",
-    ) as HTMLImageElement;
-    const overlay = document.getElementById("pc-avatar-overlay");
-
     if (avatarImg) avatarImg.style.opacity = "0.5";
-    if (overlay) overlay.style.opacity = "0";
+    if (avatarOverlay) avatarOverlay.style.opacity = "0";
 
     const result = await profileManager.uploadAvatar(file);
 
     if (avatarImg) avatarImg.style.opacity = "1";
+    if (avatarOverlay) avatarOverlay.style.opacity = "";
     avatarInput.value = "";
 
     if (result && avatarImg) {
       trackEvent("avatar_upload");
       avatarImg.src = profileManager.getAvatarUrl(result);
+      onUpdate?.(result);
     }
   });
 
-  nameText?.addEventListener("click", () => {
-    if (!nameText || !nameInput) return;
-    restoreMetaDate();
-    nameText.style.display = "none";
-    nameInput.style.display = "block";
-    nameInput.value = "";
-    nameInput.placeholder = currentProfile.display_name;
-    nameInput.focus();
+  nameText?.addEventListener("click", startNameEdit);
+  nameText?.addEventListener("keydown", (e) => {
+    if (isActivationKey(e)) {
+      e.preventDefault();
+      startNameEdit();
+    }
   });
 
   nameInput?.addEventListener("blur", () => {
@@ -571,10 +608,12 @@ function initProfileInteractions(profile: ProfilePublic): void {
   nameInput?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
+      restoreNameFocus = true;
       nameInput.blur();
     }
     if (e.key === "Escape") {
       nameInput.value = "";
+      restoreNameFocus = true;
       nameInput.blur();
     }
   });
@@ -585,7 +624,7 @@ function initProfileInteractions(profile: ProfilePublic): void {
 
     const newName = nameInput.value.trim();
 
-    if (!newName || newName === currentProfile.display_name) {
+    if (!newName || newName === currentName) {
       cancelNameEdit();
       return;
     }
@@ -599,50 +638,59 @@ function initProfileInteractions(profile: ProfilePublic): void {
     isSavingName = false;
 
     if (result.error) {
-      const metaDateEl = document.querySelector(".pc-meta-date") as HTMLElement;
-      if (metaDateEl) {
-        metaDateEl.textContent = mapErrorToRussian(result.error);
-        metaDateEl.style.color = "var(--color-danger)";
+      if (meta) {
+        meta.textContent = mapErrorToRussian(result.error);
+        meta.style.color = "var(--color-danger)";
       }
+      restoreNameFocus = false;
       nameInput.focus();
       return;
     }
 
     if (result.profile) {
       trackEvent("name_change");
-      currentProfile.display_name = result.profile.display_name;
+      currentName = result.profile.display_name;
       nameText.textContent = result.profile.display_name;
+      onUpdate?.(result.profile);
     }
 
     cancelNameEdit();
-  }
-
-  function mapErrorToRussian(error: string): string {
-    const lower = error.toLowerCase();
-    if (lower.includes("empty")) return "Пустое имя";
-    if (lower.includes("too long") || lower.includes("15")) return "Слишком длинное";
-    if (lower.includes("invalid") || lower.includes("character")) return "Недопустимые символы";
-    return "Ошибка";
   }
 
   function cancelNameEdit() {
     if (!nameText || !nameInput) return;
     nameInput.style.display = "none";
     nameInput.value = "";
-    nameText.style.display = "inline";
-    restoreMetaDate();
-  }
-
-  function restoreMetaDate() {
-    const metaDateEl = document.querySelector(".pc-meta-date") as HTMLElement;
-    if (metaDateEl) {
-      metaDateEl.innerHTML =
-        `<svg xmlns="http://w.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13H3"></path><path d="M16 17H3"></path><path d="m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6"></path><circle cx="9" cy="7" r="2"></circle></svg><span data-field="createdAt">${
-          formatDate(currentProfile.created_at)
-        }</span>`;
-      metaDateEl.style.color = "";
+    nameText.style.display = "";
+    restoreMeta();
+    if (restoreNameFocus) {
+      restoreNameFocus = false;
+      nameText.focus();
     }
   }
+
+  function restoreMeta() {
+    if (!meta) return;
+    meta.innerHTML = metaHTML;
+    meta.style.color = "";
+  }
+}
+
+function initProfileInteractions(profile: ProfilePublic): void {
+  const avatarImg = document.getElementById("pc-avatar-img") as HTMLImageElement | null;
+
+  bindProfileEditor(
+    {
+      avatarWrapper: avatarImg?.parentElement ?? null,
+      avatarImg,
+      avatarOverlay: document.getElementById("pc-avatar-overlay"),
+      avatarInput: document.getElementById("pc-avatar-input") as HTMLInputElement | null,
+      nameText: document.getElementById("pc-name-text"),
+      nameInput: document.getElementById("pc-name-input") as HTMLInputElement | null,
+      meta: document.querySelector<HTMLElement>("#profile-card .pc-meta-date"),
+    },
+    profile.display_name,
+  );
 
   document.getElementById("pc-logout")?.addEventListener("click", async () => {
     await profileManager.logout();

@@ -203,6 +203,7 @@ func main() {
 		r.Get("/license", h.StaticPage("license", "Лицензия MIT"))
 		r.Get("/terms", h.StaticPage("terms", "Пользовательское соглашение"))
 		r.Get("/markdown", h.StaticPage("markdown", "Шпаргалка по форматированию"))
+		r.With(authService.Middleware(), auth.BridgeMiddleware).Get("/{id:usr_[a-z0-9]{8}}", h.UserProfile)
 		r.With(authService.Middleware(), auth.BridgeMiddleware).Get("/{id}", h.Novel)
 		r.Get("/{id}/chapter/{chapterId}", h.Chapter)
 		r.Get("/status", h.GetStatus)
@@ -317,6 +318,23 @@ func main() {
 			Summary:     "Get user profile",
 			Tags:        []string{"Profile"},
 		}, api.HandleGetProfile)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-profile-comments",
+			Method:      http.MethodGet,
+			Path:        "/profile/{id}/comments",
+			Summary:     "Get profile comments",
+			Tags:        []string{"Profile"},
+		}, api.HandleGetProfileComments)
+
+		huma.Register(humaApi, huma.Operation{
+			OperationID: "create-profile-comment",
+			Method:      http.MethodPost,
+			Path:        "/profile/{id}/comments",
+			Summary:     "Create profile comment",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Profile"},
+		}, api.HandleCreateProfileComment)
 
 		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-comments",

@@ -68,6 +68,9 @@ interface Comment {
   chapter_num?: number;
   novel_id?: string;
   novel_title?: string;
+  profile_id?: string;
+  profile_display_name?: string;
+  is_new?: boolean;
 }
 
 interface CommentsPage {
@@ -76,6 +79,7 @@ interface CommentsPage {
   page_size: number;
   total_count: number;
   total_pages: number;
+  seen_before?: string;
 }
 
 interface CommentStatDay {
@@ -308,7 +312,7 @@ export function formatRelativeTime(dateStr: string): string {
 
 function createCommentHTML(
   comment: Comment,
-  options?: { chapterUrl?: string },
+  options?: { targetUrl?: string },
 ): string {
   const avatarUrl = getAvatarUrl(
     comment.user_id,
@@ -341,8 +345,14 @@ function createCommentHTML(
     ? " <span class=\"comment-edited\">(ред.)</span>"
     : "";
 
+  const newBadge = comment.is_new
+    ? "<span class=\"comment-new-badge\">Новый</span>"
+    : "";
+
   const isApproved = comment.status === "approved";
   const isOwn = comment.user_id === profileManager.getProfileId();
+  const isProfileComment = !!comment.profile_id;
+  const isProfileOwner = isProfileComment && comment.profile_id === profileManager.getProfileId();
 
   const upActive = comment.user_vote === 1 ? " vote-active" : "";
   const downActive = comment.user_vote === -1 ? " vote-active" : "";
@@ -363,7 +373,7 @@ function createCommentHTML(
 
   let actionHTML = "";
   const canEdit = isOwn && (comment.status === "approved" || comment.status === "rejected");
-  const canDelete = isOwn && comment.status === "approved";
+  const canDelete = (isOwn || isProfileOwner) && comment.status === "approved";
 
   if (canEdit || canDelete) {
     let itemsHTML = "";
@@ -390,7 +400,7 @@ function createCommentHTML(
       </div>`;
   }
 
-  const replyHTML = isApproved
+  const replyHTML = isApproved && !isProfileComment
     ? `<button class="comment-reply-btn" data-comment-id="${comment.id}" data-author="${comment.user_display_name}">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
         <span>Ответить</span>
@@ -401,15 +411,19 @@ function createCommentHTML(
     ? `<div class="comment-footer">${voteHTML}${replyHTML}</div>`
     : "";
 
-  const chapterUrl = options?.chapterUrl
+  const targetUrl = options?.targetUrl
     || (comment.novel_id && comment.chapter_id
       ? `/${comment.novel_id}/chapter/${comment.chapter_id}`
       : "");
 
   let jumpHTML = "";
-  if (chapterUrl && getSettings().showComments) {
+  if (targetUrl && (isProfileComment || getSettings().showComments)) {
+    const jumpTitle = isProfileComment
+      ? "Перейти к комментарию в профиле"
+      : "Перейти к комментарию в главе";
+    const jumpAttr = isProfileComment ? "" : " data-jump=\"chapter\"";
     jumpHTML =
-      `<a href="${chapterUrl}#${comment.id}" class="comment-jump-link" title="Перейти к комментарию в главе" aria-label="Перейти к комментарию">
+      `<a href="${targetUrl}#${comment.id}" class="comment-jump-link"${jumpAttr} title="${jumpTitle}" aria-label="Перейти к комментарию">
       <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/>
         <path d="m21 3-9 9"/>
@@ -434,10 +448,12 @@ function createCommentHTML(
   return `
     <div class="comment-item${extraClass}" id="${comment.id}" data-comment-id="${comment.id}" data-chapter-id="${comment.chapter_id}" data-comment-status="${comment.status}" tabindex="0">
       <div class="comment-main-row">
-        <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
+        <a href="/${comment.user_id}" class="comment-avatar-link" tabindex="-1">
+          <img src="${avatarUrl}" alt="${comment.user_display_name}" class="comment-avatar" loading="lazy"/>
+        </a>
         <div class="comment-main">
           <div class="comment-header">
-            <span class="comment-author">${comment.user_display_name} ${statusBadge}${editedBadge}</span>
+            <span class="comment-author"><span class="comment-author-main"><a href="/${comment.user_id}" class="comment-author-link">${comment.user_display_name}</a> ${statusBadge}${editedBadge}</span>${newBadge}</span>
             ${actionsHTML}
           </div>
           <div class="comment-body">
@@ -514,14 +530,16 @@ function createAnswerHTML(answer: CommentAnswer): string {
       </div>`;
   }
 
-  const newBadge = answer.is_new ? " <span class=\"comment-new-badge\">Новый ответ</span>" : "";
+  const newBadge = answer.is_new ? "<span class=\"comment-new-badge\">Новый</span>" : "";
 
   return `
     <div class="comment-answer${extraClass}" id="${answer.id}" data-answer-id="${answer.id}" tabindex="0">
-      <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
+      <a href="/${answer.user_id}" class="comment-avatar-link" tabindex="-1">
+        <img src="${avatarUrl}" alt="${answer.user_display_name}" class="comment-answer-avatar" loading="lazy"/>
+      </a>
       <div class="comment-main">
         <div class="comment-header">
-          <span class="comment-author">${answer.user_display_name} ${statusBadge}${editedBadge}${newBadge}</span>
+          <span class="comment-author"><span class="comment-author-main"><a href="/${answer.user_id}" class="comment-author-link">${answer.user_display_name}</a> ${statusBadge}${editedBadge}</span>${newBadge}</span>
           ${actionHTML}
         </div>
         <div class="comment-body"><div class="comment-content">${answer.content_html}</div></div>
@@ -569,7 +587,7 @@ let commentsObserver: IntersectionObserver | null = null;
 
 async function loadComments(
   container: HTMLElement,
-  chapterId: string,
+  commentsUrl: string,
   page: number = 1,
   noCache: boolean = false,
   showLoader: boolean = true,
@@ -590,9 +608,13 @@ async function loadComments(
   }
 
   try {
-    const url = commentId
-      ? `${API_URL}/chapters/${chapterId}/comments?comment_id=${commentId}`
-      : `${API_URL}/chapters/${chapterId}/comments?page=${page}`;
+    const params = new URLSearchParams(
+      commentId ? { comment_id: commentId } : { page: String(page) },
+    );
+    if (container.dataset.seenBefore) {
+      params.set("seen_before", container.dataset.seenBefore);
+    }
+    const url = `${commentsUrl}?${params}`;
 
     const res = await fetch(
       url,
@@ -606,6 +628,11 @@ async function loadComments(
 
     commentsTotalPages = data.total_pages;
     commentsCurrentPage = data.page;
+
+    if (data.seen_before && !container.dataset.seenBefore) {
+      container.dataset.seenBefore = data.seen_before;
+      profileManager.fetchProfile().then(() => updateProfileBadges());
+    }
 
     renderComments(container, data.comments, page > 1);
 
@@ -653,12 +680,12 @@ async function loadComments(
 
 async function loadMoreComments(
   container: HTMLElement,
-  chapterId: string,
+  commentsUrl: string,
 ): Promise<void> {
   if (isCommentsLoading || commentsCurrentPage >= commentsTotalPages) return;
   await loadComments(
     container,
-    chapterId,
+    commentsUrl,
     commentsCurrentPage + 1,
     false,
     false,
@@ -1079,10 +1106,17 @@ function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
   textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
 }
 
+function getCommentsUrl(container: HTMLElement): string | null {
+  const { chapterId, profileId } = container.dataset;
+  if (chapterId) return `${API_URL}/chapters/${chapterId}/comments`;
+  if (profileId) return `${API_URL}/profile/${profileId}/comments`;
+  return null;
+}
+
 function getTargetCommentIdFromHash(): string | undefined {
   const hash = window.location.hash;
   if (!hash) return undefined;
-  const match = hash.match(/^#((?:cmt|ans)_[a-z0-9]{8})$/);
+  const match = hash.match(/^#((?:cmt|can)_[a-z0-9]{8})$/);
   return match ? match[1] : undefined;
 }
 
@@ -1090,8 +1124,8 @@ export function initComments(): void {
   const container = document.getElementById("comments-section");
   if (!container) return;
 
-  const chapterId = container.dataset.chapterId;
-  if (!chapterId) return;
+  const commentsUrl = getCommentsUrl(container);
+  if (!commentsUrl) return;
 
   renderCommentForm(container);
 
@@ -1109,7 +1143,7 @@ export function initComments(): void {
             && !isCommentsLoading
             && commentsCurrentPage < commentsTotalPages
           ) {
-            loadMoreComments(container, chapterId);
+            loadMoreComments(container, commentsUrl);
           }
         });
       },
@@ -1122,7 +1156,7 @@ export function initComments(): void {
     const targetId = getTargetCommentIdFromHash();
     if (targetId && !document.getElementById(targetId)) {
       startSmoothScrollToHash();
-      loadComments(container, chapterId, 1, false, true, targetId);
+      loadComments(container, commentsUrl, 1, false, true, targetId);
     } else {
       startSmoothScrollToHash();
     }
@@ -1132,7 +1166,7 @@ export function initComments(): void {
   if (initialCommentId || window.location.hash === "#comments-section") {
     startSmoothScrollToHash();
   }
-  loadComments(container, chapterId, 1, false, true, initialCommentId);
+  loadComments(container, commentsUrl, 1, false, true, initialCommentId);
 
   profileManager.onLogin(() => {
     renderCommentForm(container);
@@ -1167,9 +1201,9 @@ export function initComments(): void {
       editBtn.closest(".comment-menu")?.classList.remove("active");
       const answerId = editBtn.dataset.answerId;
       if (answerId) {
-        handleEditAnswer(editBtn, container, chapterId);
+        handleEditAnswer(editBtn, container, commentsUrl);
       } else {
-        handleEditComment(editBtn, container, chapterId);
+        handleEditComment(editBtn, container, commentsUrl);
       }
       return;
     }
@@ -1201,9 +1235,9 @@ export function initComments(): void {
       deleteBtn.closest(".comment-menu")?.classList.remove("active");
       const answerId = deleteBtn.dataset.answerId;
       if (answerId) {
-        handleDeleteAnswer(answerId, container, chapterId);
+        handleDeleteAnswer(answerId, container, commentsUrl);
       } else {
-        handleDeleteComment(deleteBtn, container, chapterId);
+        handleDeleteComment(deleteBtn, container, commentsUrl);
       }
       return;
     }
@@ -1490,7 +1524,7 @@ function handleReply(btn: HTMLElement, container: HTMLElement): void {
 function handleEditComment(
   btn: HTMLElement,
   container: HTMLElement,
-  chapterId?: string,
+  commentsUrl?: string,
 ): void {
   if (!profileManager.isLoggedIn()) {
     alert("Войдите в аккаунт, чтобы редактировать комментарий");
@@ -1640,8 +1674,8 @@ function handleEditComment(
         (window as any).turnstile.reset(turnstileWidgetId);
       }
 
-      if (chapterId) {
-        await loadComments(container, chapterId, 1, true, false, commentId);
+      if (commentsUrl) {
+        await loadComments(container, commentsUrl, 1, true, false, commentId);
       } else {
         await loadMyComments(myCommentsCurrentPage);
       }
@@ -1664,7 +1698,7 @@ function handleEditComment(
 function handleEditAnswer(
   btn: HTMLElement,
   container: HTMLElement,
-  chapterId?: string,
+  commentsUrl?: string,
 ): void {
   if (!profileManager.isLoggedIn()) {
     alert("Войдите в аккаунт, чтобы редактировать ответ");
@@ -1814,8 +1848,8 @@ function handleEditAnswer(
         (window as any).turnstile.reset(turnstileWidgetId);
       }
 
-      if (chapterId) {
-        await loadComments(container, chapterId, 1, true, false, answerId);
+      if (commentsUrl) {
+        await loadComments(container, commentsUrl, 1, true, false, answerId);
       } else {
         await loadMyComments(myCommentsCurrentPage);
       }
@@ -1925,9 +1959,9 @@ function initReplyFormHandlers(
         (window as any).turnstile.reset(turnstileWidgetId);
       }
 
-      const chapterId = container.dataset.chapterId;
-      if (chapterId) {
-        await loadComments(container, chapterId, 1, true, false, commentId);
+      const commentsUrl = getCommentsUrl(container);
+      if (commentsUrl) {
+        await loadComments(container, commentsUrl, 1, true, false, commentId);
       } else {
         await loadMyComments(1);
       }
@@ -1947,7 +1981,7 @@ function initReplyFormHandlers(
 async function handleDeleteComment(
   btn: HTMLElement,
   container?: HTMLElement,
-  chapterId?: string,
+  commentsUrl?: string,
 ): Promise<void> {
   const commentId = btn.dataset.commentId;
   if (!commentId) return;
@@ -1987,7 +2021,7 @@ async function handleDeleteComment(
       if (item) item.remove();
     }
 
-    if (container && chapterId) {
+    if (container && commentsUrl) {
       const countEl = container.querySelector(".comments-count");
       if (countEl) {
         const current = parseInt(
@@ -2029,7 +2063,7 @@ async function handleDeleteComment(
 async function handleDeleteAnswer(
   answerId: string,
   container: HTMLElement,
-  chapterId?: string,
+  commentsUrl?: string,
 ): Promise<void> {
   if (!confirm("Вы уверены, что хотите удалить этот ответ?")) return;
 
@@ -2049,7 +2083,7 @@ async function handleDeleteAnswer(
     );
     if (answerEl) answerEl.remove();
 
-    if (container && chapterId) {
+    if (container && commentsUrl) {
       const countEl = container.querySelector(".comments-count");
       if (countEl) {
         const current = parseInt(
@@ -2121,11 +2155,7 @@ function renderCommentForm(container: HTMLElement): void {
     `;
     initFormHandlers(container);
   } else {
-    formWrapper.innerHTML = `
-      <div class="comment-form comment-form-guest">
-        <p class="comment-guest-message">Войдите или создайте аккаунт, чтобы писать комментарии</p>
-      </div>
-    `;
+    formWrapper.innerHTML = "";
   }
 }
 
@@ -2388,6 +2418,8 @@ interface UserCommentsPage {
   page_size: number;
   total_count: number;
   total_pages: number;
+  seen_before?: string;
+  profile_seen_before?: string;
 }
 
 function truncateText(text: string, maxLength: number): string {
@@ -2405,37 +2437,42 @@ function renderMyComments(
     return;
   }
 
-  let lastChapterId: string | null = null;
+  let lastGroupKey: string | null = null;
   if (append) {
-    const lastItem = listEl.querySelector<HTMLElement>(
-      ".mc-comment-wrapper:last-child .comment-item",
+    const lastWrapper = listEl.querySelector<HTMLElement>(
+      ".mc-comment-wrapper:last-child",
     );
-    lastChapterId = lastItem?.dataset.chapterId || null;
+    lastGroupKey = lastWrapper?.dataset.groupKey || null;
   }
 
   let html = "";
   comments.forEach((c) => {
-    const showSeparator = c.chapter_id !== lastChapterId;
-    lastChapterId = c.chapter_id;
+    const groupKey = c.profile_id ? `profile:${c.profile_id}` : c.chapter_id;
+    const showSeparator = groupKey !== lastGroupKey;
+    lastGroupKey = groupKey;
 
-    const novelTitle = truncateText(c.novel_title || "", 25);
-    const chapterUrl = `/${c.novel_id || ""}/chapter/${c.chapter_id}`;
+    const targetUrl = c.profile_id
+      ? `/${c.profile_id}`
+      : `/${c.novel_id || ""}/chapter/${c.chapter_id}`;
+    const targetTitle = truncateText(
+      (c.profile_id ? c.profile_display_name : c.novel_title) || "",
+      25,
+    );
+    const targetLabel = c.profile_id ? "Профиль" : `Глава ${c.chapter_num || ""}`;
 
-    if (showSeparator) {
-      html += `<div class="mc-comment-wrapper">
-        <div class="mc-chapter-separator">
-          <a href="${chapterUrl}" class="mc-chapter-link">
-            <span class="mc-novel-title">${novelTitle}</span>
-            <span class="mc-chapter-num">Глава ${c.chapter_num || ""}</span>
+    const separatorHTML = showSeparator
+      ? `<div class="mc-chapter-separator">
+          <a href="${targetUrl}" class="mc-chapter-link">
+            <span class="mc-novel-title">${targetTitle}</span>
+            <span class="mc-chapter-num">${targetLabel}</span>
           </a>
-        </div>
-        ${createCommentHTML(c, { chapterUrl })}
+        </div>`
+      : "";
+
+    html += `<div class="mc-comment-wrapper" data-group-key="${groupKey}">
+        ${separatorHTML}
+        ${createCommentHTML(c, { targetUrl })}
       </div>`;
-    } else {
-      html += `<div class="mc-comment-wrapper">
-        ${createCommentHTML(c, { chapterUrl })}
-      </div>`;
-    }
   });
 
   if (append) {
@@ -2573,6 +2610,8 @@ let isMyCommentsLoading = false;
 let myCommentsCurrentPage = 1;
 let myCommentsTotalPages = 1;
 let myCommentsObserver: IntersectionObserver | null = null;
+let myCommentsSeenBefore: string | null = null;
+let myCommentsProfileSeenBefore: string | null = null;
 
 async function loadMyComments(page: number = 1): Promise<void> {
   if (isMyCommentsLoading) return;
@@ -2601,7 +2640,13 @@ async function loadMyComments(page: number = 1): Promise<void> {
   }
 
   try {
-    const res = await fetch(`${API_URL}/profile/me/comments?page=${page}`, {
+    const params = new URLSearchParams({ page: String(page) });
+    if (myCommentsSeenBefore) params.set("seen_before", myCommentsSeenBefore);
+    if (myCommentsProfileSeenBefore) {
+      params.set("profile_seen_before", myCommentsProfileSeenBefore);
+    }
+
+    const res = await fetch(`${API_URL}/profile/me/comments?${params}`, {
       credentials: "include",
     });
 
@@ -2623,6 +2668,12 @@ async function loadMyComments(page: number = 1): Promise<void> {
 
     myCommentsTotalPages = data.total_pages;
     myCommentsCurrentPage = data.page;
+    if (!myCommentsSeenBefore && data.seen_before) {
+      myCommentsSeenBefore = data.seen_before;
+    }
+    if (!myCommentsProfileSeenBefore && data.profile_seen_before) {
+      myCommentsProfileSeenBefore = data.profile_seen_before;
+    }
 
     if (data.total_count === 0 && page === 1) {
       emptyEl.style.display = "block";
@@ -2785,7 +2836,7 @@ function initFormHandlers(container: HTMLElement): void {
   const submitBtn = container.querySelector(
     "#comment-submit",
   ) as HTMLButtonElement;
-  const chapterId = container.dataset.chapterId;
+  const commentsUrl = getCommentsUrl(container);
   const toolbar = container.querySelector(
     ".comment-toolbar",
   ) as HTMLElement | null;
@@ -2793,7 +2844,7 @@ function initFormHandlers(container: HTMLElement): void {
     "#comment-image-input",
   ) as HTMLInputElement;
 
-  if (!chapterId) return;
+  if (!commentsUrl) return;
 
   const updateSubmitState = () => {
     if (getRemainingCooldown() > 0) return;
@@ -2846,7 +2897,7 @@ function initFormHandlers(container: HTMLElement): void {
 
       try {
         const ok = await sendCommentPayload(
-          `${API_URL}/chapters/${chapterId}/comments`,
+          commentsUrl,
           "POST",
           content,
           submitBtn,
@@ -2864,7 +2915,7 @@ function initFormHandlers(container: HTMLElement): void {
           (window as any).turnstile.reset(turnstileWidgetId);
         }
 
-        await loadComments(container, chapterId, 1, true, false);
+        await loadComments(container, commentsUrl, 1, true, false);
       } catch (err: any) {
         console.error("Failed to submit", err);
         const msg = err && typeof err === "object" && "message" in err && err.message

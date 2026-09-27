@@ -92,6 +92,39 @@ var queryCommentStatsBase string
 //go:embed sql/comment_stats_daily.sql
 var queryCommentStatsDaily string
 
+//go:embed sql/chapter_comments_position.sql
+var queryChapterCommentsPosition string
+
+//go:embed sql/chapter_comments_count.sql
+var queryChapterCommentsCount string
+
+//go:embed sql/chapter_comments_list.sql
+var queryChapterCommentsList string
+
+//go:embed sql/comment_answers_visible_count.sql
+var queryCommentAnswersVisibleCount string
+
+//go:embed sql/comment_answers_visible_list.sql
+var queryCommentAnswersVisibleList string
+
+//go:embed sql/comment_answers_visible_parent.sql
+var queryCommentAnswersVisibleParent string
+
+//go:embed sql/user_comment_thread_details.sql
+var queryUserCommentThreadDetails string
+
+//go:embed sql/user_comment_threads_count.sql
+var queryUserCommentThreadsCount string
+
+//go:embed sql/users_seen_thresholds_get.sql
+var queryUsersSeenThresholdsGet string
+
+//go:embed sql/comments_access_get.sql
+var queryCommentsAccessGet string
+
+//go:embed sql/comments_answer_target_get.sql
+var queryCommentsAnswerTargetGet string
+
 var (
 	commentsTurnstileSecret    = os.Getenv("TURNSTILE_COMMENTS_SECRET")
 	commentsSmartCaptchaSecret = os.Getenv("SMARTCAPTCHA_SECRET")
@@ -332,15 +365,7 @@ func CreateComment(ctx context.Context, userID string, input models.CreateCommen
 		return nil, err
 	}
 
-	var user models.ProfilePublic
-	var avatarUpdatedAt time.Time
-	if err := database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar, avatar_updated_at FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar, &avatarUpdatedAt); err != nil {
-		logger.Warn("Failed to fetch user data for comment: %v", err)
-	}
-	comment.UserDisplayName = user.DisplayName
-	comment.UserAvatarSeed = user.AvatarSeed
-	comment.UserHasCustomAvatar = user.HasCustomAvatar
-	comment.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+	comment.SetAuthor(loadCommentAuthor(dbCtx, userID))
 
 	go sendCommentToTelegram(context.Background(), &comment)
 
@@ -380,21 +405,13 @@ func EditComment(ctx context.Context, commentID, userID string, input models.Edi
 	var comment models.Comment
 	err = database.DB.QueryRow(dbCtx, queryCommentsEdit,
 		contentHTML, commentID, userID,
-	).Scan(&comment.ID, &comment.ChapterID, &comment.UserID, &comment.ContentHTML, &comment.Status, &comment.EditedAt, &comment.CreatedAt)
+	).Scan(&comment.ID, &comment.ChapterID, &comment.UserID, &comment.ContentHTML, &comment.Status, &comment.EditedAt, &comment.CreatedAt, &comment.ProfileID)
 	if err != nil {
 		logger.Error("Failed to edit comment: %v", err)
 		return nil, err
 	}
 
-	var user models.ProfilePublic
-	var avatarUpdatedAt time.Time
-	if err := database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar, avatar_updated_at FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar, &avatarUpdatedAt); err != nil {
-		logger.Warn("Failed to fetch user data for edited comment: %v", err)
-	}
-	comment.UserDisplayName = user.DisplayName
-	comment.UserAvatarSeed = user.AvatarSeed
-	comment.UserHasCustomAvatar = user.HasCustomAvatar
-	comment.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+	comment.SetAuthor(loadCommentAuthor(dbCtx, userID))
 
 	go sendEditedCommentToTelegram(context.Background(), &comment, oldContentHTML)
 
@@ -414,124 +431,53 @@ func CalculateCommentsPagination(page, pageSize, totalCount int, isDeepLink bool
 	return pageSize, (page - 1) * pageSize, page, totalPages
 }
 
-func GetVisibleComments(ctx context.Context, chapterID, userID string, page int, targetID ...string) (*models.CommentsPage, error) {
-	pageSize := 12
+const visibleCommentsPageSize = 12
 
-	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+type commentTargetQueries struct {
+	position string
+	count    string
+	list     string
+}
 
-	var target string
-	if len(targetID) > 0 {
-		target = targetID[0]
-	}
+var chapterCommentQueries = commentTargetQueries{
+	position: queryChapterCommentsPosition,
+	count:    queryChapterCommentsCount,
+	list:     queryChapterCommentsList,
+}
 
+func getVisibleTargetComments(ctx context.Context, queries commentTargetQueries, targetID, viewerID string, page int, commentID string, unseenSince *time.Time) (*models.CommentsPage, error) {
 	targetPage := page
 	isDeepLink := false
-
-	if target != "" {
-		targetCommentID := target
-		if strings.HasPrefix(target, "can_") {
-			var parentCommentID string
-			err := database.DB.QueryRow(dbCtx, `
-				SELECT comment_id
-				FROM comment_answers
-				WHERE id = $1
-				  AND status != 'deleted'
-				  AND (status = 'approved' OR (status IN ('pending', 'rejected') AND user_id = $2))
-			`, target, userID).Scan(&parentCommentID)
-			if err == nil && parentCommentID != "" {
-				targetCommentID = parentCommentID
-			} else {
-				targetCommentID = ""
-			}
-		}
-
-		if targetCommentID != "" {
-			var targetCreatedAt time.Time
-			err := database.DB.QueryRow(dbCtx, `
-				SELECT created_at
-				FROM comments
-				WHERE id = $1
-				  AND chapter_id = $2
-				  AND status != 'deleted'
-				  AND (status = 'approved' OR (status IN ('pending', 'rejected') AND user_id = $3))
-			`, targetCommentID, chapterID, userID).Scan(&targetCreatedAt)
-			if err == nil {
-				var pos int
-				err = database.DB.QueryRow(dbCtx, `
-					SELECT COUNT(*)
-					FROM comments c
-					WHERE c.chapter_id = $1
-					  AND c.status != 'deleted'
-					  AND (
-					    c.status = 'approved'
-					    OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
-					  )
-					  AND (c.created_at > $3 OR (c.created_at = $3 AND c.id < $4))
-				`, chapterID, userID, targetCreatedAt, targetCommentID).Scan(&pos)
-				if err == nil {
-					targetPage = (pos / pageSize) + 1
-					isDeepLink = true
-				}
-			}
+	if commentID != "" {
+		var found bool
+		var pos int
+		if err := database.DB.QueryRow(ctx, queries.position, targetID, viewerID, commentID).Scan(&found, &pos); err != nil {
+			logger.Warn("Failed to locate comment %s: %v", commentID, err)
+		} else if found {
+			targetPage = pos/visibleCommentsPageSize + 1
+			isDeepLink = true
 		}
 	}
 
-	var topLevelCount, answersCount int
-	err := database.DB.QueryRow(dbCtx, `
-        SELECT
-            COUNT(DISTINCT c.id) AS top_level_count,
-            COUNT(DISTINCT ca.id) AS answers_count
-        FROM comments c
-        LEFT JOIN comment_answers ca ON ca.comment_id = c.id
-            AND ca.status != 'deleted'
-            AND (
-                ca.status = 'approved'
-                OR (ca.status IN ('pending', 'rejected') AND ca.user_id = $2)
-            )
-        WHERE c.chapter_id = $1
-          AND c.status != 'deleted'
-          AND (
-            c.status = 'approved'
-            OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
-          )
-    `, chapterID, userID).Scan(&topLevelCount, &answersCount)
-	if err != nil {
+	var totalCount int
+	if err := database.DB.QueryRow(ctx, queries.count, targetID, viewerID).Scan(&totalCount); err != nil {
 		logger.Error("Failed to count visible comments: %v", err)
 		return nil, err
 	}
 
-	if topLevelCount == 0 {
+	if totalCount == 0 {
 		return &models.CommentsPage{
 			Comments:   []models.Comment{},
 			Page:       1,
-			PageSize:   pageSize,
+			PageSize:   visibleCommentsPageSize,
 			TotalCount: 0,
 			TotalPages: 0,
 		}, nil
 	}
 
-	totalCount := topLevelCount + answersCount
+	limit, offset, resultPage, totalPages := CalculateCommentsPagination(page, visibleCommentsPageSize, totalCount, isDeepLink, targetPage)
 
-	limit, offset, resultPage, totalPages := CalculateCommentsPagination(page, pageSize, topLevelCount, isDeepLink, targetPage)
-
-	rows, err := database.DB.Query(dbCtx, `
-        SELECT
-            c.id, c.chapter_id, c.user_id, c.content_html, c.status, c.edited_at, c.created_at,
-            u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at,
-            COALESCE((SELECT SUM(value) FROM comment_votes WHERE comment_id = c.id), 0)::int,
-            COALESCE((SELECT value FROM comment_votes WHERE comment_id = c.id AND user_id = $2), 0)::int
-        FROM comments c
-        JOIN users u ON c.user_id = u.id
-        WHERE c.chapter_id = $1
-          AND c.status != 'deleted'
-          AND (
-            c.status = 'approved'
-            OR (c.status IN ('pending', 'rejected') AND c.user_id = $2)
-          )
-        ORDER BY c.created_at DESC, c.id ASC
-        LIMIT $3 OFFSET $4
-    `, chapterID, userID, limit, offset)
+	rows, err := database.DB.Query(ctx, queries.list, targetID, viewerID, limit, offset)
 	if err != nil {
 		logger.Error("Failed to get visible comments: %v", err)
 		return nil, err
@@ -541,79 +487,110 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int,
 	comments := make([]models.Comment, 0)
 	for rows.Next() {
 		var c models.Comment
+		var approvedAt *time.Time
 		var avatarUpdatedAt time.Time
 		if err := rows.Scan(
-			&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.EditedAt,
-			&c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed,
-			&c.UserHasCustomAvatar, &avatarUpdatedAt,
+			&c.ID, &c.ChapterID, &c.ProfileID, &c.UserID, &c.ContentHTML, &c.Status, &c.EditedAt, &c.CreatedAt, &approvedAt,
+			&c.UserDisplayName, &c.UserAvatarSeed, &c.UserHasCustomAvatar, &avatarUpdatedAt,
 			&c.Score, &c.UserVote,
 		); err != nil {
 			logger.Warn("Comment row scan error: %v", err)
 			continue
 		}
 		c.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+		c.IsNew = unseenSince != nil && isUnseenComment(c, viewerID, approvedAt, *unseenSince)
 		comments = append(comments, c)
 	}
-
-	if len(comments) > 0 {
-		commentIDs := make([]string, len(comments))
-		for i, c := range comments {
-			commentIDs[i] = c.ID
-		}
-
-		answerRows, err := database.DB.Query(dbCtx, `
-			SELECT
-				ca.id, ca.comment_id, ca.user_id, ca.content_html, ca.status, ca.edited_at, ca.created_at,
-				u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at
-			FROM comment_answers ca
-			JOIN users u ON ca.user_id = u.id
-			WHERE ca.comment_id = ANY($1)
-			  AND ca.status != 'deleted'
-			  AND (
-			    ca.status = 'approved'
-			    OR (ca.status IN ('pending', 'rejected') AND ca.user_id = $2)
-			  )
-			ORDER BY ca.comment_id, ca.created_at ASC
-		`, commentIDs, userID)
-		if err != nil {
-			logger.Warn("Failed to batch-load comment answers: %v", err)
-		} else {
-			defer answerRows.Close()
-
-			answersMap := make(map[string][]models.CommentAnswer)
-			for answerRows.Next() {
-				var a models.CommentAnswer
-				var avatarUpdatedAt time.Time
-				if err := answerRows.Scan(
-					&a.ID, &a.CommentID, &a.UserID, &a.ContentHTML, &a.Status, &a.EditedAt,
-					&a.CreatedAt, &a.UserDisplayName, &a.UserAvatarSeed,
-					&a.UserHasCustomAvatar, &avatarUpdatedAt,
-				); err != nil {
-					logger.Warn("Answer row scan error: %v", err)
-					continue
-				}
-				a.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
-				answersMap[a.CommentID] = append(answersMap[a.CommentID], a)
-			}
-
-			for i := range comments {
-				if ans, ok := answersMap[comments[i].ID]; ok {
-					comments[i].Answers = ans
-				}
-			}
-		}
+	if err := rows.Err(); err != nil {
+		logger.Error("Failed to iterate visible comments: %v", err)
+		return nil, err
 	}
 
 	return &models.CommentsPage{
 		Comments:   comments,
 		Page:       resultPage,
-		PageSize:   pageSize,
+		PageSize:   visibleCommentsPageSize,
 		TotalCount: totalCount,
 		TotalPages: totalPages,
 	}, nil
 }
 
-func GetUserComments(ctx context.Context, userID string, page int) (*models.UserCommentsPage, error) {
+func loadVisibleAnswers(ctx context.Context, commentIDs []string, viewerID string, unseenSince *time.Time) (map[string][]models.CommentAnswer, error) {
+	answers := make(map[string][]models.CommentAnswer)
+	if len(commentIDs) == 0 {
+		return answers, nil
+	}
+
+	rows, err := database.DB.Query(ctx, queryCommentAnswersVisibleList, commentIDs, viewerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var a models.CommentAnswer
+		var approvedAt *time.Time
+		var avatarUpdatedAt time.Time
+		if err := rows.Scan(
+			&a.ID, &a.CommentID, &a.UserID, &a.ContentHTML, &a.Status, &a.EditedAt, &a.CreatedAt, &approvedAt,
+			&a.UserDisplayName, &a.UserAvatarSeed, &a.UserHasCustomAvatar, &avatarUpdatedAt,
+		); err != nil {
+			logger.Warn("Answer row scan error: %v", err)
+			continue
+		}
+		a.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+		a.IsNew = unseenSince != nil && isUnseenAnswer(a, viewerID, approvedAt, *unseenSince)
+		answers[a.CommentID] = append(answers[a.CommentID], a)
+	}
+	return answers, rows.Err()
+}
+
+func GetVisibleComments(ctx context.Context, chapterID, userID string, page int, targetID ...string) (*models.CommentsPage, error) {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var target string
+	if len(targetID) > 0 {
+		target = targetID[0]
+	}
+	if strings.HasPrefix(target, "can_") {
+		var parentCommentID string
+		if err := database.DB.QueryRow(dbCtx, queryCommentAnswersVisibleParent, target, userID).Scan(&parentCommentID); err != nil {
+			parentCommentID = ""
+		}
+		target = parentCommentID
+	}
+
+	result, err := getVisibleTargetComments(dbCtx, chapterCommentQueries, chapterID, userID, page, target, nil)
+	if err != nil || result.TotalCount == 0 {
+		return result, err
+	}
+
+	var answersCount int
+	if err := database.DB.QueryRow(dbCtx, queryCommentAnswersVisibleCount, chapterID, userID).Scan(&answersCount); err != nil {
+		logger.Error("Failed to count visible answers: %v", err)
+		return nil, err
+	}
+	result.TotalCount += answersCount
+
+	commentIDs := make([]string, len(result.Comments))
+	for i, c := range result.Comments {
+		commentIDs[i] = c.ID
+	}
+
+	answers, err := loadVisibleAnswers(dbCtx, commentIDs, userID, nil)
+	if err != nil {
+		logger.Warn("Failed to batch-load comment answers: %v", err)
+		return result, nil
+	}
+	for i := range result.Comments {
+		result.Comments[i].Answers = answers[result.Comments[i].ID]
+	}
+
+	return result, nil
+}
+
+func GetUserComments(ctx context.Context, userID string, page int, seenBefore, profileSeenBefore time.Time) (*models.UserCommentsPage, error) {
 	pageSize := 12
 	offset := (page - 1) * pageSize
 
@@ -659,20 +636,22 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 
 	commentsByID := make(map[string]*models.Comment, len(commentIDs))
 
-	commentRows, err := database.DB.Query(dbCtx, `
-		SELECT
-			c.id, c.chapter_id, c.user_id, c.content_html, c.status, c.edited_at, c.created_at,
-			u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at,
-			COALESCE((SELECT SUM(value) FROM comment_votes WHERE comment_id = c.id), 0)::int,
-			COALESCE((SELECT value FROM comment_votes WHERE comment_id = c.id AND user_id = $2), 0)::int,
-			ch.chapter_num, ch.novel_id,
-			n.title
-		FROM comments c
-		JOIN users u ON c.user_id = u.id
-		JOIN chapters ch ON c.chapter_id = ch.id
-		JOIN novels n ON ch.novel_id = n.id
-		WHERE c.id = ANY($1)
-	`, commentIDs, userID)
+	notifyThreshold := time.Now().AddDate(-1, 0, 0)
+	profileThreshold := time.Now()
+	var notificationsSeen *time.Time
+	var profileCommentsSeen time.Time
+	if err := database.DB.QueryRow(dbCtx, queryUsersSeenThresholdsGet, userID).Scan(&notificationsSeen, &profileCommentsSeen); err != nil {
+		logger.Warn("Failed to get seen thresholds for user %s: %v", userID, err)
+	} else {
+		if notificationsSeen != nil {
+			notifyThreshold = *notificationsSeen
+		}
+		profileThreshold = profileCommentsSeen
+	}
+	notifyThreshold = earliestSeen(notifyThreshold, seenBefore)
+	profileThreshold = earliestSeen(profileThreshold, profileSeenBefore)
+
+	commentRows, err := database.DB.Query(dbCtx, queryUserCommentThreadDetails, commentIDs, userID)
 	if err != nil {
 		logger.Error("Failed to get user thread comments: %v", err)
 		return nil, err
@@ -682,65 +661,30 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 	for commentRows.Next() {
 		var c models.Comment
 		var avatarUpdatedAt time.Time
+		var approvedAt *time.Time
 		if err := commentRows.Scan(
 			&c.ID, &c.ChapterID, &c.UserID, &c.ContentHTML, &c.Status, &c.EditedAt,
 			&c.CreatedAt, &c.UserDisplayName, &c.UserAvatarSeed,
 			&c.UserHasCustomAvatar, &avatarUpdatedAt,
 			&c.Score, &c.UserVote,
 			&c.ChapterNum, &c.NovelID, &c.NovelTitle,
+			&c.ProfileID, &c.ProfileDisplayName, &approvedAt,
 		); err != nil {
 			logger.Warn("Comment row scan error: %v", err)
 			continue
 		}
 		c.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+		c.IsNew = c.ProfileID == userID && isUnseenComment(c, userID, approvedAt, profileThreshold)
 		commentsByID[c.ID] = &c
 	}
 
-	answerRows, err := database.DB.Query(dbCtx, `
-		SELECT
-			ca.id, ca.comment_id, ca.user_id, ca.content_html, ca.status, ca.edited_at, ca.created_at,
-			u.display_name, u.avatar_seed, u.has_custom_avatar, u.avatar_updated_at
-		FROM comment_answers ca
-		JOIN users u ON ca.user_id = u.id
-		WHERE ca.comment_id = ANY($1)
-		  AND ca.status != 'deleted'
-		  AND (
-		    ca.status = 'approved'
-		    OR (ca.status IN ('pending', 'rejected') AND ca.user_id = $2)
-		  )
-		ORDER BY ca.comment_id, ca.created_at ASC
-	`, commentIDs, userID)
+	answers, err := loadVisibleAnswers(dbCtx, commentIDs, userID, &notifyThreshold)
 	if err != nil {
 		logger.Warn("Failed to batch-load answers for user threads: %v", err)
-	} else {
-		var lastSeen sql.NullTime
-		_ = database.DB.QueryRow(dbCtx,
-			`SELECT notifications_last_seen FROM users WHERE id = $1`, userID,
-		).Scan(&lastSeen)
-
-		notifyThreshold := time.Now().AddDate(-1, 0, 0)
-		if lastSeen.Valid {
-			notifyThreshold = lastSeen.Time
-		}
-
-		defer answerRows.Close()
-		for answerRows.Next() {
-			var a models.CommentAnswer
-			var avatarUpdatedAt time.Time
-			if err := answerRows.Scan(
-				&a.ID, &a.CommentID, &a.UserID, &a.ContentHTML, &a.Status, &a.EditedAt,
-				&a.CreatedAt, &a.UserDisplayName, &a.UserAvatarSeed,
-				&a.UserHasCustomAvatar, &avatarUpdatedAt,
-			); err != nil {
-				logger.Warn("Answer row scan error: %v", err)
-				continue
-			}
-			a.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
-			a.IsNew = a.UserID != userID && a.CreatedAt.After(notifyThreshold)
-
-			if c, ok := commentsByID[a.CommentID]; ok {
-				c.Answers = append(c.Answers, a)
-			}
+	}
+	for commentID, list := range answers {
+		if c, ok := commentsByID[commentID]; ok {
+			c.Answers = list
 		}
 	}
 
@@ -752,13 +696,7 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 	}
 
 	var totalCount int
-	err = database.DB.QueryRow(dbCtx, `
-		SELECT COUNT(*) FROM (
-			SELECT id FROM comments WHERE user_id = $1 AND status != 'deleted'
-			UNION
-			SELECT comment_id FROM comment_answers WHERE user_id = $1 AND status != 'deleted'
-		) AS combined
-	`, userID).Scan(&totalCount)
+	err = database.DB.QueryRow(dbCtx, queryUserCommentThreadsCount, userID).Scan(&totalCount)
 	if err != nil {
 		logger.Error("Failed to count user threads: %v", err)
 		totalCount = len(comments)
@@ -766,11 +704,13 @@ func GetUserComments(ctx context.Context, userID string, page int) (*models.User
 
 	totalPages := (totalCount + pageSize - 1) / pageSize
 	return &models.UserCommentsPage{
-		Comments:   comments,
-		Page:       page,
-		PageSize:   pageSize,
-		TotalCount: totalCount,
-		TotalPages: totalPages,
+		Comments:          comments,
+		Page:              page,
+		PageSize:          pageSize,
+		TotalCount:        totalCount,
+		TotalPages:        totalPages,
+		SeenBefore:        &notifyThreshold,
+		ProfileSeenBefore: &profileThreshold,
 	}, nil
 }
 
@@ -814,12 +754,13 @@ func UpdateCommentStatus(ctx context.Context, commentID, status string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	var id string
-	err := database.DB.QueryRow(dbCtx, queryCommentsUpdateStatus, status, commentID).Scan(&id)
+	var id, authorID string
+	err := database.DB.QueryRow(dbCtx, queryCommentsUpdateStatus, status, commentID).Scan(&id, &authorID)
 	if err != nil {
 		logger.Error("Failed to update comment status: %v", err)
 		return err
 	}
+	InvalidateUserProfile(authorID)
 
 	logger.Info("Comment %s status updated to %s", commentID, status)
 	return nil
@@ -829,17 +770,13 @@ func DeleteComment(ctx context.Context, commentID, userID string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	var ownerID string
-	var status string
-	err := database.DB.QueryRow(dbCtx,
-		`SELECT user_id, status FROM comments WHERE id = $1`,
-		commentID,
-	).Scan(&ownerID, &status)
+	var ownerID, status, profileID string
+	err := database.DB.QueryRow(dbCtx, queryCommentsAccessGet, commentID).Scan(&ownerID, &status, &profileID)
 	if err != nil {
 		return ErrCommentNotFound
 	}
 
-	if ownerID != userID {
+	if !canDeleteComment(userID, ownerID, profileID) {
 		return ErrNotCommentAuthor
 	}
 
@@ -858,6 +795,34 @@ func DeleteComment(ctx context.Context, commentID, userID string) error {
 
 	logger.Info("Comment %s deleted by user %s", commentID, userID)
 	return nil
+}
+
+func earliestSeen(stored, provided time.Time) time.Time {
+	if !provided.IsZero() && provided.Before(stored) {
+		return provided
+	}
+	return stored
+}
+
+func isUnseenComment(c models.Comment, viewerID string, approvedAt *time.Time, seenAt time.Time) bool {
+	return c.Status == "approved" && c.UserID != viewerID && approvedAt != nil && approvedAt.After(seenAt)
+}
+
+func isUnseenAnswer(a models.CommentAnswer, viewerID string, approvedAt *time.Time, seenAt time.Time) bool {
+	return a.Status == "approved" && a.UserID != viewerID && approvedAt != nil && approvedAt.After(seenAt)
+}
+
+func loadCommentAuthor(ctx context.Context, userID string) models.ProfilePublic {
+	author, err := GetPublicProfile(ctx, userID)
+	if err != nil {
+		logger.Warn("Failed to fetch comment author %s: %v", userID, err)
+		return models.ProfilePublic{}
+	}
+	return *author
+}
+
+func canDeleteComment(userID, authorID, profileID string) bool {
+	return userID != "" && (userID == authorID || userID == profileID)
 }
 
 func GetCommentByID(ctx context.Context, commentID string) (*models.Comment, error) {
@@ -883,15 +848,16 @@ func CreateCommentAnswer(ctx context.Context, userID string, input models.Create
 	defer cancel()
 
 	var commentStatus string
-	err := database.DB.QueryRow(dbCtx,
-		`SELECT status FROM comments WHERE id = $1`,
-		input.CommentID,
-	).Scan(&commentStatus)
+	var isProfileComment bool
+	err := database.DB.QueryRow(dbCtx, queryCommentsAnswerTargetGet, input.CommentID).Scan(&commentStatus, &isProfileComment)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrCommentNotFound
 		}
 		return nil, err
+	}
+	if isProfileComment {
+		return nil, ErrCommentNotFound
 	}
 	if commentStatus != "approved" {
 		return nil, ErrCommentNotApproved
@@ -908,15 +874,7 @@ func CreateCommentAnswer(ctx context.Context, userID string, input models.Create
 		return nil, err
 	}
 
-	var user models.ProfilePublic
-	var avatarUpdatedAt time.Time
-	if err := database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar, avatar_updated_at FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar, &avatarUpdatedAt); err != nil {
-		logger.Warn("Failed to fetch user data for answer: %v", err)
-	}
-	answer.UserDisplayName = user.DisplayName
-	answer.UserAvatarSeed = user.AvatarSeed
-	answer.UserHasCustomAvatar = user.HasCustomAvatar
-	answer.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+	answer.SetAuthor(loadCommentAuthor(dbCtx, userID))
 
 	go sendAnswerToTelegram(context.Background(), &answer)
 
@@ -962,15 +920,7 @@ func EditCommentAnswer(ctx context.Context, answerID, userID string, input model
 		return nil, err
 	}
 
-	var user models.ProfilePublic
-	var avatarUpdatedAt time.Time
-	if err := database.DB.QueryRow(dbCtx, `SELECT display_name, avatar_seed, has_custom_avatar, avatar_updated_at FROM users WHERE id = $1`, userID).Scan(&user.DisplayName, &user.AvatarSeed, &user.HasCustomAvatar, &avatarUpdatedAt); err != nil {
-		logger.Warn("Failed to fetch user data for edited answer: %v", err)
-	}
-	answer.UserDisplayName = user.DisplayName
-	answer.UserAvatarSeed = user.AvatarSeed
-	answer.UserHasCustomAvatar = user.HasCustomAvatar
-	answer.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
+	answer.SetAuthor(loadCommentAuthor(dbCtx, userID))
 
 	go sendEditedAnswerToTelegram(context.Background(), &answer, oldContentHTML)
 
@@ -1002,11 +952,12 @@ func DeleteCommentAnswer(ctx context.Context, answerID, userID string) error {
 		return ErrCannotDeleteAnswer
 	}
 
-	var id string
-	err = database.DB.QueryRow(dbCtx, queryCommentAnswersUpdateStatus, "deleted", answerID).Scan(&id)
+	var id, authorID string
+	err = database.DB.QueryRow(dbCtx, queryCommentAnswersUpdateStatus, "deleted", answerID).Scan(&id, &authorID)
 	if err != nil {
 		return err
 	}
+	InvalidateUserProfile(authorID)
 
 	logger.Info("Comment answer %s deleted by user %s", answerID, userID)
 	return nil
@@ -1016,12 +967,13 @@ func UpdateCommentAnswerStatus(ctx context.Context, answerID, status string) err
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	var id string
-	err := database.DB.QueryRow(dbCtx, queryCommentAnswersUpdateStatus, status, answerID).Scan(&id)
+	var id, authorID string
+	err := database.DB.QueryRow(dbCtx, queryCommentAnswersUpdateStatus, status, answerID).Scan(&id, &authorID)
 	if err != nil {
 		logger.Error("Failed to update comment answer status: %v", err)
 		return err
 	}
+	InvalidateUserProfile(authorID)
 
 	logger.Info("Comment answer %s status updated to %s", answerID, status)
 	return nil
@@ -1046,13 +998,13 @@ func RetryPendingTelegramNotifications(ctx context.Context) {
 	}
 
 	type pendingComment struct {
-		id, chapterID, contentHTML, displayName string
+		id, chapterID, profileID, contentHTML, displayName string
 	}
 
 	pending := make([]pendingComment, 0)
 	for rows.Next() {
 		var c pendingComment
-		if err := rows.Scan(&c.id, &c.chapterID, &c.contentHTML, &c.displayName); err != nil {
+		if err := rows.Scan(&c.id, &c.chapterID, &c.profileID, &c.contentHTML, &c.displayName); err != nil {
 			continue
 		}
 		pending = append(pending, c)
@@ -1066,6 +1018,7 @@ func RetryPendingTelegramNotifications(ctx context.Context) {
 		comment := &models.Comment{
 			ID:              c.id,
 			ChapterID:       c.chapterID,
+			ProfileID:       c.profileID,
 			ContentHTML:     c.contentHTML,
 			UserDisplayName: c.displayName,
 		}
@@ -1105,6 +1058,11 @@ func RetryPendingTelegramNotifications(ctx context.Context) {
 }
 
 func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
+	if comment.ProfileID != "" {
+		sendProfileCommentToTelegram(ctx, comment, "", false)
+		return
+	}
+
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -1127,6 +1085,11 @@ func sendCommentToTelegram(ctx context.Context, comment *models.Comment) {
 }
 
 func sendEditedCommentToTelegram(ctx context.Context, comment *models.Comment, oldContentHTML string) {
+	if comment.ProfileID != "" {
+		sendProfileCommentToTelegram(ctx, comment, oldContentHTML, true)
+		return
+	}
+
 	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
