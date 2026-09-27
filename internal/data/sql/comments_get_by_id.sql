@@ -1,6 +1,6 @@
 SELECT
     id,
-    chapter_id,
+    COALESCE(chapter_id, ''),
     user_id,
     content_html,
     status,

@@ -513,3 +513,122 @@ func TestCacheMiddleware(t *testing.T) {
 		})
 	}
 }
+
+func TestGetProfileCommentsInputValidation(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	type testResponse struct {
+		Body string
+	}
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "get-profile-comments",
+		Method:      http.MethodGet,
+		Path:        "/profile/{id}/comments",
+	}, func(ctx context.Context, input *GetProfileCommentsInput) (*testResponse, error) {
+		return &testResponse{Body: input.SeenBefore.UTC().Format("2006-01-02T15:04:05Z07:00")}, nil
+	})
+
+	tests := []struct {
+		name       string
+		path       string
+		wantStatus int
+		wantBody   string
+	}{
+		{"valid profile", "/profile/usr_12345678/comments", http.StatusOK, ""},
+		{"valid comment_id cmt", "/profile/usr_12345678/comments?comment_id=cmt_abcdef12", http.StatusOK, ""},
+		{"answer id is accepted and ignored downstream", "/profile/usr_12345678/comments?comment_id=can_abcdef12", http.StatusOK, ""},
+		{"seen_before with offset", "/profile/usr_12345678/comments?seen_before=2026-09-20T15%3A04%3A05.123456%2B03%3A00", http.StatusOK, "2026-09-20T12:04:05Z"},
+		{"seen_before in UTC", "/profile/usr_12345678/comments?seen_before=2026-09-20T12%3A04%3A05Z", http.StatusOK, "2026-09-20T12:04:05Z"},
+		{"invalid profile prefix", "/profile/nvl_12345678/comments", http.StatusUnprocessableEntity, ""},
+		{"invalid profile length", "/profile/usr_123/comments", http.StatusUnprocessableEntity, ""},
+		{"invalid comment_id prefix", "/profile/usr_12345678/comments?comment_id=usr_abcdef12", http.StatusUnprocessableEntity, ""},
+		{"invalid seen_before", "/profile/usr_12345678/comments?seen_before=yesterday", http.StatusUnprocessableEntity, ""},
+		{"invalid page zero", "/profile/usr_12345678/comments?page=0", http.StatusUnprocessableEntity, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := humaApi.Get(tt.path)
+			if resp.Code != tt.wantStatus {
+				t.Fatalf("GET %s returned status %d, want %d: %s", tt.path, resp.Code, tt.wantStatus, resp.Body.String())
+			}
+			if tt.wantBody != "" {
+				var body string
+				if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
+					t.Fatalf("failed to decode body: %v", err)
+				}
+				if body != tt.wantBody {
+					t.Errorf("parsed seen_before = %q, want %q", body, tt.wantBody)
+				}
+			}
+		})
+	}
+}
+
+func TestCreateProfileCommentInputValidation(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "create-profile-comment",
+		Method:      http.MethodPost,
+		Path:        "/profile/{id}/comments",
+	}, func(ctx context.Context, input *CreateProfileCommentInput) (*EmptyResponse, error) {
+		return &EmptyResponse{Status: http.StatusNoContent}, nil
+	})
+
+	tests := []struct {
+		name       string
+		path       string
+		body       map[string]any
+		wantStatus int
+	}{
+		{"valid", "/profile/usr_12345678/comments", map[string]any{"content": "Привет"}, http.StatusNoContent},
+		{"empty content", "/profile/usr_12345678/comments", map[string]any{"content": ""}, http.StatusUnprocessableEntity},
+		{"invalid profile id", "/profile/chp_12345678/comments", map[string]any{"content": "Привет"}, http.StatusUnprocessableEntity},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := humaApi.Post(tt.path, tt.body)
+			if resp.Code != tt.wantStatus {
+				t.Errorf("POST %s returned status %d, want %d: %s", tt.path, resp.Code, tt.wantStatus, resp.Body.String())
+			}
+		})
+	}
+}
+
+func TestGetUserCommentsInputValidation(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	type testResponse struct {
+		Body string
+	}
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "get-user-comments",
+		Method:      http.MethodGet,
+		Path:        "/profile/me/comments",
+	}, func(ctx context.Context, input *GetUserCommentsInput) (*testResponse, error) {
+		return &testResponse{Body: "ok"}, nil
+	})
+
+	tests := []struct {
+		name       string
+		path       string
+		wantStatus int
+	}{
+		{"no thresholds", "/profile/me/comments?page=2", http.StatusOK},
+		{"both thresholds", "/profile/me/comments?seen_before=2026-09-20T12%3A04%3A05Z&profile_seen_before=2026-09-21T08%3A00%3A00.5%2B03%3A00", http.StatusOK},
+		{"invalid profile threshold", "/profile/me/comments?profile_seen_before=20-09-2026", http.StatusUnprocessableEntity},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := humaApi.Get(tt.path)
+			if resp.Code != tt.wantStatus {
+				t.Errorf("GET %s returned status %d, want %d: %s", tt.path, resp.Code, tt.wantStatus, resp.Body.String())
+			}
+		})
+	}
+}

@@ -6,9 +6,12 @@ import (
 	"math"
 	"math/rand/v2"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/ch1kulya/kappalib/internal/models"
 )
 
 func MapStatus(status string) string {
@@ -431,4 +434,125 @@ func shouldShowAnnouncement() bool {
 
 func isExternalURL(rawURL string) bool {
 	return strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://")
+}
+
+var heatmapLevelThresholds = []int{1, 10 * 60, 30 * 60, 90 * 60}
+
+var monthShortNames = [...]string{"Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"}
+
+var monthGenitiveNames = [...]string{"января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"}
+
+func heatmapLevel(seconds int) int {
+	level := 0
+	for i, threshold := range heatmapLevelThresholds {
+		if seconds >= threshold {
+			level = i + 1
+		}
+	}
+	return level
+}
+
+func BuildActivityHeatmap(days []models.ActivityDay) ActivityHeatmap {
+	var heatmap ActivityHeatmap
+	for _, day := range days {
+		weekday := (int(day.Date.Weekday()) + 6) % 7
+		if len(heatmap.Weeks) == 0 {
+			week := make([]HeatmapCell, weekday, 7)
+			for i := range week {
+				week[i].Empty = true
+			}
+			heatmap.Weeks = append(heatmap.Weeks, week)
+		} else if weekday == 0 {
+			heatmap.Weeks = append(heatmap.Weeks, make([]HeatmapCell, 0, 7))
+		}
+		last := len(heatmap.Weeks) - 1
+		heatmap.Weeks[last] = append(heatmap.Weeks[last], HeatmapCell{
+			Date:    day.Date,
+			Seconds: day.Seconds,
+			Level:   heatmapLevel(day.Seconds),
+		})
+		heatmap.TotalSeconds += day.Seconds
+	}
+	heatmap.Months = buildHeatmapMonths(heatmap.Weeks)
+	return heatmap
+}
+
+func buildHeatmapMonths(weeks [][]HeatmapCell) []HeatmapMonth {
+	months := make([]HeatmapMonth, 0, 13)
+	prevMonth := time.Month(0)
+	for col, week := range weeks {
+		for _, cell := range week {
+			if cell.Empty {
+				continue
+			}
+			if cell.Date.Month() != prevMonth {
+				prevMonth = cell.Date.Month()
+				months = append(months, HeatmapMonth{Label: monthShortNames[prevMonth-1], Column: col})
+			}
+			break
+		}
+	}
+	if len(months) > 1 && months[1].Column-months[0].Column < 2 {
+		months = months[1:]
+	}
+	if n := len(months); n > 0 && months[n-1].Column > len(weeks)-2 {
+		months = months[:n-1]
+	}
+	return months
+}
+
+func heatmapBodyStyle(weeks int) string {
+	return fmt.Sprintf("--weeks: %d", max(weeks, 1))
+}
+
+func heatmapColumnStyle(column int) string {
+	return fmt.Sprintf("--col: %d", column)
+}
+
+func heatmapCellLabel(cell HeatmapCell) string {
+	if cell.Seconds == 0 {
+		return "Нет активности · " + FormatDate(cell.Date)
+	}
+	return FormatDuration(cell.Seconds) + " · " + FormatDate(cell.Date)
+}
+
+func heatmapSummary(totalSeconds int) string {
+	if totalSeconds == 0 {
+		return "Нет активности за последний год"
+	}
+	return FormatDuration(totalSeconds) + " за последний год"
+}
+
+func FormatDuration(seconds int) string {
+	if seconds <= 0 {
+		return "0 мин"
+	}
+	if seconds < 60 {
+		return "меньше минуты"
+	}
+	hours := seconds / 3600
+	minutes := (seconds % 3600) / 60
+	switch {
+	case hours == 0:
+		return fmt.Sprintf("%d мин", minutes)
+	case minutes == 0:
+		return fmt.Sprintf("%d ч", hours)
+	default:
+		return fmt.Sprintf("%d ч %d мин", hours, minutes)
+	}
+}
+
+func FormatDate(t time.Time) string {
+	return fmt.Sprintf("%d %s %d", t.Day(), monthGenitiveNames[t.Month()-1], t.Year())
+}
+
+func AvatarURL(userID string, hasCustomAvatar bool, avatarSeed string, avatarUpdatedAt int64) string {
+	if hasCustomAvatar {
+		return fmt.Sprintf("%s/avatars/%s.jpg?v=%d", os.Getenv("S3_PUBLIC_URL"), userID, avatarUpdatedAt)
+	}
+	return "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=" + url.QueryEscape(avatarSeed) + "&backgroundType=solid,gradientLinear"
+}
+
+func achievementTierLabel(tier int) string {
+	return fmt.Sprintf("x%d", tier)
 }

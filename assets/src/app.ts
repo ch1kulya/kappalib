@@ -14,6 +14,8 @@ import { initCatalogSort, initChaptersSort } from "./modules/sort";
 import { initStatusBadge } from "./modules/status";
 import { initTimeTracker } from "./modules/time";
 import { initTocFilter } from "./modules/toc";
+import { initHelpTooltips } from "./modules/tooltip";
+import { initUserProfilePage } from "./modules/user";
 
 declare global {
   interface Window {
@@ -60,6 +62,8 @@ document.addEventListener("DOMContentLoaded", () => {
     initNovelListDropdown();
     initListPage();
     initChaptersBookmarks();
+    initUserProfilePage();
+    initHelpTooltips();
 
     if (document.querySelector(".cr-wrapper")) {
       refreshLastReadTotalChapters();

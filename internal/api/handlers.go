@@ -103,6 +103,24 @@ type GetCommentsInput struct {
 	CommentID string `query:"comment_id" pattern:"^(cmt|can)_[a-z0-9]{8}$"`
 }
 
+type GetProfileCommentsInput struct {
+	ProfileID  string    `path:"id" pattern:"^usr_[a-z0-9]{8}$"`
+	Page       int       `query:"page" default:"1" minimum:"1" maximum:"9999"`
+	CommentID  string    `query:"comment_id" pattern:"^(cmt|can)_[a-z0-9]{8}$"`
+	SeenBefore time.Time `query:"seen_before"`
+}
+
+type CreateProfileCommentInput struct {
+	ProfileID    string `path:"id" pattern:"^usr_[a-z0-9]{8}$"`
+	ForwardedFor string `header:"X-Forwarded-For"`
+	RealIP       string `header:"X-Real-IP"`
+	Body         struct {
+		Content           string `json:"content" minLength:"1" maxLength:"12000"`
+		TurnstileToken    string `json:"turnstile_token,omitempty"`
+		SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
+	}
+}
+
 type CreateCommentInput struct {
 	ChapterID    string `path:"chapterId" pattern:"^chp_[a-z0-9]{8}$"`
 	ForwardedFor string `header:"X-Forwarded-For"`
@@ -251,7 +269,9 @@ type UserCommentsPageResponse struct {
 }
 
 type GetUserCommentsInput struct {
-	Page int `query:"page" default:"1" minimum:"1" maximum:"9999"`
+	Page              int       `query:"page" default:"1" minimum:"1" maximum:"9999"`
+	SeenBefore        time.Time `query:"seen_before"`
+	ProfileSeenBefore time.Time `query:"profile_seen_before"`
 }
 
 type CreateCommentAnswerInput struct {
@@ -396,9 +416,12 @@ func HandleGetChapter(ctx context.Context, input *ChapterIDInput) (*ChapterRespo
 }
 
 func HandleGetProfile(ctx context.Context, input *ProfileIDInput) (*ProfileResponse, error) {
-	profile, err := data.GetProfile(ctx, input.ProfileID)
+	profile, err := data.GetPublicProfile(ctx, input.ProfileID)
 	if err != nil {
-		return nil, huma.Error404NotFound("Profile not found")
+		if errors.Is(err, data.ErrProfileNotFound) {
+			return nil, huma.Error404NotFound("Profile not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to fetch profile")
 	}
 	return &ProfileResponse{Body: *profile}, nil
 }
@@ -489,6 +512,58 @@ func HandleCreateComment(ctx context.Context, input *CreateCommentInput) (*Comme
 			return nil, huma.Error400BadRequest("Comment must be 1-3000 characters")
 		case errors.Is(err, data.ErrChapterNotFound):
 			return nil, huma.Error404NotFound("Chapter not found")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to create comment")
+		}
+	}
+	return &CommentResponse{Body: *comment}, nil
+}
+
+func HandleGetProfileComments(ctx context.Context, input *GetProfileCommentsInput) (*CommentsPageResponse, error) {
+	userID := auth.GetUserIDFromContext(ctx)
+
+	comments, err := data.GetVisibleProfileComments(ctx, input.ProfileID, userID, input.Page, input.CommentID, input.SeenBefore)
+	if err != nil {
+		if errors.Is(err, data.ErrProfileNotFound) {
+			return nil, huma.Error404NotFound("Profile not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to fetch comments")
+	}
+
+	if userID != "" && userID == input.ProfileID {
+		if err := data.MarkProfileCommentsSeen(ctx, userID); err != nil {
+			logger.Warn("Failed to update profile_comments_last_seen for user %s: %v", userID, err)
+		}
+	}
+
+	return &CommentsPageResponse{Body: *comments}, nil
+}
+
+func HandleCreateProfileComment(ctx context.Context, input *CreateProfileCommentInput) (*CommentResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	commentInput := models.CreateProfileCommentInput{
+		ProfileID:         input.ProfileID,
+		Content:           input.Body.Content,
+		TurnstileToken:    input.Body.TurnstileToken,
+		SmartCaptchaToken: input.Body.SmartCaptchaToken,
+		IP:                extractIP(input.ForwardedFor, input.RealIP),
+	}
+
+	comment, err := data.CreateProfileComment(ctx, userID, commentInput)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRateLimitExceeded):
+			return nil, huma.Error429TooManyRequests("Подождите 30 секунд перед отправкой следующего комментария")
+		case errors.Is(err, data.ErrCaptchaFailed):
+			return nil, huma.Error400BadRequest("Captcha verification failed")
+		case errors.Is(err, data.ErrInvalidContentLength):
+			return nil, huma.Error400BadRequest("Comment must be 1-3000 characters")
+		case errors.Is(err, data.ErrProfileNotFound):
+			return nil, huma.Error404NotFound("Profile not found")
 		default:
 			return nil, huma.Error500InternalServerError("Failed to create comment")
 		}
@@ -980,7 +1055,7 @@ func HandleDeleteComment(ctx context.Context, input *DeleteCommentInput) (*Empty
 		case errors.Is(err, data.ErrCommentNotFound):
 			return nil, huma.Error404NotFound("Comment not found")
 		case errors.Is(err, data.ErrNotCommentAuthor):
-			return nil, huma.Error403Forbidden("You can only delete your own comments")
+			return nil, huma.Error403Forbidden("You can only delete your own comments or comments on your profile")
 		case errors.Is(err, data.ErrCannotDeleteComment):
 			return nil, huma.Error400BadRequest("Only approved comments can be deleted")
 		default:
@@ -997,13 +1072,16 @@ func HandleGetUserComments(ctx context.Context, input *GetUserCommentsInput) (*U
 		return nil, err
 	}
 
-	comments, err := data.GetUserComments(ctx, userID, input.Page)
+	comments, err := data.GetUserComments(ctx, userID, input.Page, input.SeenBefore, input.ProfileSeenBefore)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch comments")
 	}
 
 	if err := data.UpdateNotificationsLastSeen(ctx, userID); err != nil {
 		logger.Warn("Failed to update notifications_last_seen for user %s: %v", userID, err)
+	}
+	if err := data.MarkProfileCommentsSeen(ctx, userID); err != nil {
+		logger.Warn("Failed to update profile_comments_last_seen for user %s: %v", userID, err)
 	}
 
 	return &UserCommentsPageResponse{Body: *comments}, nil

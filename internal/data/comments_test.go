@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ch1kulya/kappalib/internal/models"
 )
 
 func TestVerifyCommentsCaptcha_EmptyTokens(t *testing.T) {
@@ -608,6 +610,34 @@ func TestValidateSubmissionLength(t *testing.T) {
 			err := validateSubmission("user1", tt.content, tt.maxLen, tt.isAnswer, "", "", "")
 			if err != tt.wantErr {
 				t.Errorf("validateSubmission() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestIsUnseenAnswer(t *testing.T) {
+	seenAt := time.Date(2026, 9, 20, 12, 0, 0, 0, time.UTC)
+	createdBefore := seenAt.Add(-time.Hour)
+	approvedAfter := seenAt.Add(time.Hour)
+	approvedBefore := seenAt.Add(-time.Minute)
+
+	tests := []struct {
+		name       string
+		answer     models.CommentAnswer
+		approvedAt *time.Time
+		expected   bool
+	}{
+		{"created before visit but approved after", models.CommentAnswer{Status: "approved", UserID: "usr_b", CreatedAt: createdBefore}, &approvedAfter, true},
+		{"approved before visit", models.CommentAnswer{Status: "approved", UserID: "usr_b", CreatedAt: createdBefore}, &approvedBefore, false},
+		{"still pending", models.CommentAnswer{Status: "pending", UserID: "usr_b", CreatedAt: approvedAfter}, nil, false},
+		{"rejected after first approval", models.CommentAnswer{Status: "rejected", UserID: "usr_b"}, &approvedAfter, false},
+		{"own answer", models.CommentAnswer{Status: "approved", UserID: "usr_a"}, &approvedAfter, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isUnseenAnswer(tt.answer, "usr_a", tt.approvedAt, seenAt); got != tt.expected {
+				t.Errorf("isUnseenAnswer() = %v, want %v", got, tt.expected)
 			}
 		})
 	}

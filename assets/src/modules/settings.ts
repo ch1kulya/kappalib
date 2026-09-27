@@ -286,15 +286,15 @@ function applySettings(settings: ReaderSettings): void {
     chapterTitle.classList.toggle("justify-text", settings.justify);
   }
 
-  const commentsSection = document.getElementById(
-    "comments-section",
-  ) as HTMLElement | null;
+  const commentsSection = document.querySelector<HTMLElement>(
+    "#comments-section[data-chapter-id]",
+  );
   if (commentsSection) {
     commentsSection.style.display = settings.showComments ? "" : "none";
   }
 
   document
-    .querySelectorAll<HTMLElement>(".comment-jump-link")
+    .querySelectorAll<HTMLElement>(".comment-jump-link[data-jump=\"chapter\"]")
     .forEach((el) => {
       el.style.display = settings.showComments ? "" : "none";
     });

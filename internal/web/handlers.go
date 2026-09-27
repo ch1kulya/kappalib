@@ -982,6 +982,43 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	h.render(w, r, views.List(props))
 }
 
+func (h *Handler) UserProfile(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	page, err := data.GetUserProfilePage(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, data.ErrProfileNotFound) {
+			h.renderError(w, r, http.StatusNotFound, "Пользователь не найден", "Мы не смогли найти запрашиваемый профиль.")
+			return
+		}
+		logger.Error("Failed to load user profile %s: %v", id, err)
+		h.renderError(w, r, http.StatusServiceUnavailable, "Сервис временно недоступен", "Не удалось загрузить профиль. Пожалуйста, попробуйте позже.")
+		return
+	}
+
+	profile := page.Profile
+	var ogImage string
+	if profile.HasCustomAvatar {
+		ogImage = views.AvatarURL(profile.ID, profile.HasCustomAvatar, profile.AvatarSeed, profile.AvatarUpdatedAt)
+	}
+
+	props := views.UserProfileProps{
+		BaseProps: views.BaseProps{
+			Title:              fmt.Sprintf("%s — kappalib", profile.DisplayName),
+			Description:        fmt.Sprintf("Профиль пользователя %s на kappalib: активность, достижения и комментарии.", profile.DisplayName),
+			Canonical:          fmt.Sprintf("https://kappalib.rip/%s", profile.ID),
+			OGImage:            ogImage,
+			Version:            h.assetVersion,
+			IsLoggedIn:         h.hasSession(r),
+			ReaderSettings:     h.getReaderSettings(r),
+			GlobalAnnouncement: h.globalAnnouncement(r.Context()),
+		},
+		Page:    page,
+		Heatmap: views.BuildActivityHeatmap(page.Activity),
+		IsOwner: auth.GetUserIDFromContext(r.Context()) == profile.ID,
+	}
+	h.render(w, r, views.UserProfile(props))
+}
+
 type matchedNovelAddition struct {
 	addition *models.NovelAddition
 	matched  bool

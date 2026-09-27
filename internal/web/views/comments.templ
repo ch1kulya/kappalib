@@ -13,6 +13,19 @@ templ CommentsSection(chapterId string) {
 	</div>
 }
 
+templ ProfileCommentsSection(profileID string) {
+	<section class="up-section" id="comments-section" data-profile-id={ profileID }>
+		<div class="chapters-header up-section-header">
+			<h2>Комментарии <span class="comments-count"></span></h2>
+		</div>
+		<div class="comment-form-wrapper"></div>
+		<div class="comments-list"></div>
+		<div class="comments-loader" id="comments-loader" style="display: none;">
+			<span>Загрузка...</span>
+		</div>
+	</section>
+}
+
 templ MyComments(props BaseProps) {
 	@Base(props) {
 		<div class="my-comments-page">

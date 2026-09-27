@@ -87,6 +87,7 @@ templ ProfileTemplates() {
 			</div>
 			<div class="pc-footer">
 				<span class="pc-skeleton pc-skeleton-logout"></span>
+				<span class="pc-skeleton pc-skeleton-logout"></span>
 				<div class="pc-footer-row">
 					<span class="pc-skeleton pc-skeleton-logout"></span>
 					<span class="pc-skeleton pc-skeleton-logout"></span>
@@ -98,7 +99,7 @@ templ ProfileTemplates() {
 	<template id="tpl-pc-profile">
 		<div class="pc-body">
 			<div class="pc-profile">
-				<div class="pc-avatar-wrapper">
+				<div class="pc-avatar-wrapper" role="button" tabindex="0" aria-label="Изменить аватар">
 					<img src="" alt="" class="pc-avatar" id="pc-avatar-img" data-field="avatarUrl"/>
 					<div class="pc-avatar-overlay" id="pc-avatar-overlay">
 						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg>
@@ -107,7 +108,7 @@ templ ProfileTemplates() {
 				</div>
 				<div class="pc-info">
 					<div class="pc-name-row">
-						<span class="pc-name" id="pc-name-text" data-field="displayName"></span>
+						<span class="pc-name" id="pc-name-text" data-field="displayName" role="button" tabindex="0" title="Изменить имя"></span>
 						<input type="text" class="pc-name-input" id="pc-name-input" maxlength="15" style="display:none"/>
 					</div>
 					<div class="pc-meta">
@@ -119,6 +120,10 @@ templ ProfileTemplates() {
 				</div>
 			</div>
 			<div class="pc-footer">
+				<a href="/" class="pc-btn pc-btn-action" id="pc-profile-link">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+					<span>Мой профиль</span>
+				</a>
 				<a href="/comments" class="pc-btn pc-btn-action">
 					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
 					<span>Комментарии</span>

@@ -135,6 +135,43 @@ type ProfilePublic struct {
 	UnreadNotifications int       `json:"unread_notifications"`
 }
 
+type UserBadge struct {
+	ID          string    `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Icon        string    `json:"icon"`
+	AwardedAt   time.Time `json:"awarded_at"`
+}
+
+type Achievement struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Icon        string `json:"icon"`
+	Tier        int    `json:"tier"`
+	MaxTier     int    `json:"max_tier"`
+}
+
+type ActivityDay struct {
+	Date    time.Time `json:"date"`
+	Seconds int       `json:"seconds"`
+}
+
+type UserProfileStats struct {
+	TotalSeconds  int `json:"total_seconds"`
+	LongestStreak int `json:"longest_streak"`
+	Comments      int `json:"comments"`
+	Rating        int `json:"rating"`
+}
+
+type UserProfilePage struct {
+	Profile      ProfilePublic    `json:"profile"`
+	Stats        UserProfileStats `json:"stats"`
+	Badges       []UserBadge      `json:"badges"`
+	Achievements []Achievement    `json:"achievements"`
+	Activity     []ActivityDay    `json:"activity"`
+}
+
 type Comment struct {
 	ID                  string          `json:"id"`
 	ChapterID           string          `json:"chapter_id"`
@@ -154,6 +191,9 @@ type Comment struct {
 	ChapterNum          int             `json:"chapter_num,omitempty"`
 	NovelID             string          `json:"novel_id,omitempty"`
 	NovelTitle          string          `json:"novel_title,omitempty"`
+	ProfileID           string          `json:"profile_id,omitempty"`
+	ProfileDisplayName  string          `json:"profile_display_name,omitempty"`
+	IsNew               bool            `json:"is_new,omitempty"`
 }
 
 type CommentAnswer struct {
@@ -172,20 +212,37 @@ type CommentAnswer struct {
 	IsNew               bool       `json:"is_new"`
 }
 
+func (c *Comment) SetAuthor(author ProfilePublic) {
+	c.UserDisplayName = author.DisplayName
+	c.UserAvatarSeed = author.AvatarSeed
+	c.UserHasCustomAvatar = author.HasCustomAvatar
+	c.UserAvatarUpdatedAt = author.AvatarUpdatedAt
+}
+
+func (a *CommentAnswer) SetAuthor(author ProfilePublic) {
+	a.UserDisplayName = author.DisplayName
+	a.UserAvatarSeed = author.AvatarSeed
+	a.UserHasCustomAvatar = author.HasCustomAvatar
+	a.UserAvatarUpdatedAt = author.AvatarUpdatedAt
+}
+
 type CommentsPage struct {
-	Comments   []Comment `json:"comments"`
-	Page       int       `json:"page"`
-	PageSize   int       `json:"page_size"`
-	TotalCount int       `json:"total_count"`
-	TotalPages int       `json:"total_pages"`
+	Comments   []Comment  `json:"comments"`
+	Page       int        `json:"page"`
+	PageSize   int        `json:"page_size"`
+	TotalCount int        `json:"total_count"`
+	TotalPages int        `json:"total_pages"`
+	SeenBefore *time.Time `json:"seen_before,omitempty"`
 }
 
 type UserCommentsPage struct {
-	Comments   []Comment `json:"comments"`
-	Page       int       `json:"page"`
-	PageSize   int       `json:"page_size"`
-	TotalCount int       `json:"total_count"`
-	TotalPages int       `json:"total_pages"`
+	Comments          []Comment  `json:"comments"`
+	Page              int        `json:"page"`
+	PageSize          int        `json:"page_size"`
+	TotalCount        int        `json:"total_count"`
+	TotalPages        int        `json:"total_pages"`
+	SeenBefore        *time.Time `json:"seen_before,omitempty"`
+	ProfileSeenBefore *time.Time `json:"profile_seen_before,omitempty"`
 }
 
 type CommentStatDay struct {
@@ -223,6 +280,14 @@ type UserAnswer struct {
 
 type CreateCommentInput struct {
 	ChapterID         string `json:"chapter_id"`
+	Content           string `json:"content"`
+	TurnstileToken    string `json:"turnstile_token,omitempty"`
+	SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`
+	IP                string `json:"-"`
+}
+
+type CreateProfileCommentInput struct {
+	ProfileID         string `json:"profile_id"`
 	Content           string `json:"content"`
 	TurnstileToken    string `json:"turnstile_token,omitempty"`
 	SmartCaptchaToken string `json:"smart_captcha_token,omitempty"`

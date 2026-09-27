@@ -10,10 +10,11 @@ WHERE
     AND user_id = $3
 RETURNING
     id,
-    chapter_id,
+    COALESCE(chapter_id, ''),
     user_id,
     content_html,
     status,
     edited_at,
-    created_at;
+    created_at,
+    COALESCE(profile_id, '');
 
