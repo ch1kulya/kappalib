@@ -1,5 +1,5 @@
 import { clearIdentifiedUmami, identifyUmami, trackEvent } from "./analytics";
-import { initComments } from "./comments";
+import { initComments, pluralize } from "./comments";
 import { refreshHistory } from "./history";
 import { refreshLastReadTotalChapters } from "./progress";
 import { getCookie, settingsManager } from "./settings";
@@ -16,6 +16,12 @@ interface CookieValue {
   updated_at: number;
 }
 
+interface UserStreak {
+  current: number;
+  today: number;
+  week: boolean[];
+}
+
 interface ProfilePublic {
   id: string;
   display_name: string;
@@ -24,7 +30,14 @@ interface ProfilePublic {
   avatar_updated_at: number;
   created_at: string;
   unread_notifications?: number;
+  streak?: UserStreak;
 }
+
+const STREAK_NOTES: Record<string, string> = {
+  active: "Сегодня серия уже продлена",
+  pending: "Почитайте сегодня, чтобы не прервать серию",
+  none: "Читайте каждый день, чтобы начать серию",
+};
 
 export function getAvatarUrl(
   userId: string,
@@ -496,6 +509,8 @@ function renderLoggedInView(profile: ProfilePublic): void {
     }),
   );
 
+  renderStreak(content, profile.streak);
+
   const profileLink = content.querySelector<HTMLAnchorElement>("#pc-profile-link");
   if (profileLink) {
     profileLink.href = `/${profile.id}`;
@@ -511,6 +526,45 @@ function renderLoggedInView(profile: ProfilePublic): void {
   }
 
   initProfileInteractions(profile);
+}
+
+function getStreakState(streak: UserStreak): string {
+  if (streak.week[streak.today]) return "active";
+  return streak.current > 0 ? "pending" : "none";
+}
+
+function getStreakDayState(streak: UserStreak, day: number): string {
+  if (streak.week[day]) return "active";
+  if (day === streak.today) return "pending";
+  return day > streak.today ? "future" : "missed";
+}
+
+function renderStreak(container: HTMLElement, streak?: UserStreak): void {
+  const el = container.querySelector<HTMLElement>(".streak");
+  if (!el) return;
+
+  if (!streak) {
+    el.remove();
+    return;
+  }
+
+  const state = getStreakState(streak);
+  el.dataset.state = state;
+
+  const fields: Record<string, string> = {
+    streakCount: String(streak.current),
+    streakLabel: pluralize(streak.current, "день подряд", "дня подряд", "дней подряд"),
+    streakNote: STREAK_NOTES[state],
+  };
+  for (const [key, value] of Object.entries(fields)) {
+    const field = el.querySelector(`[data-field="${key}"]`);
+    if (field) field.textContent = value;
+  }
+
+  el.querySelectorAll<HTMLElement>(".streak-day").forEach((day, i) => {
+    day.dataset.state = getStreakDayState(streak, i);
+    day.classList.toggle("streak-day-today", i === streak.today);
+  });
 }
 
 export interface ProfileEditorElements {

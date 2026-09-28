@@ -45,7 +45,10 @@ templ UserProfile(props UserProfileProps) {
 				<div class="chapters-header up-section-header">
 					<h2>Активность</h2>
 				</div>
-				@ActivityHeatmapView(props.Heatmap)
+				<div class="up-activity">
+					@ActivityStreak(props.Page.Streak, streakRecordLabel(props.Page.Stats.LongestStreak))
+					@ActivityHeatmapView(props.Heatmap)
+				</div>
 			</section>
 			<section class="up-section">
 				<div class="chapters-header up-section-header">
@@ -79,6 +82,33 @@ templ userProfileAvatar(profile models.ProfilePublic) {
 		alt={ profile.DisplayName }
 		decoding="async"
 	/>
+}
+
+templ ActivityStreak(streak models.UserStreak, note string) {
+	<div class="streak" data-state={ streakState(streak) }>
+		<div class="streak-summary">
+			<span class="up-achievement-badge streak-badge">
+				@IconBadge("flame", "streak-icon")
+			</span>
+			<div class="streak-info">
+				<span class="streak-title">
+					<span class="streak-count" data-field="streakCount">{ strconv.Itoa(streak.Current) }</span>
+					<span class="streak-label" data-field="streakLabel">{ streakLabel(streak.Current) }</span>
+				</span>
+				<span class="streak-note" data-field="streakNote">{ note }</span>
+			</div>
+		</div>
+		<div class="streak-week" aria-hidden="true">
+			for _, day := range BuildStreakWeek(streak) {
+				<span class={ "streak-day", templ.KV("streak-day-today", day.Today) } data-state={ day.State }>
+					<span class="streak-day-label">{ day.Label }</span>
+					<span class="streak-day-dot">
+						<svg class="streak-day-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+					</span>
+				</span>
+			}
+		</div>
+	</div>
 }
 
 templ ActivityHeatmapView(heatmap ActivityHeatmap) {

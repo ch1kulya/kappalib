@@ -23,6 +23,9 @@ var queryUserBadgesGet string
 //go:embed sql/user_activity_year.sql
 var queryUserActivityYear string
 
+//go:embed sql/user_streak_get.sql
+var queryUserStreakGet string
+
 const userProfileCacheTTL = 5 * time.Minute
 
 type achievementTier struct {
@@ -140,6 +143,25 @@ func BuildAchievements(stats models.UserProfileStats, createdAt, now time.Time) 
 	return achievements
 }
 
+func BuildUserStreak(today time.Time, current int, activeDays []time.Time) models.UserStreak {
+	streak := models.UserStreak{
+		Current: current,
+		Today:   (int(today.Weekday()) + 6) % 7,
+		Week:    make([]bool, 7),
+	}
+
+	active := make(map[string]bool, len(activeDays))
+	for _, day := range activeDays {
+		active[day.Format(time.DateOnly)] = true
+	}
+
+	weekStart := today.AddDate(0, 0, -streak.Today)
+	for i := range streak.Week {
+		streak.Week[i] = active[weekStart.AddDate(0, 0, i).Format(time.DateOnly)]
+	}
+	return streak
+}
+
 func userProfileCacheKey(userID string) string {
 	return "user_profile:" + userID
 }
@@ -215,11 +237,17 @@ func fetchUserProfilePage(ctx context.Context, userID string) (*models.UserProfi
 		return nil, err
 	}
 
+	streak, err := getUserStreak(dbCtx, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &models.UserProfilePage{
 		Profile:      *profile,
 		Stats:        stats,
 		Achievements: BuildAchievements(stats, profile.CreatedAt, time.Now()),
 		Activity:     activity,
+		Streak:       streak,
 	}, nil
 }
 
@@ -269,4 +297,15 @@ func getUserActivityYear(ctx context.Context, userID string) ([]models.ActivityD
 		return nil, err
 	}
 	return days, nil
+}
+
+func getUserStreak(ctx context.Context, userID string) (models.UserStreak, error) {
+	var today time.Time
+	var current int
+	var activeDays []time.Time
+	if err := database.DB.QueryRow(ctx, queryUserStreakGet, userID).Scan(&today, &current, &activeDays); err != nil {
+		logger.Error("Failed to get streak for %s: %v", userID, err)
+		return models.UserStreak{}, err
+	}
+	return BuildUserStreak(today, current, activeDays), nil
 }

@@ -98,3 +98,25 @@ func TestSetAuthor(t *testing.T) {
 		t.Errorf("CommentAnswer.SetAuthor did not copy fields: %+v", a)
 	}
 }
+
+func TestUserStreak_ActiveToday(t *testing.T) {
+	tests := []struct {
+		name     string
+		streak   UserStreak
+		expected bool
+	}{
+		{"active today", UserStreak{Today: 2, Week: []bool{true, true, true, false, false, false, false}}, true},
+		{"inactive today", UserStreak{Today: 3, Week: []bool{true, true, true, false, false, false, false}}, false},
+		{"empty week", UserStreak{Today: 0}, false},
+		{"today out of range", UserStreak{Today: 7, Week: []bool{true, true, true, true, true, true, true}}, false},
+		{"negative today", UserStreak{Today: -1, Week: []bool{true, true, true, true, true, true, true}}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.streak.ActiveToday(); got != tt.expected {
+				t.Errorf("ActiveToday() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}

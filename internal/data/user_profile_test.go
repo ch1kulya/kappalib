@@ -100,6 +100,70 @@ func TestBuildAchievementsOrderIsStable(t *testing.T) {
 	}
 }
 
+func TestBuildUserStreak(t *testing.T) {
+	day := func(d int) time.Time { return time.Date(2026, 9, d, 0, 0, 0, 0, time.UTC) }
+
+	tests := []struct {
+		name          string
+		today         time.Time
+		current       int
+		activeDays    []time.Time
+		expectedToday int
+		expectedWeek  []bool
+	}{
+		{
+			name:          "no activity",
+			today:         day(30),
+			expectedToday: 2,
+			expectedWeek:  []bool{false, false, false, false, false, false, false},
+		},
+		{
+			name:          "monday marks first day",
+			today:         day(28),
+			current:       5,
+			activeDays:    []time.Time{day(28)},
+			expectedToday: 0,
+			expectedWeek:  []bool{true, false, false, false, false, false, false},
+		},
+		{
+			name:          "sunday closes the week",
+			today:         day(27),
+			current:       3,
+			activeDays:    []time.Time{day(21), day(25), day(26), day(27)},
+			expectedToday: 6,
+			expectedWeek:  []bool{true, false, false, false, true, true, true},
+		},
+		{
+			name:          "days outside current week are ignored",
+			today:         day(30),
+			current:       2,
+			activeDays:    []time.Time{day(20), day(27), day(29), time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)},
+			expectedToday: 2,
+			expectedWeek:  []bool{false, true, false, false, false, false, false},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := BuildUserStreak(tt.today, tt.current, tt.activeDays)
+			if got.Current != tt.current {
+				t.Errorf("expected current %d, got %d", tt.current, got.Current)
+			}
+			if got.Today != tt.expectedToday {
+				t.Errorf("expected today %d, got %d", tt.expectedToday, got.Today)
+			}
+			if len(got.Week) != len(tt.expectedWeek) {
+				t.Fatalf("expected %d week days, got %d", len(tt.expectedWeek), len(got.Week))
+			}
+			for i, active := range tt.expectedWeek {
+				if got.Week[i] != active {
+					t.Errorf("day %d: expected %v, got %v", i, active, got.Week[i])
+				}
+			}
+		})
+	}
+}
+
 func TestUserProfileCacheKey(t *testing.T) {
 	if got := userProfileCacheKey("usr_abc12345"); got != "user_profile:usr_abc12345" {
 		t.Errorf("unexpected cache key %q", got)

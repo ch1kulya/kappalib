@@ -143,6 +143,12 @@ type ActivityHeatmap struct {
 	TotalSeconds int
 }
 
+type StreakDay struct {
+	Label string
+	State string
+	Today bool
+}
+
 type UserProfileProps struct {
 	BaseProps
 	Page    *models.UserProfilePage
