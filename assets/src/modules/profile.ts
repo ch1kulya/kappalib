@@ -34,7 +34,7 @@ interface ProfilePublic {
 }
 
 const STREAK_NOTES: Record<string, string> = {
-  active: "Сегодня серия уже продлена",
+  active: "Сегодняшний день уже засчитан",
   pending: "Почитайте сегодня, чтобы не прервать серию",
   none: "Читайте каждый день, чтобы начать серию",
 };

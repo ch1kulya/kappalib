@@ -46,7 +46,7 @@ templ UserProfile(props UserProfileProps) {
 					<h2>Активность</h2>
 				</div>
 				<div class="up-activity">
-					@ActivityStreak(props.Page.Streak, streakRecordLabel(props.Page.Stats.LongestStreak))
+					@ActivityStreak(props.Page.Streak, streakRecordLabel(max(props.Page.Stats.LongestStreak, props.Page.Streak.Current)))
 					@ActivityHeatmapView(props.Heatmap)
 				</div>
 			</section>

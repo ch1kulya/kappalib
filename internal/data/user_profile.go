@@ -210,8 +210,14 @@ func GetUserProfilePage(ctx context.Context, userID string) (*models.UserProfile
 		return nil, err
 	}
 
+	streak, err := getUserStreak(dbCtx, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	page := *value.(*models.UserProfilePage)
 	page.Badges = badges
+	page.Streak = streak
 	return &page, nil
 }
 
@@ -237,17 +243,11 @@ func fetchUserProfilePage(ctx context.Context, userID string) (*models.UserProfi
 		return nil, err
 	}
 
-	streak, err := getUserStreak(dbCtx, userID)
-	if err != nil {
-		return nil, err
-	}
-
 	return &models.UserProfilePage{
 		Profile:      *profile,
 		Stats:        stats,
 		Achievements: BuildAchievements(stats, profile.CreatedAt, time.Now()),
 		Activity:     activity,
-		Streak:       streak,
 	}, nil
 }
 
