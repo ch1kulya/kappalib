@@ -91,6 +91,10 @@ templ Novel(props NovelProps) {
 						if props.Novel.AgeRating != nil && *props.Novel.AgeRating != "" {
 							<span class={ "badge", templ.KV("badge-danger", *props.Novel.AgeRating == "18+") }>{ *props.Novel.AgeRating }</span>
 						}
+						<span class="badge badge-views" role="img" aria-label={ viewsLabel(props.Novel.ViewsCount) } title={ viewsLabel(props.Novel.ViewsCount) }>
+							@IconEye("badge-views-icon")
+							{ FormatCompactNumber(props.Novel.ViewsCount) }
+						</span>
 					</div>
 					if props.Novel.Description != "" {
 						<div class="description-wrapper">

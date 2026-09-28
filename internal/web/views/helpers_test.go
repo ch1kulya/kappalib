@@ -124,3 +124,54 @@ func TestIsExternalURL(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatCompactNumber(t *testing.T) {
+	tests := []struct {
+		n        int64
+		expected string
+	}{
+		{0, "0"},
+		{7, "7"},
+		{999, "999"},
+		{1_000, "1 тыс."},
+		{1_049, "1 тыс."},
+		{1_250, "1,2 тыс."},
+		{9_999, "9,9 тыс."},
+		{10_000, "10 тыс."},
+		{15_780, "15 тыс."},
+		{999_999, "999 тыс."},
+		{1_000_000, "1 млн"},
+		{1_234_567, "1,2 млн"},
+		{12_345_678, "12 млн"},
+		{999_999_999, "999 млн"},
+		{1_500_000_000, "1,5 млрд"},
+		{25_000_000_000, "25 млрд"},
+	}
+
+	for _, tt := range tests {
+		if got := FormatCompactNumber(tt.n); got != tt.expected {
+			t.Errorf("FormatCompactNumber(%d) = %q, want %q", tt.n, got, tt.expected)
+		}
+	}
+}
+
+func TestViewsLabel(t *testing.T) {
+	tests := []struct {
+		views    int64
+		expected string
+	}{
+		{0, "0 просмотров"},
+		{1, "1 просмотр"},
+		{3, "3 просмотра"},
+		{12, "12 просмотров"},
+		{1_021, "1\u00a0021 просмотр"},
+		{1_234_567, "1\u00a0234\u00a0567 просмотров"},
+		{100_000_002, "100\u00a0000\u00a0002 просмотра"},
+	}
+
+	for _, tt := range tests {
+		if got := viewsLabel(tt.views); got != tt.expected {
+			t.Errorf("viewsLabel(%d) = %q, want %q", tt.views, got, tt.expected)
+		}
+	}
+}

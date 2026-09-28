@@ -18,6 +18,7 @@ type Novel struct {
 	CoverURL          *string    `json:"cover_url"`
 	CreatedAt         time.Time  `json:"created_at"`
 	ChapterCount      int        `json:"chapter_count"`
+	ViewsCount        int64      `json:"views_count"`
 	HasSelfHarm       bool       `json:"has_self_harm"`
 	HasDrugUsage      bool       `json:"has_drug_usage"`
 	HasSexualViolence bool       `json:"has_sexual_violence"`
