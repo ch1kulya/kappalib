@@ -84,9 +84,10 @@ templ Novel(props NovelProps) {
 					<div class="meta">
 						<span class="badge">{ props.Novel.Author }</span>
 						<span class="badge">{ fmt.Sprintf("%d", props.Novel.YearStart) }</span>
-						<span class="badge">{ MapStatus(props.Novel.Status) }</span>
 						if props.Novel.IsAbandoned() {
 							<span class="badge badge-danger">Заброшено</span>
+						} else {
+							<span class="badge">{ MapStatus(props.Novel.Status) }</span>
 						}
 						if props.Novel.AgeRating != nil && *props.Novel.AgeRating != "" {
 							<span class={ "badge", templ.KV("badge-danger", *props.Novel.AgeRating == "18+") }>{ *props.Novel.AgeRating }</span>
@@ -216,33 +217,41 @@ templ Novel(props NovelProps) {
 					}
 				</div>
 			</div>
-			if props.Novel.TitleEn != "" || len(props.Novel.AltTitles) > 0 || len(props.Novel.Tags) > 0 {
-				<div class="novel-extra-info">
-					if props.Novel.TitleEn != "" || len(props.Novel.AltTitles) > 0 {
-						<div class="extra-info-block">
-							<h4>Альтернативные названия</h4>
-							<div class="alt-titles-list">
-								if props.Novel.TitleEn != "" {
-									<span class="alt-title badge">{ props.Novel.TitleEn }</span>
-								}
-								for _, title := range props.Novel.AltTitles {
-									<span class="alt-title badge">{ title }</span>
-								}
-							</div>
+			<div class="novel-extra-info">
+				if props.Novel.TitleEn != "" || len(props.Novel.AltTitles) > 0 {
+					<div class="extra-info-block">
+						<h4>Альтернативные названия</h4>
+						<div class="alt-titles-list">
+							if props.Novel.TitleEn != "" {
+								<span class="alt-title badge">{ props.Novel.TitleEn }</span>
+							}
+							for _, title := range props.Novel.AltTitles {
+								<span class="alt-title badge">{ title }</span>
+							}
 						</div>
-					}
-					if len(props.Novel.Tags) > 0 {
-						<div class="extra-info-block">
-							<h4>Теги</h4>
-							<div class="tags-list">
-								for _, tag := range props.Novel.Tags {
-									<span class="tag badge">{ tag.Name }</span>
-								}
-							</div>
+					</div>
+				}
+				if len(props.Novel.Tags) > 0 {
+					<div class="extra-info-block">
+						<h4>Теги</h4>
+						<div class="tags-list">
+							for _, tag := range props.Novel.Tags {
+								<span class="tag badge">{ tag.Name }</span>
+							}
 						</div>
-					}
+					</div>
+				}
+				<div class="extra-info-block">
+					<h4>Статистика</h4>
+					<div class="stats-list">
+						<span class="stat badge">{ fmt.Sprintf("%d", props.Novel.ChapterCount) } { pluralize(props.Novel.ChapterCount, "глава", "главы", "глав") }</span>
+						<span class="stat badge" title={ viewsLabel(props.Novel.ViewsCount) }>{ FormatCompactNumber(props.Novel.ViewsCount) } { viewsWord(props.Novel.ViewsCount) }</span>
+						if props.Novel.LastChapterAt != nil {
+							<span class="stat badge" title={ FormatDate(*props.Novel.LastChapterAt) + " г." }>Обновлено { FormatRelativeTime(*props.Novel.LastChapterAt) }</span>
+						}
+					</div>
 				</div>
-			}
+			</div>
 		</div>
 	}
 }

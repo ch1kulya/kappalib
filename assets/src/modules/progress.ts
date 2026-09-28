@@ -232,7 +232,9 @@ function setupSwipeNavigation(): void {
   const nav = document.querySelector<HTMLElement>(".chapter-navigation");
   if (!nav) return;
 
-  const MIN_DISTANCE = 60;
+  const MIN_DISTANCE = 80;
+  const MIN_DISTANCE_RATIO = 0.25;
+  const MIN_AXIS_RATIO = 2;
   const MAX_TIME = 600;
   const EDGE_MARGIN = 44;
 
@@ -244,7 +246,11 @@ function setupSwipeNavigation(): void {
   document.addEventListener(
     "touchstart",
     (e: TouchEvent) => {
-      if (isNavigatingChapter || e.touches.length !== 1) {
+      if (
+        isNavigatingChapter
+        || e.touches.length !== 1
+        || (window.visualViewport?.scale ?? 1) > 1.01
+      ) {
         tracking = false;
         return;
       }
@@ -292,7 +298,8 @@ function setupSwipeNavigation(): void {
       const deltaX = touch.clientX - startX;
       const deltaY = touch.clientY - startY;
 
-      if (Math.abs(deltaX) < MIN_DISTANCE || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) {
+      const minDistance = Math.max(MIN_DISTANCE, window.innerWidth * MIN_DISTANCE_RATIO);
+      if (Math.abs(deltaX) < minDistance || Math.abs(deltaX) < Math.abs(deltaY) * MIN_AXIS_RATIO) {
         return;
       }
 

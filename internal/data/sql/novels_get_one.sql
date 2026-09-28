@@ -11,6 +11,7 @@ SELECT
     cover_url,
     created_at,
     chapters_count,
+    views_count,
     has_self_harm,
     has_drug_usage,
     has_sexual_violence,

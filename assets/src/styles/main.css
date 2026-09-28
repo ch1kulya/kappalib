@@ -5225,14 +5225,16 @@ td:first-child {
 }
 
 .alt-titles-list,
-.tags-list {
+.tags-list,
+.stats-list {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
 }
 
 .alt-title,
-.tag {
+.tag,
+.stat {
   color: var(--secondary);
   font-size: 0.85rem;
   font-weight: 500;

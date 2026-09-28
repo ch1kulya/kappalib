@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -559,4 +560,57 @@ func streakLabel(days int) string {
 
 func achievementTierLabel(tier int) string {
 	return fmt.Sprintf("x%d", tier)
+}
+
+var compactNumberUnits = []struct {
+	value  int64
+	suffix string
+}{
+	{1_000_000_000, "млрд"},
+	{1_000_000, "млн"},
+	{1_000, "тыс."},
+}
+
+func FormatCompactNumber(n int64) string {
+	for _, unit := range compactNumberUnits {
+		if n < unit.value {
+			continue
+		}
+		if n >= 10*unit.value {
+			return fmt.Sprintf("%d %s", n/unit.value, unit.suffix)
+		}
+		tenths := n * 10 / unit.value
+		if tenths%10 == 0 {
+			return fmt.Sprintf("%d %s", tenths/10, unit.suffix)
+		}
+		return fmt.Sprintf("%d,%d %s", tenths/10, tenths%10, unit.suffix)
+	}
+	return strconv.FormatInt(n, 10)
+}
+
+func groupDigits(n int64) string {
+	digits := strconv.FormatInt(n, 10)
+	sign := ""
+	if n < 0 {
+		sign, digits = "-", digits[1:]
+	}
+	var b strings.Builder
+	for i, d := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			b.WriteRune('\u00a0')
+		}
+		b.WriteRune(d)
+	}
+	return sign + b.String()
+}
+
+func viewsLabel(views int64) string {
+	return fmt.Sprintf("%s %s", groupDigits(views), pluralize(int(views%100), "просмотр", "просмотра", "просмотров"))
+}
+
+func viewsWord(views int64) string {
+	if views >= 1_000 {
+		return "просмотров"
+	}
+	return pluralize(int(views), "просмотр", "просмотра", "просмотров")
 }
