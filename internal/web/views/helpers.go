@@ -553,6 +553,10 @@ func AvatarURL(userID string, hasCustomAvatar bool, avatarSeed string, avatarUpd
 	return "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=" + url.QueryEscape(avatarSeed) + "&backgroundType=solid,gradientLinear"
 }
 
+func streakLabel(days int) string {
+	return fmt.Sprintf("%d %s подряд", days, pluralize(days, "день", "дня", "дней"))
+}
+
 func achievementTierLabel(tier int) string {
 	return fmt.Sprintf("x%d", tier)
 }

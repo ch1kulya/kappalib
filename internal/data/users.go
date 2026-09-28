@@ -251,6 +251,10 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 		logger.Warn("Failed to count unread notifications for user %s: %v", profileID, err)
 	}
 
+	if streak, err := getUserStreak(dbCtx, profileID); err == nil {
+		profile.Streak = &streak
+	}
+
 	if _, err := database.DB.Exec(dbCtx,
 		`UPDATE users SET last_active_at = now() WHERE id = $1`, profileID,
 	); err != nil {

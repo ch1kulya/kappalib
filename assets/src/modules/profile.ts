@@ -1,5 +1,5 @@
 import { clearIdentifiedUmami, identifyUmami, trackEvent } from "./analytics";
-import { initComments } from "./comments";
+import { initComments, pluralize } from "./comments";
 import { refreshHistory } from "./history";
 import { refreshLastReadTotalChapters } from "./progress";
 import { getCookie, settingsManager } from "./settings";
@@ -16,6 +16,11 @@ interface CookieValue {
   updated_at: number;
 }
 
+interface UserStreak {
+  current: number;
+  active_today: boolean;
+}
+
 interface ProfilePublic {
   id: string;
   display_name: string;
@@ -24,6 +29,7 @@ interface ProfilePublic {
   avatar_updated_at: number;
   created_at: string;
   unread_notifications?: number;
+  streak?: UserStreak;
 }
 
 export function getAvatarUrl(
@@ -493,8 +499,11 @@ function renderLoggedInView(profile: ProfilePublic): void {
       avatarUrl,
       displayName: profile.display_name,
       createdAt: formatDate(profile.created_at),
+      streakCount: String(profile.streak?.current ?? 0),
     }),
   );
+
+  renderStreak(content, profile.streak);
 
   const profileLink = content.querySelector<HTMLAnchorElement>("#pc-profile-link");
   if (profileLink) {
@@ -511,6 +520,21 @@ function renderLoggedInView(profile: ProfilePublic): void {
   }
 
   initProfileInteractions(profile);
+}
+
+function renderStreak(container: HTMLElement, streak?: UserStreak): void {
+  const el = container.querySelector<HTMLElement>(".streak");
+  if (!el) return;
+
+  if (!streak) {
+    el.remove();
+    return;
+  }
+
+  const label = `${streak.current} ${pluralize(streak.current, "день", "дня", "дней")} подряд`;
+  el.classList.toggle("streak-active", streak.active_today);
+  el.title = label;
+  el.setAttribute("aria-label", label);
 }
 
 export interface ProfileEditorElements {

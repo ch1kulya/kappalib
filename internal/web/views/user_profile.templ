@@ -40,6 +40,7 @@ templ UserProfile(props UserProfileProps) {
 						<span>{ FormatDate(props.Page.Profile.CreatedAt) + " г." }</span>
 					</span>
 				</div>
+				@ActivityStreak(props.Page.Streak)
 			</section>
 			<section class="up-section">
 				<div class="chapters-header up-section-header">
@@ -79,6 +80,18 @@ templ userProfileAvatar(profile models.ProfilePublic) {
 		alt={ profile.DisplayName }
 		decoding="async"
 	/>
+}
+
+templ ActivityStreak(streak models.UserStreak) {
+	<span
+		class={ "streak", templ.KV("streak-active", streak.ActiveToday) }
+		role="img"
+		aria-label={ streakLabel(streak.Current) }
+		title={ streakLabel(streak.Current) }
+	>
+		@IconBadge("flame", "streak-icon")
+		<span data-field="streakCount">{ strconv.Itoa(streak.Current) }</span>
+	</span>
 }
 
 templ ActivityHeatmapView(heatmap ActivityHeatmap) {
