@@ -20,5 +20,5 @@ SELECT
 FROM
     streaks
 WHERE
-    last_day >= CURRENT_DATE - 1;
+    last_day >= CURRENT_DATE -1;
 
