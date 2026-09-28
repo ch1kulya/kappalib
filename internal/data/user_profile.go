@@ -23,6 +23,9 @@ var queryUserBadgesGet string
 //go:embed sql/user_activity_year.sql
 var queryUserActivityYear string
 
+//go:embed sql/user_streak_get.sql
+var queryUserStreakGet string
+
 const userProfileCacheTTL = 5 * time.Minute
 
 type achievementTier struct {
@@ -188,8 +191,14 @@ func GetUserProfilePage(ctx context.Context, userID string) (*models.UserProfile
 		return nil, err
 	}
 
+	streak, err := getUserStreak(dbCtx, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	page := *value.(*models.UserProfilePage)
 	page.Badges = badges
+	page.Streak = streak
 	return &page, nil
 }
 
@@ -269,4 +278,13 @@ func getUserActivityYear(ctx context.Context, userID string) ([]models.ActivityD
 		return nil, err
 	}
 	return days, nil
+}
+
+func getUserStreak(ctx context.Context, userID string) (models.UserStreak, error) {
+	var streak models.UserStreak
+	if err := database.DB.QueryRow(ctx, queryUserStreakGet, userID).Scan(&streak.Current, &streak.ActiveToday); err != nil {
+		logger.Error("Failed to get streak for %s: %v", userID, err)
+		return models.UserStreak{}, err
+	}
+	return streak, nil
 }

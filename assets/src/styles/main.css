@@ -3362,6 +3362,13 @@ html {
   border-radius: 4px;
 }
 
+.pc-skeleton-streak {
+  display: block;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 1.25rem;
+}
+
 /* Profile Agreement */
 .pc-agreements {
   display: flex;
@@ -5409,6 +5416,9 @@ td:first-child {
   display: flex;
   align-items: center;
   gap: 1rem;
+  & .streak {
+    font-size: 1.25rem;
+  }
 }
 
 .up-avatar {
@@ -5503,6 +5513,31 @@ td:first-child {
   width: 1.25em;
   height: 1.25em;
   flex-shrink: 0;
+}
+
+.streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--tertiary);
+  cursor: default;
+  &.streak-active {
+    color: var(--accent-primary);
+    & .streak-icon {
+      fill: color-mix(in srgb, currentColor 25%, transparent);
+    }
+  }
+}
+
+.streak-icon {
+  width: 1.25em;
+  height: 1.25em;
 }
 
 .up-section-header {

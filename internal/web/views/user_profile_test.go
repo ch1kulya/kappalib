@@ -196,3 +196,22 @@ func TestAchievementTierLabel(t *testing.T) {
 		t.Errorf("achievementTierLabel(3) = %q, want %q", got, "x3")
 	}
 }
+
+func TestStreakLabel(t *testing.T) {
+	tests := []struct {
+		days     int
+		expected string
+	}{
+		{0, "0 дней подряд"},
+		{1, "1 день подряд"},
+		{3, "3 дня подряд"},
+		{11, "11 дней подряд"},
+		{21, "21 день подряд"},
+	}
+
+	for _, tt := range tests {
+		if got := streakLabel(tt.days); got != tt.expected {
+			t.Errorf("streakLabel(%d) = %q, want %q", tt.days, got, tt.expected)
+		}
+	}
+}

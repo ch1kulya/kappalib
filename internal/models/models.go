@@ -126,13 +126,14 @@ type CookieValue struct {
 }
 
 type ProfilePublic struct {
-	ID                  string    `json:"id"`
-	DisplayName         string    `json:"display_name"`
-	AvatarSeed          string    `json:"avatar_seed"`
-	HasCustomAvatar     bool      `json:"has_custom_avatar"`
-	AvatarUpdatedAt     int64     `json:"avatar_updated_at"`
-	CreatedAt           time.Time `json:"created_at"`
-	UnreadNotifications int       `json:"unread_notifications"`
+	ID                  string      `json:"id"`
+	DisplayName         string      `json:"display_name"`
+	AvatarSeed          string      `json:"avatar_seed"`
+	HasCustomAvatar     bool        `json:"has_custom_avatar"`
+	AvatarUpdatedAt     int64       `json:"avatar_updated_at"`
+	CreatedAt           time.Time   `json:"created_at"`
+	UnreadNotifications int         `json:"unread_notifications"`
+	Streak              *UserStreak `json:"streak,omitempty"`
 }
 
 type UserBadge struct {
@@ -157,6 +158,11 @@ type ActivityDay struct {
 	Seconds int       `json:"seconds"`
 }
 
+type UserStreak struct {
+	Current     int  `json:"current"`
+	ActiveToday bool `json:"active_today"`
+}
+
 type UserProfileStats struct {
 	TotalSeconds  int `json:"total_seconds"`
 	LongestStreak int `json:"longest_streak"`
@@ -170,6 +176,7 @@ type UserProfilePage struct {
 	Badges       []UserBadge      `json:"badges"`
 	Achievements []Achievement    `json:"achievements"`
 	Activity     []ActivityDay    `json:"activity"`
+	Streak       UserStreak       `json:"streak"`
 }
 
 type Comment struct {
