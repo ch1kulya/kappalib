@@ -442,8 +442,6 @@ var monthShortNames = [...]string{"Янв", "Фев", "Мар", "Апр", "Ма�
 
 var monthGenitiveNames = [...]string{"января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"}
 
-var weekdayShortNames = [...]string{"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"}
-
 func heatmapLevel(seconds int) int {
 	level := 0
 	for i, threshold := range heatmapLevelThresholds {
@@ -555,43 +553,8 @@ func AvatarURL(userID string, hasCustomAvatar bool, avatarSeed string, avatarUpd
 	return "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=" + url.QueryEscape(avatarSeed) + "&backgroundType=solid,gradientLinear"
 }
 
-func BuildStreakWeek(streak models.UserStreak) []StreakDay {
-	days := make([]StreakDay, len(weekdayShortNames))
-	for i, label := range weekdayShortNames {
-		state := "missed"
-		switch {
-		case i < len(streak.Week) && streak.Week[i]:
-			state = "active"
-		case i == streak.Today:
-			state = "pending"
-		case i > streak.Today:
-			state = "future"
-		}
-		days[i] = StreakDay{Label: label, State: state, Today: i == streak.Today}
-	}
-	return days
-}
-
-func streakState(streak models.UserStreak) string {
-	switch {
-	case streak.ActiveToday():
-		return "active"
-	case streak.Current > 0:
-		return "pending"
-	default:
-		return "none"
-	}
-}
-
 func streakLabel(days int) string {
-	return pluralize(days, "день подряд", "дня подряд", "дней подряд")
-}
-
-func streakRecordLabel(days int) string {
-	if days <= 0 {
-		return "Рекорда пока нет"
-	}
-	return fmt.Sprintf("Рекорд: %d %s", days, pluralize(days, "день", "дня", "дней"))
+	return fmt.Sprintf("%d %s подряд", days, pluralize(days, "день", "дня", "дней"))
 }
 
 func achievementTierLabel(tier int) string {

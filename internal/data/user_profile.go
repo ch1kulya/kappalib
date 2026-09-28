@@ -143,25 +143,6 @@ func BuildAchievements(stats models.UserProfileStats, createdAt, now time.Time) 
 	return achievements
 }
 
-func BuildUserStreak(today time.Time, current int, activeDays []time.Time) models.UserStreak {
-	streak := models.UserStreak{
-		Current: current,
-		Today:   (int(today.Weekday()) + 6) % 7,
-		Week:    make([]bool, 7),
-	}
-
-	active := make(map[string]bool, len(activeDays))
-	for _, day := range activeDays {
-		active[day.Format(time.DateOnly)] = true
-	}
-
-	weekStart := today.AddDate(0, 0, -streak.Today)
-	for i := range streak.Week {
-		streak.Week[i] = active[weekStart.AddDate(0, 0, i).Format(time.DateOnly)]
-	}
-	return streak
-}
-
 func userProfileCacheKey(userID string) string {
 	return "user_profile:" + userID
 }
@@ -300,12 +281,10 @@ func getUserActivityYear(ctx context.Context, userID string) ([]models.ActivityD
 }
 
 func getUserStreak(ctx context.Context, userID string) (models.UserStreak, error) {
-	var today time.Time
-	var current int
-	var activeDays []time.Time
-	if err := database.DB.QueryRow(ctx, queryUserStreakGet, userID).Scan(&today, &current, &activeDays); err != nil {
+	var streak models.UserStreak
+	if err := database.DB.QueryRow(ctx, queryUserStreakGet, userID).Scan(&streak.Current, &streak.ActiveToday); err != nil {
 		logger.Error("Failed to get streak for %s: %v", userID, err)
 		return models.UserStreak{}, err
 	}
-	return BuildUserStreak(today, current, activeDays), nil
+	return streak, nil
 }

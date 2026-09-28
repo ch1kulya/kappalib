@@ -40,15 +40,13 @@ templ UserProfile(props UserProfileProps) {
 						<span>{ FormatDate(props.Page.Profile.CreatedAt) + " г." }</span>
 					</span>
 				</div>
+				@ActivityStreak(props.Page.Streak)
 			</section>
 			<section class="up-section">
 				<div class="chapters-header up-section-header">
 					<h2>Активность</h2>
 				</div>
-				<div class="up-activity">
-					@ActivityStreak(props.Page.Streak, streakRecordLabel(max(props.Page.Stats.LongestStreak, props.Page.Streak.Current)))
-					@ActivityHeatmapView(props.Heatmap)
-				</div>
+				@ActivityHeatmapView(props.Heatmap)
 			</section>
 			<section class="up-section">
 				<div class="chapters-header up-section-header">
@@ -84,31 +82,16 @@ templ userProfileAvatar(profile models.ProfilePublic) {
 	/>
 }
 
-templ ActivityStreak(streak models.UserStreak, note string) {
-	<div class="streak" data-state={ streakState(streak) }>
-		<div class="streak-summary">
-			<span class="up-achievement-badge streak-badge">
-				@IconBadge("flame", "streak-icon")
-			</span>
-			<div class="streak-info">
-				<span class="streak-title">
-					<span class="streak-count" data-field="streakCount">{ strconv.Itoa(streak.Current) }</span>
-					<span class="streak-label" data-field="streakLabel">{ streakLabel(streak.Current) }</span>
-				</span>
-				<span class="streak-note" data-field="streakNote">{ note }</span>
-			</div>
-		</div>
-		<div class="streak-week" aria-hidden="true">
-			for _, day := range BuildStreakWeek(streak) {
-				<span class={ "streak-day", templ.KV("streak-day-today", day.Today) } data-state={ day.State }>
-					<span class="streak-day-label">{ day.Label }</span>
-					<span class="streak-day-dot">
-						<svg class="streak-day-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
-					</span>
-				</span>
-			}
-		</div>
-	</div>
+templ ActivityStreak(streak models.UserStreak) {
+	<span
+		class={ "streak", templ.KV("streak-active", streak.ActiveToday) }
+		role="img"
+		aria-label={ streakLabel(streak.Current) }
+		title={ streakLabel(streak.Current) }
+	>
+		@IconBadge("flame", "streak-icon")
+		<span data-field="streakCount">{ strconv.Itoa(streak.Current) }</span>
+	</span>
 }
 
 templ ActivityHeatmapView(heatmap ActivityHeatmap) {

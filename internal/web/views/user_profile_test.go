@@ -197,95 +197,21 @@ func TestAchievementTierLabel(t *testing.T) {
 	}
 }
 
-func TestBuildStreakWeek(t *testing.T) {
-	streak := models.UserStreak{Current: 4, Today: 3, Week: []bool{true, false, true, false, false, false, false}}
-
-	days := BuildStreakWeek(streak)
-
-	expected := []string{"active", "missed", "active", "pending", "future", "future", "future"}
-	if len(days) != len(expected) {
-		t.Fatalf("expected %d days, got %d", len(expected), len(days))
-	}
-	for i, state := range expected {
-		if days[i].State != state {
-			t.Errorf("day %d: expected state %q, got %q", i, state, days[i].State)
-		}
-		if days[i].Today != (i == 3) {
-			t.Errorf("day %d: unexpected today flag %v", i, days[i].Today)
-		}
-		if days[i].Label != weekdayShortNames[i] {
-			t.Errorf("day %d: expected label %q, got %q", i, weekdayShortNames[i], days[i].Label)
-		}
-	}
-}
-
-func TestBuildStreakWeekActiveToday(t *testing.T) {
-	days := BuildStreakWeek(models.UserStreak{Current: 1, Today: 6, Week: []bool{false, false, false, false, false, false, true}})
-
-	if days[6].State != "active" || !days[6].Today {
-		t.Errorf("expected active today on sunday, got %+v", days[6])
-	}
-	if days[0].State != "missed" {
-		t.Errorf("expected missed monday, got %q", days[0].State)
-	}
-}
-
-func TestBuildStreakWeekEmpty(t *testing.T) {
-	days := BuildStreakWeek(models.UserStreak{})
-
-	if len(days) != 7 {
-		t.Fatalf("expected 7 days, got %d", len(days))
-	}
-	if days[0].State != "pending" || !days[0].Today {
-		t.Errorf("expected pending today on monday, got %+v", days[0])
-	}
-	for _, day := range days[1:] {
-		if day.State != "future" || day.Today {
-			t.Errorf("expected future day, got %+v", day)
-		}
-	}
-}
-
-func TestStreakState(t *testing.T) {
+func TestStreakLabel(t *testing.T) {
 	tests := []struct {
-		name     string
-		streak   models.UserStreak
+		days     int
 		expected string
 	}{
-		{"no streak", models.UserStreak{Today: 2, Week: make([]bool, 7)}, "none"},
-		{"streak waiting for today", models.UserStreak{Current: 3, Today: 2, Week: []bool{true, true, false, false, false, false, false}}, "pending"},
-		{"streak extended today", models.UserStreak{Current: 3, Today: 2, Week: []bool{true, true, true, false, false, false, false}}, "active"},
+		{0, "0 дней подряд"},
+		{1, "1 день подряд"},
+		{3, "3 дня подряд"},
+		{11, "11 дней подряд"},
+		{21, "21 день подряд"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := streakState(tt.streak); got != tt.expected {
-				t.Errorf("streakState() = %q, want %q", got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestStreakLabels(t *testing.T) {
-	tests := []struct {
-		days   int
-		label  string
-		record string
-	}{
-		{0, "дней подряд", "Рекорда пока нет"},
-		{1, "день подряд", "Рекорд: 1 день"},
-		{3, "дня подряд", "Рекорд: 3 дня"},
-		{11, "дней подряд", "Рекорд: 11 дней"},
-		{21, "день подряд", "Рекорд: 21 день"},
-		{365, "дней подряд", "Рекорд: 365 дней"},
-	}
-
-	for _, tt := range tests {
-		if got := streakLabel(tt.days); got != tt.label {
-			t.Errorf("streakLabel(%d) = %q, want %q", tt.days, got, tt.label)
-		}
-		if got := streakRecordLabel(tt.days); got != tt.record {
-			t.Errorf("streakRecordLabel(%d) = %q, want %q", tt.days, got, tt.record)
+		if got := streakLabel(tt.days); got != tt.expected {
+			t.Errorf("streakLabel(%d) = %q, want %q", tt.days, got, tt.expected)
 		}
 	}
 }

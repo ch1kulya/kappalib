@@ -159,13 +159,8 @@ type ActivityDay struct {
 }
 
 type UserStreak struct {
-	Current int    `json:"current"`
-	Today   int    `json:"today"`
-	Week    []bool `json:"week"`
-}
-
-func (s UserStreak) ActiveToday() bool {
-	return s.Today >= 0 && s.Today < len(s.Week) && s.Week[s.Today]
+	Current     int  `json:"current"`
+	ActiveToday bool `json:"active_today"`
 }
 
 type UserProfileStats struct {
