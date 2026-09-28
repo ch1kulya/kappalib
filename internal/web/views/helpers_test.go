@@ -175,3 +175,24 @@ func TestViewsLabel(t *testing.T) {
 		}
 	}
 }
+
+func TestViewsWord(t *testing.T) {
+	tests := []struct {
+		views    int64
+		expected string
+	}{
+		{0, "просмотров"},
+		{1, "просмотр"},
+		{24, "просмотра"},
+		{111, "просмотров"},
+		{999, "просмотров"},
+		{1_000, "просмотров"},
+		{1_234_567, "просмотров"},
+	}
+
+	for _, tt := range tests {
+		if got := viewsWord(tt.views); got != tt.expected {
+			t.Errorf("viewsWord(%d) = %q, want %q", tt.views, got, tt.expected)
+		}
+	}
+}
