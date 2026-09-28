@@ -123,3 +123,26 @@ func TestNovelRendersAbandonedBadge(t *testing.T) {
 		})
 	}
 }
+
+func TestNovelRendersViewsBadge(t *testing.T) {
+	props := NovelProps{
+		BaseProps: BaseProps{
+			Title:          "t",
+			Description:    "d",
+			Version:        "test",
+			ReaderSettings: DefaultReaderSettings,
+		},
+		Novel: &models.Novel{ID: "nvl_views", Title: "Popular Novel", ViewsCount: 1_234_567},
+	}
+	var sb strings.Builder
+	if err := Novel(props).Render(context.Background(), &sb); err != nil {
+		t.Fatalf("render failed: %v", err)
+	}
+	output := sb.String()
+	if !strings.Contains(output, "title=\"1\u00a0234\u00a0567 просмотров\"") {
+		t.Error("views badge should expose full count in title")
+	}
+	if !strings.Contains(output, "1,2 млн</span>") {
+		t.Error("views badge should render compact count")
+	}
+}

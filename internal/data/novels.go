@@ -48,7 +48,7 @@ func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
 		err := database.DB.QueryRow(dbCtx, queryNovelsGetOne, id).Scan(
 			&n.ID, &n.Title, &n.TitleEn, &n.Author,
 			&n.YearStart, &n.YearEnd, &n.Status, &n.Description,
-			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount,
+			&n.AgeRating, &n.CoverURL, &n.CreatedAt, &n.ChapterCount, &n.ViewsCount,
 			&n.HasSelfHarm, &n.HasDrugUsage, &n.HasSexualViolence, &n.HasGraphicSex, &n.HasProfanity,
 			&altTitlesJSON,
 			&n.LastChapterAt,
