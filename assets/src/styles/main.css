@@ -1199,19 +1199,6 @@ a.global-announcement {
   border-color: var(--color-danger-glow);
 }
 
-.badge-views {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  & .badge-views-icon {
-    width: 1.15em;
-    height: 1.15em;
-    flex-shrink: 0;
-  }
-}
-
 /* Chapters */
 .chapters-header {
   display: flex;
@@ -5238,14 +5225,16 @@ td:first-child {
 }
 
 .alt-titles-list,
-.tags-list {
+.tags-list,
+.stats-list {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
 }
 
 .alt-title,
-.tag {
+.tag,
+.stat {
   color: var(--secondary);
   font-size: 0.85rem;
   font-weight: 500;

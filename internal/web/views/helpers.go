@@ -607,3 +607,10 @@ func groupDigits(n int64) string {
 func viewsLabel(views int64) string {
 	return fmt.Sprintf("%s %s", groupDigits(views), pluralize(int(views%100), "просмотр", "просмотра", "просмотров"))
 }
+
+func viewsWord(views int64) string {
+	if views >= 1_000 {
+		return "просмотров"
+	}
+	return pluralize(int(views), "просмотр", "просмотра", "просмотров")
+}
