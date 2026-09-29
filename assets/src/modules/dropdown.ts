@@ -1,3 +1,16 @@
+function closeDropdown(root: HTMLElement): void {
+  root.classList.remove("active");
+  root.querySelector(".dropdown-btn")?.setAttribute("aria-expanded", "false");
+}
+
+document.addEventListener("click", (e: Event) => {
+  document
+    .querySelectorAll<HTMLElement>(".dropdown.active")
+    .forEach((root) => {
+      if (!root.contains(e.target as Node)) closeDropdown(root);
+    });
+});
+
 export default class Dropdown {
   root: HTMLElement;
   trigger: HTMLElement | null;
@@ -18,8 +31,7 @@ export default class Dropdown {
   }
 
   private init(): void {
-    this.trigger?.addEventListener("click", (e: Event) => {
-      e.stopPropagation();
+    this.trigger?.addEventListener("click", () => {
       this.toggle();
     });
 
@@ -29,12 +41,6 @@ export default class Dropdown {
         e.preventDefault();
         this.select(item);
       });
-    });
-
-    document.addEventListener("click", (e: Event) => {
-      if (!this.root.contains(e.target as Node)) {
-        this.close();
-      }
     });
 
     this.root.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -52,8 +58,7 @@ export default class Dropdown {
   }
 
   public close(): void {
-    this.root.classList.remove("active");
-    this.trigger?.setAttribute("aria-expanded", "false");
+    closeDropdown(this.root);
   }
 
   private select(item: HTMLElement): void {

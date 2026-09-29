@@ -109,14 +109,17 @@ type ListStatusOption struct {
 
 type CatalogProps struct {
 	BaseProps
-	Novels      []models.NovelSummary
-	Page        int
-	TotalPages  int
-	TotalCount  int
-	SortOrder   string
-	SearchQuery string
-	SearchTags  []string
-	IsPartial   bool
+	Novels           []models.NovelSummary
+	Page             int
+	TotalPages       int
+	TotalCount       int
+	SortOrder        string
+	SearchQuery      string
+	IsPartial        bool
+	IsResultsPartial bool
+	Filter           models.CatalogFilter
+	FilterTags       []models.Tag
+	Stats            *models.CatalogStats
 }
 
 type UpdatesProps struct {

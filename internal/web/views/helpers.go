@@ -396,13 +396,6 @@ func pluralizeNovels(n int) string {
 	return pluralize(n, "новелла", "новеллы", "новелл")
 }
 
-func pluralizeTags(n int) string {
-	if n == 1 {
-		return "тегу"
-	}
-	return "тегам"
-}
-
 func buildWarningList(hasSelfHarm, hasDrugUsage, hasSexualViolence, hasGraphicSex, hasProfanity bool) string {
 	var warnings []string
 	if hasSelfHarm {
@@ -604,13 +597,62 @@ func groupDigits(n int64) string {
 	return sign + b.String()
 }
 
+func exactCountLabel(n int64, one, two, five string) string {
+	return fmt.Sprintf("%s %s", groupDigits(n), pluralize(int(n%100), one, two, five))
+}
+
+func compactCountWord(n int64, one, two, five string) string {
+	if n >= 1_000 {
+		return five
+	}
+	return pluralize(int(n), one, two, five)
+}
+
 func viewsLabel(views int64) string {
-	return fmt.Sprintf("%s %s", groupDigits(views), pluralize(int(views%100), "просмотр", "просмотра", "просмотров"))
+	return exactCountLabel(views, "просмотр", "просмотра", "просмотров")
 }
 
 func viewsWord(views int64) string {
-	if views >= 1_000 {
-		return "просмотров"
+	return compactCountWord(views, "просмотр", "просмотра", "просмотров")
+}
+
+type catalogStatItem struct {
+	Value          int64
+	One, Two, Five string
+}
+
+func catalogStatItems(stats models.CatalogStats) []catalogStatItem {
+	return []catalogStatItem{
+		{stats.NovelsCount, "новелла", "новеллы", "новелл"},
+		{stats.ChaptersCount, "глава", "главы", "глав"},
+		{stats.SourcesCount, "источник", "источника", "источников"},
+		{stats.CharactersCount, "знак", "знака", "знаков"},
 	}
-	return pluralize(int(views), "просмотр", "просмотра", "просмотров")
+}
+
+func catalogRangeBadge(from, to *int) string {
+	switch {
+	case from != nil && to != nil:
+		return fmt.Sprintf("%d–%d", *from, *to)
+	case from != nil:
+		return fmt.Sprintf("от %d", *from)
+	case to != nil:
+		return fmt.Sprintf("до %d", *to)
+	default:
+		return ""
+	}
+}
+
+func catalogCountBadge(n int) string {
+	if n == 0 {
+		return ""
+	}
+	return strconv.Itoa(n)
+}
+
+func optionalIntValue(v *int) string {
+	if v == nil {
+		return ""
+	}
+	return strconv.Itoa(*v)
 }
