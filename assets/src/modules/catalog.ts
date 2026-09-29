@@ -111,6 +111,40 @@ let isLoading = false;
 let currentPage = 1;
 let totalPages = 1;
 let currentSort = "popular";
+let generation = 0;
+let reloadController: AbortController | null = null;
+let reloadTimeout: number | undefined;
+let loaderObserver: IntersectionObserver | null = null;
+
+function getRangeValue(input: HTMLInputElement): string {
+  const value = parseInt(input.value, 10);
+  const min = parseInt(input.dataset.min || "0", 10);
+  const max = parseInt(input.dataset.max || String(Number.MAX_SAFE_INTEGER), 10);
+  if (Number.isNaN(value) || value < min || value > max) return "";
+  return String(value);
+}
+
+function appendFilterParams(params: URLSearchParams): void {
+  const filters = document.getElementById("catalog-filters");
+  if (!filters) return;
+
+  filters.querySelectorAll<HTMLElement>(".catalog-filter").forEach((filter) => {
+    const param = filter.dataset.filter;
+    if (!param) return;
+    filter
+      .querySelectorAll<HTMLElement>(".dropdown-item.selected")
+      .forEach((item) => {
+        if (item.dataset.value) params.append(param, item.dataset.value);
+      });
+  });
+
+  filters
+    .querySelectorAll<HTMLInputElement>("input[name]")
+    .forEach((input) => {
+      const value = getRangeValue(input);
+      if (value) params.set(input.name, value);
+    });
+}
 
 function getBaseParams(): URLSearchParams {
   const params = new URLSearchParams();
@@ -123,13 +157,72 @@ function getBaseParams(): URLSearchParams {
     params.set("search", search);
   }
 
+  appendFilterParams(params);
+
   return params;
 }
 
+function formatRangeBadge(from: string, to: string): string {
+  if (from && to) return `${from}–${to}`;
+  if (from) return `от ${from}`;
+  if (to) return `до ${to}`;
+  return "";
+}
+
+function getFilterBadgeText(filter: HTMLElement): string {
+  const inputs = filter.querySelectorAll<HTMLInputElement>("input[name]");
+  if (inputs.length === 2) {
+    return formatRangeBadge(getRangeValue(inputs[0]), getRangeValue(inputs[1]));
+  }
+
+  const selected = filter.querySelectorAll(".dropdown-item.selected").length;
+  return selected > 0 ? String(selected) : "";
+}
+
+function updateFilterBadges(): void {
+  const filters = document.getElementById("catalog-filters");
+  if (!filters) return;
+
+  let hasActive = false;
+
+  filters.querySelectorAll<HTMLElement>(".catalog-filter").forEach((filter) => {
+    const badgeText = getFilterBadgeText(filter);
+
+    const badge = filter.querySelector<HTMLElement>(".catalog-filter-badge");
+    if (badge) {
+      badge.textContent = badgeText;
+      badge.hidden = badgeText === "";
+    }
+    filter
+      .querySelector(".dropdown-btn")
+      ?.classList.toggle("has-value", badgeText !== "");
+
+    if (badgeText) hasActive = true;
+  });
+
+  const reset = document.getElementById("catalog-filters-reset");
+  if (reset) reset.hidden = !hasActive;
+}
+
+function scheduleReload(delay: number): void {
+  clearTimeout(reloadTimeout);
+  reloadTimeout = window.setTimeout(() => {
+    reloadCatalog();
+  }, delay);
+}
+
+function observeLoader(): void {
+  const loader = document.getElementById("catalog-loader");
+  if (!loader || !loaderObserver) return;
+  loaderObserver.unobserve(loader);
+  loaderObserver.observe(loader);
+}
+
 async function loadMoreNovels(): Promise<void> {
-  if (isLoading || currentPage >= totalPages) return;
+  if (isLoading || reloadController || currentPage >= totalPages) return;
 
   isLoading = true;
+  const requestGeneration = generation;
   const loader = document.getElementById("catalog-loader");
   if (loader) loader.style.display = "flex";
 
@@ -144,6 +237,8 @@ async function loadMoreNovels(): Promise<void> {
     if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
     const html = await response.text();
+    if (requestGeneration !== generation) return;
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
     const newGrid = doc.getElementById("catalog-grid");
@@ -172,25 +267,27 @@ async function loadMoreNovels(): Promise<void> {
     if (loader && currentPage < totalPages) {
       loader.style.display = "flex";
     }
+    if (requestGeneration !== generation) observeLoader();
   }
 }
 
-async function applySort(): Promise<void> {
-  const params = getBaseParams();
-  params.set("page", "1");
-
-  if (currentSort !== "relevance") {
-    setKappalibCookie("catalog_sort", currentSort);
-  }
-
+async function reloadCatalog(): Promise<void> {
   const catalogContent = document.getElementById("catalog-content");
-  if (catalogContent) {
-    catalogContent.classList.add("is-loading");
-  }
+  if (!catalogContent) return;
+
+  clearTimeout(reloadTimeout);
+  reloadController?.abort();
+  const controller = new AbortController();
+  reloadController = controller;
+  generation++;
+
+  const params = getBaseParams();
+  catalogContent.classList.add("is-loading");
 
   try {
     const response = await fetch(`/catalog?${params.toString()}`, {
-      headers: { "X-Partial": "true" },
+      headers: { "X-Partial": "results" },
+      signal: controller.signal,
     });
 
     if (!response.ok) throw new Error(`HTTP error ${response.status}`);
@@ -198,68 +295,124 @@ async function applySort(): Promise<void> {
     const html = await response.text();
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
-    const newGrid = doc.getElementById("catalog-grid");
+    const newContent = doc.getElementById("catalog-content");
+    if (!newContent) throw new Error("Catalog content not found in response");
 
-    if (newGrid && catalogContent) {
-      const currentGrid = document.getElementById("catalog-grid");
-      if (currentGrid) {
-        currentGrid.innerHTML = newGrid.innerHTML;
-      }
-
-      const tempDiv = document.createElement("div");
-      tempDiv.innerHTML = html;
-      const emptyMessage = tempDiv.querySelector(".catalog-empty");
-      const existingEmpty = catalogContent.querySelector(".catalog-empty");
-
-      if (emptyMessage && !existingEmpty) {
-        catalogContent.appendChild(emptyMessage.cloneNode(true));
-      } else if (!emptyMessage && existingEmpty) {
-        existingEmpty.remove();
-      }
-    }
+    catalogContent.innerHTML = newContent.innerHTML;
+    updateURL(params);
 
     currentPage = 1;
-    const newCatalogContent = doc.getElementById("catalog-content");
-    if (newCatalogContent) {
-      totalPages = parseInt(newCatalogContent.dataset.totalPages || "1", 10);
-      if (catalogContent) {
-        catalogContent.dataset.totalPages = String(totalPages);
-      }
-    }
-
-    updateURL();
+    totalPages = parseInt(newContent.dataset.totalPages || "1", 10);
+    catalogContent.dataset.totalPages = String(totalPages);
 
     const loader = document.getElementById("catalog-loader");
     if (loader) {
       loader.style.display = currentPage < totalPages ? "flex" : "none";
     }
+    observeLoader();
 
-    console.info("Sort applied successfully");
+    console.info("Catalog results updated");
   } catch (err) {
-    console.error("Failed to apply sort", err);
+    if (controller.signal.aborted) return;
+    console.error("Failed to reload catalog, falling back to navigation", err);
+    window.location.href = catalogURL(params);
   } finally {
-    if (catalogContent) {
+    if (reloadController === controller) {
+      reloadController = null;
       catalogContent.classList.remove("is-loading");
     }
   }
 }
 
-function updateURL(): void {
-  const params = getBaseParams();
-
-  const newUrl = new URL(window.location.origin + "/catalog");
+function catalogURL(params: URLSearchParams): string {
+  const url = new URL(window.location.origin + "/catalog");
   params.forEach((value, key) => {
-    newUrl.searchParams.append(key, value);
+    url.searchParams.append(key, value);
   });
-  window.history.replaceState({}, "", newUrl.toString());
+  return url.toString();
+}
+
+function updateURL(params: URLSearchParams): void {
+  window.history.replaceState({}, "", catalogURL(params));
+}
+
+function initCatalogFilters(): void {
+  const filters = document.getElementById("catalog-filters");
+  if (!filters) return;
+
+  filters.addEventListener("click", (e: Event) => {
+    const target = e.target as HTMLElement;
+
+    const option = target.closest<HTMLElement>(".dropdown-item");
+    if (option && filters.contains(option)) {
+      const selected = option.classList.toggle("selected");
+      option.setAttribute("aria-selected", String(selected));
+      updateFilterBadges();
+      scheduleReload(250);
+      return;
+    }
+
+    if (target.closest("#catalog-filters-reset")) {
+      filters
+        .querySelectorAll<HTMLElement>(".dropdown-item.selected")
+        .forEach((item) => {
+          item.classList.remove("selected");
+          item.setAttribute("aria-selected", "false");
+        });
+      filters.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
+        input.value = "";
+      });
+      filterTagOptions(filters, "");
+      updateFilterBadges();
+      reloadCatalog();
+    }
+  });
+
+  filters.addEventListener("input", (e: Event) => {
+    const input = e.target as HTMLInputElement;
+
+    if (input.classList.contains("catalog-filter-search")) {
+      filterTagOptions(filters, input.value);
+      return;
+    }
+
+    if (!input.name) return;
+    const maxDigits = (input.dataset.max || "").length || undefined;
+    const digits = input.value.replace(/\D/g, "").slice(0, maxDigits);
+    if (digits !== input.value) input.value = digits;
+    updateFilterBadges();
+    scheduleReload(600);
+  });
+
+  filters.addEventListener("keydown", (e: KeyboardEvent) => {
+    const input = e.target as HTMLInputElement;
+    if (e.key === "Enter" && input.name) {
+      e.preventDefault();
+      reloadCatalog();
+    }
+  });
+}
+
+function filterTagOptions(filters: HTMLElement, query: string): void {
+  const normalized = query.trim().toLowerCase();
+  let visible = 0;
+
+  filters
+    .querySelectorAll<HTMLElement>(".catalog-filter-options .dropdown-item")
+    .forEach((item) => {
+      const matches = !normalized
+        || (item.textContent || "").toLowerCase().includes(normalized);
+      item.hidden = !matches;
+      if (matches) visible++;
+    });
+
+  const empty = filters.querySelector<HTMLElement>(".catalog-filter-empty");
+  if (empty) empty.hidden = visible > 0;
 }
 
 export function initCatalogPage(): void {
   const catalogContent = document.getElementById("catalog-content");
-  if (!catalogContent) return;
-
-  const loader = document.getElementById("catalog-loader");
-  if (!loader && !catalogContent.dataset.search) return;
+  if (!catalogContent || !catalogContent.closest(".catalog-page")) return;
 
   currentPage = 1;
   totalPages = parseInt(catalogContent.dataset.totalPages || "1", 10);
@@ -272,26 +425,28 @@ export function initCatalogPage(): void {
     sortDropdown.addEventListener("change", (e: Event) => {
       const customEvent = e as CustomEvent<{ value: string }>;
       currentSort = customEvent.detail.value;
-      applySort();
+      if (currentSort !== "relevance") {
+        setKappalibCookie("catalog_sort", currentSort);
+      }
+      reloadCatalog();
     });
   }
 
-  if (loader) {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !isLoading && currentPage < totalPages) {
-            loadMoreNovels();
-          }
-        });
-      },
-      {
-        rootMargin: "200px",
-      },
-    );
+  initCatalogFilters();
 
-    observer.observe(loader);
-  }
+  loaderObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && !isLoading && currentPage < totalPages) {
+          loadMoreNovels();
+        }
+      });
+    },
+    {
+      rootMargin: "200px",
+    },
+  );
+  observeLoader();
 
   window.addEventListener("popstate", () => {
     window.location.reload();

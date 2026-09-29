@@ -196,3 +196,23 @@ func TestViewsWord(t *testing.T) {
 		}
 	}
 }
+
+func TestCatalogRangeBadge(t *testing.T) {
+	from, to := 2010, 2020
+	tests := []struct {
+		from     *int
+		to       *int
+		expected string
+	}{
+		{nil, nil, ""},
+		{&from, nil, "от 2010"},
+		{nil, &to, "до 2020"},
+		{&from, &to, "2010–2020"},
+	}
+
+	for _, tt := range tests {
+		if got := catalogRangeBadge(tt.from, tt.to); got != tt.expected {
+			t.Errorf("catalogRangeBadge(%v, %v) = %q, want %q", tt.from, tt.to, got, tt.expected)
+		}
+	}
+}
