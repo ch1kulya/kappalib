@@ -83,7 +83,36 @@ type CatalogPage struct {
 	PageSize   int            `json:"page_size"`
 	TotalCount int            `json:"total_count"`
 	TotalPages int            `json:"total_pages"`
-	SearchTags []string       `json:"search_tags,omitempty"`
+}
+
+var NovelStatuses = []string{"ongoing", "completed", "announced"}
+
+const (
+	CatalogYearMin     = 1
+	CatalogYearMax     = 9999
+	CatalogChaptersMax = 1_000_000
+)
+
+type CatalogFilter struct {
+	TagIDs       []int
+	Statuses     []string
+	YearFrom     *int
+	YearTo       *int
+	ChaptersFrom *int
+	ChaptersTo   *int
+}
+
+func (f CatalogFilter) IsEmpty() bool {
+	return len(f.TagIDs) == 0 && len(f.Statuses) == 0 &&
+		f.YearFrom == nil && f.YearTo == nil &&
+		f.ChaptersFrom == nil && f.ChaptersTo == nil
+}
+
+type CatalogStats struct {
+	NovelsCount     int64 `json:"novels_count"`
+	ChaptersCount   int64 `json:"chapters_count"`
+	SourcesCount    int64 `json:"sources_count"`
+	CharactersCount int64 `json:"characters_count"`
 }
 
 type Source struct {

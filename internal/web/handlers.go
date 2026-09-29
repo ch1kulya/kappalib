@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -864,8 +865,60 @@ func isPrefetchOrPrerender(r *http.Request) bool {
 	return strings.Contains(secPurpose, "prefetch") || strings.Contains(secPurpose, "prerender")
 }
 
+const maxCatalogFilterTags = 20
+
+func parseCatalogBound(raw string, minValue, maxValue int) *int {
+	v, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || v < minValue || v > maxValue {
+		return nil
+	}
+	return &v
+}
+
+func parseCatalogFilter(q url.Values) models.CatalogFilter {
+	var filter models.CatalogFilter
+
+	seenTags := make(map[int]bool)
+	for _, raw := range q["tag"] {
+		if len(filter.TagIDs) == maxCatalogFilterTags {
+			break
+		}
+		id, err := strconv.Atoi(raw)
+		if err != nil || id <= 0 || seenTags[id] {
+			continue
+		}
+		seenTags[id] = true
+		filter.TagIDs = append(filter.TagIDs, id)
+	}
+
+	for _, status := range models.NovelStatuses {
+		if slices.Contains(q["status"], status) {
+			filter.Statuses = append(filter.Statuses, status)
+		}
+	}
+
+	filter.YearFrom = parseCatalogBound(q.Get("year_from"), models.CatalogYearMin, models.CatalogYearMax)
+	filter.YearTo = parseCatalogBound(q.Get("year_to"), models.CatalogYearMin, models.CatalogYearMax)
+	filter.ChaptersFrom = parseCatalogBound(q.Get("chapters_from"), 0, models.CatalogChaptersMax)
+	filter.ChaptersTo = parseCatalogBound(q.Get("chapters_to"), 0, models.CatalogChaptersMax)
+
+	return filter
+}
+
+func knownTagIDs(ids []int, tags []models.Tag) []int {
+	known := make([]int, 0, len(ids))
+	for _, id := range ids {
+		if slices.ContainsFunc(tags, func(t models.Tag) bool { return t.ID == id }) {
+			known = append(known, id)
+		}
+	}
+	return known
+}
+
 func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
-	isPartial := r.Header.Get("X-Partial") == "true"
+	w.Header().Add("Vary", "X-Partial")
+	partial := r.Header.Get("X-Partial")
+	isPartial := partial == "true"
 
 	page := 1
 	if isPartial {
@@ -887,7 +940,24 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dataResp, err := data.GetCatalogNovels(r.Context(), page, sortOrder, searchQuery)
+	filter := parseCatalogFilter(r.URL.Query())
+
+	var filterTags []models.Tag
+	var stats *models.CatalogStats
+	if !isPartial {
+		var err error
+		if filterTags, err = data.GetCatalogTags(r.Context()); err != nil {
+			logger.Warn("Failed to fetch catalog tags: %v", err)
+		}
+		filter.TagIDs = knownTagIDs(filter.TagIDs, filterTags)
+		if searchQuery == "" {
+			if stats, err = data.GetCatalogStats(r.Context()); err != nil {
+				logger.Warn("Failed to fetch catalog stats: %v", err)
+			}
+		}
+	}
+
+	dataResp, err := data.GetCatalogNovels(r.Context(), page, sortOrder, searchQuery, filter)
 	if err != nil {
 		h.renderError(w, r, http.StatusServiceUnavailable, "Сервис временно недоступен", "Не удалось загрузить каталог. Пожалуйста, попробуйте позже.")
 		logger.Error("Failed to fetch catalog: %v", err)
@@ -916,14 +986,17 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 			ReaderSettings:     h.getReaderSettings(r),
 			GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 		},
-		Novels:      dataResp.Novels,
-		Page:        page,
-		TotalPages:  dataResp.TotalPages,
-		TotalCount:  dataResp.TotalCount,
-		SortOrder:   sortOrder,
-		SearchQuery: searchQuery,
-		SearchTags:  dataResp.SearchTags,
-		IsPartial:   isPartial,
+		Novels:           dataResp.Novels,
+		Page:             page,
+		TotalPages:       dataResp.TotalPages,
+		TotalCount:       dataResp.TotalCount,
+		SortOrder:        sortOrder,
+		SearchQuery:      searchQuery,
+		IsPartial:        isPartial,
+		IsResultsPartial: partial == "results",
+		Filter:           filter,
+		FilterTags:       filterTags,
+		Stats:            stats,
 	}
 
 	h.render(w, r, views.Catalog(props))

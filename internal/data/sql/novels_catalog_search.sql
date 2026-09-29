@@ -1,8 +1,8 @@
 WITH norm_query AS (
     SELECT
-        lower(regexp_replace($1, '[^[:alnum:]]', '', 'g')) AS q,
-        '%' || lower(regexp_replace($1, '[^[:alnum:]]', '', 'g')) || '%' AS q_like,
-        string_to_array(lower(regexp_replace($1, '[^[:alnum:] ]', '', 'g')), ' ') AS tokens
+        lower(regexp_replace($7, '[^[:alnum:]]', '', 'g')) AS q,
+        '%' || lower(regexp_replace($7, '[^[:alnum:]]', '', 'g')) || '%' AS q_like,
+        string_to_array(lower(regexp_replace($7, '[^[:alnum:] ]', '', 'g')), ' ') AS tokens
 ),
 non_empty_tokens AS (
     SELECT
@@ -73,6 +73,7 @@ SELECT
     c.cover_url,
     c.created_at,
     c.chapters_count,
+    c.views_count,
     c.has_self_harm,
     c.has_drug_usage,
     c.has_sexual_violence,
@@ -114,8 +115,3 @@ SELECT
         END + similarity (c.q, c.title_norm) * 30 + similarity (c.q, c.title_en_norm) * 25 + similarity (c.q, c.author_norm) * 15 + similarity (c.q, c.alt_titles_norm) * 20 + word_similarity (c.q, c.title_norm) * 20 + word_similarity (c.q, c.title_en_norm) * 15 + word_similarity (c.q, c.alt_titles_norm) * 15) AS relevance
 FROM
     candidates AS c
-ORDER BY
-    relevance DESC,
-    c.created_at DESC
-LIMIT 5;
-

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -417,5 +419,66 @@ func TestStaticPageCaching(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "cached terms content") {
 		t.Errorf("expected response to contain cached content, got %s", rec.Body.String())
+	}
+}
+
+func TestParseCatalogFilter(t *testing.T) {
+	q := url.Values{
+		"tag":           {"3", "x", "-1", "3", "0", "12"},
+		"status":        {"completed", "bogus", "ongoing", "completed"},
+		"year_from":     {" 2010 "},
+		"year_to":       {"abc"},
+		"chapters_from": {"0"},
+		"chapters_to":   {"1000001"},
+	}
+
+	filter := parseCatalogFilter(q)
+
+	if got, want := filter.TagIDs, []int{3, 12}; !slices.Equal(got, want) {
+		t.Errorf("TagIDs = %v, want %v", got, want)
+	}
+	if got, want := filter.Statuses, []string{"ongoing", "completed"}; !slices.Equal(got, want) {
+		t.Errorf("Statuses = %v, want %v", got, want)
+	}
+	if filter.YearFrom == nil || *filter.YearFrom != 2010 {
+		t.Errorf("YearFrom = %v, want 2010", filter.YearFrom)
+	}
+	if filter.YearTo != nil {
+		t.Errorf("YearTo = %v, want nil", *filter.YearTo)
+	}
+	if filter.ChaptersFrom == nil || *filter.ChaptersFrom != 0 {
+		t.Errorf("ChaptersFrom = %v, want 0", filter.ChaptersFrom)
+	}
+	if filter.ChaptersTo != nil {
+		t.Errorf("ChaptersTo = %v, want nil", *filter.ChaptersTo)
+	}
+	if filter.IsEmpty() {
+		t.Error("filter should not be empty")
+	}
+
+	if !parseCatalogFilter(url.Values{"sort": {"popular"}}).IsEmpty() {
+		t.Error("filter without params should be empty")
+	}
+}
+
+func TestParseCatalogFilterLimitsTags(t *testing.T) {
+	q := url.Values{}
+	for i := 1; i <= maxCatalogFilterTags+5; i++ {
+		q.Add("tag", strconv.Itoa(i))
+	}
+
+	if got := len(parseCatalogFilter(q).TagIDs); got != maxCatalogFilterTags {
+		t.Errorf("len(TagIDs) = %d, want %d", got, maxCatalogFilterTags)
+	}
+}
+
+func TestKnownTagIDs(t *testing.T) {
+	tags := []models.Tag{{ID: 3, Name: "Драма"}, {ID: 12, Name: "Фэнтези"}}
+
+	if got, want := knownTagIDs([]int{12, 999, 3}, tags), []int{12, 3}; !slices.Equal(got, want) {
+		t.Errorf("knownTagIDs = %v, want %v", got, want)
+	}
+	if got := knownTagIDs([]int{3}, nil); len(got) != 0 {
+		t.Errorf("knownTagIDs without tags = %v, want empty", got)
 	}
 }

@@ -1,6 +1,12 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+	"strconv"
+
+	"github.com/ch1kulya/kappalib/internal/models"
+)
 
 templ CatalogGrid(props CatalogProps) {
 	<div class="novels-grid" id="catalog-grid">
@@ -25,6 +31,8 @@ templ CatalogGrid(props CatalogProps) {
 templ Catalog(props CatalogProps) {
 	if props.IsPartial {
 		@CatalogGrid(props)
+	} else if props.IsResultsPartial {
+		@CatalogResults(props)
 	} else {
 		@Base(props.BaseProps) {
 			<div class="catalog-page">
@@ -76,47 +84,151 @@ templ Catalog(props CatalogProps) {
 							</div>
 						</div>
 					</div>
-					if len(props.SearchTags) > 0 {
-						<span class="catalog-search-meta">
-							{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по { pluralizeTags(len(props.SearchTags)) }
-							<span style="display: inline-flex; flex-wrap: wrap; gap: 0.4rem;">
-								for _, tag := range props.SearchTags {
-									<span class="tag badge">{ tag }</span>
-								}
-							</span>
-						</span>
-					} else if props.SearchQuery != "" {
-						<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по запросу «{ props.SearchQuery }»</span>
-					} else {
-						<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } из основной коллекции</span>
+					if props.Stats != nil {
+						@CatalogStats(*props.Stats)
 					}
+					@CatalogFilters(props)
 				</div>
+				@CatalogResults(props)
 				<div
-					id="catalog-content"
-					data-total-pages={ fmt.Sprintf("%d", props.TotalPages) }
-					data-sort={ props.SortOrder }
-					data-search={ props.SearchQuery }
-				>
-					@CatalogGrid(props)
-					if len(props.Novels) == 0 {
-						<div class="catalog-empty">
-							<p>Ничего не найдено</p>
-							<p class="catalog-empty-suggest">
-								Не нашли нужную новеллу?
-								<a href="https://stats.kappalib.rip/q/LNdWv7KGd" target="_blank" rel="noopener noreferrer">
-									Предложите добавить
-									@IconExternalLink()
-								</a>
-							</p>
-						</div>
+					class="catalog-loader"
+					id="catalog-loader"
+					if props.Page >= props.TotalPages || len(props.Novels) == 0 {
+						style="display: none;"
 					}
+				>
+					<span>Загрузка...</span>
 				</div>
-				if props.Page < props.TotalPages && len(props.Novels) > 0 {
-					<div class="catalog-loader" id="catalog-loader">
-						<span>Загрузка...</span>
-					</div>
-				}
 			</div>
 		}
 	}
+}
+
+templ CatalogResults(props CatalogProps) {
+	<div
+		id="catalog-content"
+		data-total-pages={ fmt.Sprintf("%d", props.TotalPages) }
+		data-sort={ props.SortOrder }
+		data-search={ props.SearchQuery }
+	>
+		@catalogResultsMeta(props)
+		@CatalogGrid(props)
+		if len(props.Novels) == 0 {
+			<div class="catalog-empty">
+				<p>Ничего не найдено</p>
+				<p class="catalog-empty-suggest">
+					Не нашли нужную новеллу?
+					<a href="https://stats.kappalib.rip/q/LNdWv7KGd" target="_blank" rel="noopener noreferrer">
+						Предложите добавить
+						@IconExternalLink()
+					</a>
+				</p>
+			</div>
+		}
+	</div>
+}
+
+templ catalogResultsMeta(props CatalogProps) {
+	if props.SearchQuery != "" {
+		<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по запросу «{ props.SearchQuery }»</span>
+	} else if !props.Filter.IsEmpty() {
+		<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } по выбранным фильтрам</span>
+	} else if props.Stats == nil {
+		<span class="catalog-search-meta">{ fmt.Sprintf("%d", props.TotalCount) } { pluralizeNovels(props.TotalCount) } из основной коллекции</span>
+	}
+}
+
+templ CatalogStats(stats models.CatalogStats) {
+	<div class="catalog-stats">
+		for _, item := range catalogStatItems(stats) {
+			<div class="catalog-stat" title={ exactCountLabel(item.Value, item.One, item.Two, item.Five) }>
+				<span class="catalog-stat-value">{ FormatCompactNumber(item.Value) }</span>
+				<span class="catalog-stat-label">{ compactCountWord(item.Value, item.One, item.Two, item.Five) }</span>
+			</div>
+		}
+	</div>
+}
+
+templ CatalogFilters(props CatalogProps) {
+	<div class="catalog-filters" id="catalog-filters">
+		if len(props.FilterTags) > 0 {
+			<div class="dropdown catalog-filter" data-filter="tag">
+				@catalogFilterButton("Теги", catalogCountBadge(len(props.Filter.TagIDs)))
+				<div class="dropdown-menu">
+					<div class="dropdown-menu-inner">
+						<input type="text" class="catalog-filter-input catalog-filter-search" placeholder="Найти тег" aria-label="Найти тег" autocomplete="off" enterkeyhint="search"/>
+						<div class="catalog-filter-options" role="listbox" aria-multiselectable="true">
+							for _, tag := range props.FilterTags {
+								@catalogFilterOption(strconv.Itoa(tag.ID), tag.Name, slices.Contains(props.Filter.TagIDs, tag.ID))
+							}
+						</div>
+						<p class="catalog-filter-empty" hidden>Ничего не найдено</p>
+					</div>
+				</div>
+			</div>
+		}
+		@catalogRangeFilter("Год выхода", "year", props.Filter.YearFrom, props.Filter.YearTo, models.CatalogYearMin, models.CatalogYearMax)
+		@catalogRangeFilter("Главы", "chapters", props.Filter.ChaptersFrom, props.Filter.ChaptersTo, 0, models.CatalogChaptersMax)
+		<div class="dropdown catalog-filter" data-filter="status">
+			@catalogFilterButton("Статус", catalogCountBadge(len(props.Filter.Statuses)))
+			<div class="dropdown-menu">
+				<div class="dropdown-menu-inner" role="listbox" aria-multiselectable="true">
+					for _, status := range models.NovelStatuses {
+						@catalogFilterOption(status, MapStatus(status), slices.Contains(props.Filter.Statuses, status))
+					}
+				</div>
+			</div>
+		</div>
+		<button type="button" class="btn-text catalog-filters-reset" id="catalog-filters-reset" hidden?={ props.Filter.IsEmpty() }>Сбросить</button>
+	</div>
+}
+
+templ catalogFilterButton(label string, badge string) {
+	<button class={ "dropdown-btn", templ.KV("has-value", badge != "") } type="button" aria-haspopup="true" aria-expanded="false">
+		<span>{ label }</span>
+		<span class="badge catalog-filter-badge" hidden?={ badge == "" }>{ badge }</span>
+		<svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+	</button>
+}
+
+templ catalogFilterOption(value string, label string, selected bool) {
+	<button
+		type="button"
+		class={ "dropdown-item", templ.KV("selected", selected) }
+		data-value={ value }
+		data-no-select="true"
+		role="option"
+		aria-selected={ fmt.Sprintf("%t", selected) }
+	>
+		<span>{ label }</span>
+		@IconCheck("check-icon")
+	</button>
+}
+
+templ catalogRangeFilter(label string, param string, from *int, to *int, minValue int, maxValue int) {
+	<div class="dropdown catalog-filter" data-filter={ param }>
+		@catalogFilterButton(label, catalogRangeBadge(from, to))
+		<div class="dropdown-menu">
+			<div class="dropdown-menu-inner catalog-filter-range">
+				@catalogRangeInput(label, param+"_from", "от", from, minValue, maxValue)
+				<span class="catalog-filter-range-sep" aria-hidden="true">—</span>
+				@catalogRangeInput(label, param+"_to", "до", to, minValue, maxValue)
+			</div>
+		</div>
+	</div>
+}
+
+templ catalogRangeInput(label string, name string, placeholder string, value *int, minValue int, maxValue int) {
+	<input
+		type="text"
+		class="catalog-filter-input"
+		name={ name }
+		inputmode="numeric"
+		autocomplete="off"
+		placeholder={ placeholder }
+		aria-label={ label + " " + placeholder }
+		data-min={ strconv.Itoa(minValue) }
+		data-max={ strconv.Itoa(maxValue) }
+		value={ optionalIntValue(value) }
+	/>
 }
