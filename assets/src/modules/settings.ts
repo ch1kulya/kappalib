@@ -215,14 +215,18 @@ function updateUmamiSchemeTag(scheme: string): void {
   }
 }
 
+const systemDarkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
 function updateBrandIcons(scheme: string): void {
   const iconScheme = COLOR_SCHEME_OPTIONS.some((s) => s.value === scheme)
     ? scheme
     : "default";
+  const variant = systemDarkQuery.matches ? "dark/" : "";
   document
     .querySelectorAll<HTMLLinkElement>("link[data-brand-icon]")
     .forEach((link) => {
-      const href = `/assets/icons/${iconScheme}/${link.dataset.brandIcon}`;
+      const dir = link.rel === "icon" ? variant : "";
+      const href = `/assets/icons/${iconScheme}/${dir}${link.dataset.brandIcon}`;
       if (link.getAttribute("href") !== href) {
         link.setAttribute("href", href);
       }
@@ -340,7 +344,7 @@ function isDarkMode(): boolean {
   const theme = root.getAttribute("data-theme");
   if (theme === "dark") return true;
   if (theme === "light") return false;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return systemDarkQuery.matches;
 }
 
 function createColorPalette(colors: {
@@ -395,6 +399,9 @@ export const settingsManager = new SettingsManager();
 
 export function initSettings(): void {
   applyGlobalSettings();
+  systemDarkQuery.addEventListener("change", () => {
+    updateBrandIcons(getSettings().colorScheme);
+  });
 }
 
 export function initSettingsModal(): void {

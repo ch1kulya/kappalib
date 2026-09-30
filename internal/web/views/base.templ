@@ -44,7 +44,15 @@ templ Base(props BaseProps) {
 			<link rel="icon" type="image/png" sizes="32x32" href={ BrandIconURL(props.ReaderSettings.ColorScheme, "favicon-32x32.png") } data-brand-icon="favicon-32x32.png"/>
 			<link rel="apple-touch-icon" sizes="180x180" href={ BrandIconURL(props.ReaderSettings.ColorScheme, "apple-touch-icon.png") } data-brand-icon="apple-touch-icon.png"/>
 			if !props.IsChapterPage || props.Novel == nil {
-				<link rel="preload" href={ BrandIconURL(props.ReaderSettings.ColorScheme, "logo.png") } as="image"/>
+				switch props.ReaderSettings.Theme {
+					case "light":
+						<link rel="preload" href={ BrandIconURL(props.ReaderSettings.ColorScheme, "logo.png") } as="image"/>
+					case "dark":
+						<link rel="preload" href={ BrandIconURL(props.ReaderSettings.ColorScheme, "dark/logo.png") } as="image"/>
+					default:
+						<link rel="preload" href={ BrandIconURL(props.ReaderSettings.ColorScheme, "logo.png") } as="image" media="(prefers-color-scheme: light)"/>
+						<link rel="preload" href={ BrandIconURL(props.ReaderSettings.ColorScheme, "dark/logo.png") } as="image" media="(prefers-color-scheme: dark)"/>
+				}
 			}
 			<meta property="og:type" content="website"/>
 			<meta property="og:site_name" content="kappalib"/>

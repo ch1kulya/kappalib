@@ -239,7 +239,10 @@ func TestBrandIconURL(t *testing.T) {
 }
 
 func TestBrandIconFilesExist(t *testing.T) {
-	files := []string{"favicon.ico", "favicon-16x16.png", "favicon-32x32.png", "apple-touch-icon.png", "logo.png"}
+	files := []string{
+		"favicon.ico", "favicon-16x16.png", "favicon-32x32.png", "apple-touch-icon.png", "logo.png",
+		"dark/favicon.ico", "dark/favicon-16x16.png", "dark/favicon-32x32.png", "dark/logo.png",
+	}
 	for _, s := range ColorSchemeOptions {
 		for _, f := range files {
 			path := filepath.Join("..", "..", "..", "assets", "static", strings.TrimPrefix(BrandIconURL(s.Value, f), "/assets/"))
