@@ -105,7 +105,7 @@ func TestNovelRendersStatsBlock(t *testing.T) {
 	if !strings.Contains(output, "<span class=\"stat badge\" title=\"1\u00a0234\u00a0567 просмотров\">1,2 млн просмотров</span>") {
 		t.Error("stats block should render compact views count with full count in title")
 	}
-	if !strings.Contains(output, `<span class="stat badge" title="5 марта 2026 г.">Обновлено `+FormatRelativeTime(updatedAt)+"</span>") {
+	if !strings.Contains(output, `<span class="stat badge" title="5 марта 2026 г.">обновлено `+FormatRelativeTime(updatedAt)+"</span>") {
 		t.Error("stats block should render last update with full date in title")
 	}
 	if strings.Contains(metaBlock(t, output), "просмотр") {
@@ -113,7 +113,7 @@ func TestNovelRendersStatsBlock(t *testing.T) {
 	}
 
 	noChapters := renderNovel(t, &models.Novel{ID: "nvl_empty", Title: "Empty Novel"}, "")
-	if strings.Contains(noChapters, "Обновлено") {
+	if strings.Contains(noChapters, "обновлено") {
 		t.Error("last update should be hidden when novel has no chapters")
 	}
 }

@@ -247,7 +247,7 @@ templ Novel(props NovelProps) {
 						<span class="stat badge">{ fmt.Sprintf("%d", props.Novel.ChapterCount) } { pluralize(props.Novel.ChapterCount, "глава", "главы", "глав") }</span>
 						<span class="stat badge" title={ viewsLabel(props.Novel.ViewsCount) }>{ FormatCompactNumber(props.Novel.ViewsCount) } { viewsWord(props.Novel.ViewsCount) }</span>
 						if props.Novel.LastChapterAt != nil {
-							<span class="stat badge" title={ FormatDate(*props.Novel.LastChapterAt) + " г." }>Обновлено { FormatRelativeTime(*props.Novel.LastChapterAt) }</span>
+							<span class="stat badge" title={ FormatDate(*props.Novel.LastChapterAt) + " г." }>обновлено { FormatRelativeTime(*props.Novel.LastChapterAt) }</span>
 						}
 					</div>
 				</div>

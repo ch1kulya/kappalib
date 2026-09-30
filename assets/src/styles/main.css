@@ -361,26 +361,30 @@ a.global-announcement {
   margin-right: 1rem;
 }
 
+.header-brand {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: var(--brand-icon) center / contain no-repeat;
+  box-shadow: none;
+  transition: opacity 0.2s ease;
+  &:hover {
+    opacity: 0.8;
+  }
+  &:active {
+    box-shadow: none;
+  }
+}
+
 .header-logo {
   width: 24px;
   height: 24px;
   min-height: 24px;
-  color: var(--primary);
+  color: var(--tertiary);
   margin: 0;
   vertical-align: unset;
-  filter: drop-shadow(0 0 0.5px var(--secondary));
-  will-change: filter;
-  &:hover {
-    opacity: 0.8;
-  }
-  &.back {
-    color: var(--tertiary);
-    filter: none;
-    will-change: auto;
-    &:hover {
-      opacity: 1;
-    }
-  }
 }
 
 .header-right {

@@ -25,6 +25,7 @@
   --accent-primary: #f97316;
   --accent-text: white;
   --accent-border: rgba(249, 115, 22, 0.1);
+  --brand-icon: url("/assets/icons/default/logo.png");
   --color-success: light-dark(#059669, #10b981);
   --color-success-glow: light-dark(
     rgba(5, 150, 105, 0.2),
@@ -72,6 +73,7 @@
     rgba(254, 100, 11, 0.15),
     rgba(250, 179, 135, 0.15)
   );
+  --brand-icon: url("/assets/icons/catppuccin/logo.png");
   --color-success: light-dark(#40a02b, #a6e3a1);
   --color-success-glow: light-dark(
     rgba(64, 160, 43, 0.2),
@@ -119,6 +121,7 @@
     rgba(214, 93, 14, 0.15),
     rgba(254, 128, 25, 0.15)
   );
+  --brand-icon: url("/assets/icons/gruvbox/logo.png");
   --color-success: light-dark(#79740e, #b8bb26);
   --color-success-glow: light-dark(
     rgba(121, 116, 14, 0.2),
@@ -163,6 +166,7 @@
   --accent-primary: #d08770;
   --accent-text: #eceff4;
   --accent-border: rgba(208, 135, 112, 0.15);
+  --brand-icon: url("/assets/icons/nord/logo.png");
   --color-success: light-dark(#8aa873, #a3be8c);
   --color-success-glow: light-dark(
     rgba(138, 168, 115, 0.2),
@@ -210,6 +214,7 @@
     rgba(215, 130, 126, 0.15),
     rgba(234, 154, 151, 0.15)
   );
+  --brand-icon: url("/assets/icons/rosepine/logo.png");
   --color-success: light-dark(#56949f, #9ccfd8);
   --color-success-glow: light-dark(
     rgba(86, 148, 159, 0.2),
@@ -257,6 +262,7 @@
     rgba(177, 92, 0, 0.15),
     rgba(255, 158, 100, 0.15)
   );
+  --brand-icon: url("/assets/icons/tokyonight/logo.png");
   --color-success: light-dark(#387068, #9ece6a);
   --color-success-glow: light-dark(
     rgba(56, 112, 104, 0.2),
@@ -304,6 +310,7 @@
     rgba(245, 125, 38, 0.15),
     rgba(230, 152, 117, 0.15)
   );
+  --brand-icon: url("/assets/icons/everforest/logo.png");
   --color-success: light-dark(#8da101, #a7c080);
   --color-success-glow: light-dark(
     rgba(141, 161, 1, 0.2),
@@ -351,6 +358,7 @@
     rgba(218, 112, 44, 0.15),
     rgba(188, 82, 21, 0.15)
   );
+  --brand-icon: url("/assets/icons/flexoki/logo.png");
   --color-success: light-dark(#879a39, #879a39);
   --color-success-glow: light-dark(
     rgba(135, 154, 57, 0.2),
@@ -398,6 +406,7 @@
     rgba(248, 94, 132, 0.15),
     rgba(248, 94, 132, 0.15)
   );
+  --brand-icon: url("/assets/icons/sonokai/logo.png");
   --color-success: light-dark(#5c9e1e, #a9dc76);
   --color-success-glow: light-dark(
     rgba(92, 158, 30, 0.2),
@@ -445,6 +454,7 @@
     rgba(238, 83, 150, 0.15),
     rgba(255, 126, 182, 0.15)
   );
+  --brand-icon: url("/assets/icons/oxocarbon/logo.png");
   --color-success: light-dark(#198038, #42be65);
   --color-success-glow: light-dark(
     rgba(25, 128, 56, 0.2),

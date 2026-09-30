@@ -82,7 +82,7 @@ func buildAssets() error {
 			"process.env.SMARTCAPTCHA_SITE_KEY":       fmt.Sprintf("\"%s\"", os.Getenv("SMARTCAPTCHA_SITE_KEY")),
 			"process.env.S3_PUBLIC_URL":               fmt.Sprintf("\"%s\"", os.Getenv("S3_PUBLIC_URL")),
 		},
-		External: []string{"/assets/fonts/*"},
+		External: []string{"/assets/fonts/*", "/assets/icons/*"},
 		Engines: []esbuild.Engine{
 			{Name: esbuild.EngineChrome, Version: "100"},
 		},
