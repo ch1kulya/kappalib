@@ -366,15 +366,11 @@ a.global-announcement {
   height: 36px;
   padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   background: var(--brand-icon) center / contain no-repeat;
-  box-shadow: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
   &:hover {
     opacity: 0.8;
-  }
-  &:active {
-    box-shadow: none;
   }
 }
 
