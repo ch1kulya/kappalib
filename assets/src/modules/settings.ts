@@ -215,10 +215,25 @@ function updateUmamiSchemeTag(scheme: string): void {
   }
 }
 
+function updateBrandIcons(scheme: string): void {
+  const iconScheme = COLOR_SCHEME_OPTIONS.some((s) => s.value === scheme)
+    ? scheme
+    : "default";
+  document
+    .querySelectorAll<HTMLLinkElement>("link[data-brand-icon]")
+    .forEach((link) => {
+      const href = `/assets/icons/${iconScheme}/${link.dataset.brandIcon}`;
+      if (link.getAttribute("href") !== href) {
+        link.setAttribute("href", href);
+      }
+    });
+}
+
 function applySettings(settings: ReaderSettings): void {
   const root = document.documentElement;
 
   updateUmamiSchemeTag(settings.colorScheme);
+  updateBrandIcons(settings.colorScheme);
 
   if (settings.theme === "auto") {
     root.removeAttribute("data-theme");
@@ -305,6 +320,7 @@ function applyGlobalSettings(): void {
   const root = document.documentElement;
 
   updateUmamiSchemeTag(settings.colorScheme);
+  updateBrandIcons(settings.colorScheme);
 
   if (settings.theme === "auto") {
     root.removeAttribute("data-theme");

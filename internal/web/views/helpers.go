@@ -270,6 +270,13 @@ func IsValidColorScheme(scheme string) bool {
 	return false
 }
 
+func BrandIconURL(scheme, file string) string {
+	if !IsValidColorScheme(scheme) {
+		scheme = "default"
+	}
+	return "/assets/icons/" + scheme + "/" + file
+}
+
 func chapterContentClasses(settings ReaderSettings) string {
 	classes := "chapter-content"
 	classes += " density-" + settings.Density
