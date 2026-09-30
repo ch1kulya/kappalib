@@ -1,6 +1,9 @@
 package views
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -213,6 +216,36 @@ func TestCatalogRangeBadge(t *testing.T) {
 	for _, tt := range tests {
 		if got := catalogRangeBadge(tt.from, tt.to); got != tt.expected {
 			t.Errorf("catalogRangeBadge(%v, %v) = %q, want %q", tt.from, tt.to, got, tt.expected)
+		}
+	}
+}
+
+func TestBrandIconURL(t *testing.T) {
+	tests := []struct {
+		scheme   string
+		expected string
+	}{
+		{"default", "/assets/icons/default/favicon.ico"},
+		{"gruvbox", "/assets/icons/gruvbox/favicon.ico"},
+		{"", "/assets/icons/default/favicon.ico"},
+		{"../../etc", "/assets/icons/default/favicon.ico"},
+	}
+
+	for _, tt := range tests {
+		if got := BrandIconURL(tt.scheme, "favicon.ico"); got != tt.expected {
+			t.Errorf("BrandIconURL(%q) = %q, want %q", tt.scheme, got, tt.expected)
+		}
+	}
+}
+
+func TestBrandIconFilesExist(t *testing.T) {
+	files := []string{"favicon.ico", "favicon-16x16.png", "favicon-32x32.png", "apple-touch-icon.png", "logo.png"}
+	for _, s := range ColorSchemeOptions {
+		for _, f := range files {
+			path := filepath.Join("..", "..", "..", "assets", "static", strings.TrimPrefix(BrandIconURL(s.Value, f), "/assets/"))
+			if _, err := os.Stat(path); err != nil {
+				t.Errorf("missing brand icon %s for scheme %q: %v", f, s.Value, err)
+			}
 		}
 	}
 }
