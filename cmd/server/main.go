@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	_ "embed"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/templates"
 	"github.com/ch1kulya/kappalib/internal/web"
+	"github.com/ch1kulya/kappalib/internal/web/views"
 
 	"github.com/ch1kulya/logger"
 	"github.com/danielgtaylor/huma/v2"
@@ -72,6 +74,15 @@ func buildAssets(version string) error {
 
 	apiUrl := "/api"
 
+	schemes := make([]string, len(views.ColorSchemeOptions))
+	for i, opt := range views.ColorSchemeOptions {
+		schemes[i] = opt.Value
+	}
+	colorSchemes, err := json.Marshal(schemes)
+	if err != nil {
+		return fmt.Errorf("encode color schemes: %w", err)
+	}
+
 	common := esbuild.BuildOptions{
 		Bundle:            true,
 		MinifyWhitespace:  true,
@@ -87,6 +98,7 @@ func buildAssets(version string) error {
 			"process.env.SMARTCAPTCHA_SITE_KEY":       fmt.Sprintf("\"%s\"", os.Getenv("SMARTCAPTCHA_SITE_KEY")),
 			"process.env.S3_PUBLIC_URL":               fmt.Sprintf("\"%s\"", os.Getenv("S3_PUBLIC_URL")),
 			"process.env.ASSET_VERSION":               fmt.Sprintf("\"%s\"", version),
+			"process.env.COLOR_SCHEMES":               string(colorSchemes),
 		},
 		Engines: []esbuild.Engine{
 			{Name: esbuild.EngineChrome, Version: "100"},

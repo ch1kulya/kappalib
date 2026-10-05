@@ -95,6 +95,10 @@ const PRECACHE_ASSET_URLS = [
   "/assets/fonts/InterVariable.woff2?v=4.1",
   "/assets/fonts/InterVariable-Italic.woff2?v=4.1",
 ];
+const BRAND_ICON_URLS = process.env.COLOR_SCHEMES.map(
+  (scheme) => `/assets/icons/${scheme}/logo.png`,
+);
+const OPTIONAL_PRECACHE_INTERVAL_MS = 100;
 const BATCH_LIMIT = 50;
 const BATCH_INTERVAL_MS = 1000;
 const MAX_ATTEMPTS = 6;
@@ -140,6 +144,7 @@ self.addEventListener("install", (event) => {
           ...PRECACHE_ASSET_URLS.map((url) => new Request(url)),
         ],
       );
+      await precacheOptional(cache, BRAND_ICON_URLS);
       await self.skipWaiting();
     })(),
   );
@@ -202,6 +207,19 @@ self.addEventListener("message", (event) => {
     }),
   );
 });
+
+async function precacheOptional(cache: Cache, urls: string[]): Promise<void> {
+  for (const url of urls) {
+    if (await cache.match(url)) continue;
+    try {
+      const response = await fetch(url);
+      if (response.status === 200) await cache.put(url, response);
+    } catch (err) {
+      console.warn("Failed to precache", url, err);
+    }
+    await new Promise((resolve) => setTimeout(resolve, OPTIONAL_PRECACHE_INTERVAL_MS));
+  }
+}
 
 async function handleNavigation(event: FetchEvent, url: URL): Promise<Response> {
   try {

@@ -5,5 +5,6 @@ declare var process: {
     SMARTCAPTCHA_SITE_KEY: string;
     S3_PUBLIC_URL: string;
     ASSET_VERSION: string;
+    COLOR_SCHEMES: string[];
   };
 };
