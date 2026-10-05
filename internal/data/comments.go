@@ -1731,25 +1731,22 @@ func GetUserCommentStats(ctx context.Context, userID string) (*models.UserCommen
 	defer rows.Close()
 
 	days := make([]models.CommentStatDay, 0, 30)
-	cumRating, cumReplies := baseRating, baseReplies
+	rating, replies := baseRating, baseReplies
 
 	for rows.Next() {
 		var d models.CommentStatDay
-		var dailyRating, dailyReplies int
-		if err := rows.Scan(&d.Day, &dailyRating, &dailyReplies); err != nil {
+		if err := rows.Scan(&d.Day, &d.Rating, &d.Replies); err != nil {
 			continue
 		}
-		cumRating += dailyRating
-		cumReplies += dailyReplies
-		d.Rating = cumRating
-		d.Replies = cumReplies
+		rating += d.Rating
+		replies += d.Replies
 		days = append(days, d)
 	}
 
 	return &models.UserCommentStats{
 		Days:    days,
-		Rating:  cumRating,
-		Replies: cumReplies,
+		Rating:  rating,
+		Replies: replies,
 	}, nil
 }
 
