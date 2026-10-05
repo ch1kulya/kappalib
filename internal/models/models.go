@@ -283,18 +283,15 @@ type UserCommentsPage struct {
 }
 
 type CommentStatDay struct {
-	Day      string `json:"day"`
-	Comments int    `json:"comments"`
-	Rating   int    `json:"rating"`
-	Replies  int    `json:"replies"`
+	Day     string `json:"day"`
+	Rating  int    `json:"rating"`
+	Replies int    `json:"replies"`
 }
 
 type UserCommentStats struct {
 	Days    []CommentStatDay `json:"days"`
-	Total   int              `json:"total"`
 	Rating  int              `json:"rating"`
 	Replies int              `json:"replies"`
-	Rank    int              `json:"rank"`
 }
 
 type UserAnswer struct {
