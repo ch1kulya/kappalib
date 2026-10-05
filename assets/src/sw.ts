@@ -88,9 +88,8 @@ const FONT_ORIGIN = "https://cdn.jsdelivr.net";
 const COVER_ORIGIN = originOf(process.env.S3_PUBLIC_URL);
 const LIBRARY_SHELL = "/downloads";
 const READER_SHELL = "/offline/reader";
-const PRECACHE_URLS = [
-  LIBRARY_SHELL,
-  READER_SHELL,
+const SHELL_URLS = [LIBRARY_SHELL, READER_SHELL];
+const PRECACHE_ASSET_URLS = [
   `/assets/dist/app.js?v=${VERSION}`,
   `/assets/dist/styles/main.css?v=${VERSION}`,
   "/assets/fonts/InterVariable.woff2?v=4.1",
@@ -136,7 +135,10 @@ self.addEventListener("install", (event) => {
     (async () => {
       const cache = await caches.open(STATIC_CACHE);
       await cache.addAll(
-        PRECACHE_URLS.map((url) => new Request(url, { cache: "no-cache" })),
+        [
+          ...SHELL_URLS.map((url) => new Request(url, { cache: "no-cache" })),
+          ...PRECACHE_ASSET_URLS.map((url) => new Request(url)),
+        ],
       );
       await self.skipWaiting();
     })(),
@@ -316,11 +318,18 @@ async function handleCommand(command: OfflineCommand): Promise<void> {
     case "download":
       await startDownload(command.novelId);
       return;
-    case "cancel":
+    case "cancel": {
       await stopJob(command.novelId);
-      await deleteOfflineJob(command.novelId);
+      const novel = await getOfflineNovel(command.novelId);
+      if (novel && novel.savedCount === 0) {
+        await deleteOfflineNovel(command.novelId);
+        await removeCover(novel.coverUrl);
+      } else {
+        await deleteOfflineJob(command.novelId);
+      }
       broadcast(command.novelId, await currentState(command.novelId));
       return;
+    }
     case "delete": {
       await stopJob(command.novelId);
       const novel = await getOfflineNovel(command.novelId);

@@ -64,7 +64,7 @@ let channel: BroadcastChannel | null = null;
 let lastWorkerActivity = Date.now();
 let watchdogTimer: number | null = null;
 
-export function isOfflineSupported(): boolean {
+function isOfflineSupported(): boolean {
   return window.isSecureContext
     && "serviceWorker" in navigator
     && typeof indexedDB !== "undefined"
@@ -144,6 +144,9 @@ function ensureChannel(): void {
   channel = new BroadcastChannel(OFFLINE_CHANNEL);
   channel.onmessage = (event: MessageEvent<OfflineBroadcast>) => {
     lastWorkerActivity = Date.now();
+    if (event.data.state.kind === "queued" || event.data.state.kind === "downloading") {
+      startWatchdog();
+    }
     listeners.forEach((listener) => listener(event.data));
   };
 }
@@ -160,9 +163,12 @@ function isResumable(job: OfflineJob): boolean {
 async function resumePendingJobs(): Promise<void> {
   try {
     const jobs = await listOfflineJobs();
-    if (jobs.some(isResumable)) {
-      await postCommand({ type: "resume" });
+    if (!jobs.some(isResumable)) {
+      stopWatchdog();
+      return;
     }
+    startWatchdog();
+    await postCommand({ type: "resume" });
   } catch (err) {
     console.warn("Failed to resume offline downloads", err);
   }
@@ -178,6 +184,12 @@ function startWatchdog(): void {
     lastWorkerActivity = Date.now();
     void resumePendingJobs();
   }, WATCHDOG_INTERVAL_MS);
+}
+
+function stopWatchdog(): void {
+  if (watchdogTimer === null) return;
+  window.clearInterval(watchdogTimer);
+  watchdogTimer = null;
 }
 
 async function requestDownload(novelId: string): Promise<void> {
@@ -625,8 +637,8 @@ function dropdownStatus(state: OfflineState, newChapters: number): string {
       return ERROR_MESSAGES[state.error];
     case "ready": {
       const saved = state.saved < state.total
-        ? `Сохранено ${state.saved} из ${state.total}`
-        : `Сохранено ${chaptersLabel(state.saved)}`;
+        ? `На устройстве: ${state.saved} из ${state.total}`
+        : `На устройстве: ${chaptersLabel(state.saved)}`;
       const details = `${saved} · ${formatBytes(state.bytes)}`;
       return newChapters > 0 ? `${details}. Новых глав: ${newChapters}` : details;
     }
@@ -987,6 +999,7 @@ export function initOffline(): void {
   navigator.serviceWorker
     .register(SERVICE_WORKER_URL, { scope: "/" })
     .catch((err) => console.warn("Service worker registration failed", err));
-  startWatchdog();
+  ensureChannel();
+  window.addEventListener("online", () => void resumePendingJobs());
   if (navigator.onLine) void resumePendingJobs();
 }
