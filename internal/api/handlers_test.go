@@ -474,6 +474,15 @@ func TestCacheMiddleware(t *testing.T) {
 			wantExpires:   "0",
 		},
 		{
+			name:          "no-cache prefix offline path",
+			method:        http.MethodGet,
+			path:          "/api/offline/novels/nvl_12345678/chapters",
+			cookies:       []*http.Cookie{{Name: SessionCookieName, Value: "valid_session"}},
+			wantCacheCtrl: "no-store, no-cache, must-revalidate, private",
+			wantPragma:    "no-cache",
+			wantExpires:   "0",
+		},
+		{
 			name:          "POST request without noCache prefix has no public cache header",
 			method:        http.MethodPost,
 			path:          "/api/chapters/123/comments",
@@ -630,5 +639,88 @@ func TestGetUserCommentsInputValidation(t *testing.T) {
 				t.Errorf("GET %s returned status %d, want %d: %s", tt.path, resp.Code, tt.wantStatus, resp.Body.String())
 			}
 		})
+	}
+}
+
+func TestGetOfflineChaptersInputValidation(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "get-offline-chapters",
+		Method:      http.MethodGet,
+		Path:        "/offline/novels/{id}/chapters",
+	}, func(ctx context.Context, input *GetOfflineChaptersInput) (*OfflineChaptersResponse, error) {
+		return &OfflineChaptersResponse{}, nil
+	})
+
+	tests := []struct {
+		name       string
+		path       string
+		wantStatus int
+	}{
+		{
+			name:       "valid novel without cursor",
+			path:       "/offline/novels/nvl_12345678/chapters",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "valid cursor and limit",
+			path:       "/offline/novels/nvl_12345678/chapters?after=120&limit=25",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "valid negative cursor",
+			path:       "/offline/novels/nvl_12345678/chapters?after=-1",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "invalid novel id",
+			path:       "/offline/novels/chp_12345678/chapters",
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "non-numeric cursor",
+			path:       "/offline/novels/nvl_12345678/chapters?after=abc",
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "cursor too long",
+			path:       "/offline/novels/nvl_12345678/chapters?after=1234567890",
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "limit zero",
+			path:       "/offline/novels/nvl_12345678/chapters?limit=0",
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "limit exceeds maximum",
+			path:       "/offline/novels/nvl_12345678/chapters?limit=51",
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := humaApi.Get(tt.path)
+			if resp.Code != tt.wantStatus {
+				t.Errorf("GET %s returned status %d, want %d: %s", tt.path, resp.Code, tt.wantStatus, resp.Body.String())
+			}
+		})
+	}
+}
+
+func TestHandleGetOfflineChapters(t *testing.T) {
+	_, humaApi := humatest.New(t)
+
+	huma.Register(humaApi, huma.Operation{
+		OperationID: "get-offline-chapters",
+		Method:      http.MethodGet,
+		Path:        "/offline/novels/{id}/chapters",
+	}, HandleGetOfflineChapters)
+
+	resp := humaApi.Get("/offline/novels/nvl_12345678/chapters")
+	if resp.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 Unauthorized for unauthenticated request, got %d: %s", resp.Code, resp.Body.String())
 	}
 }

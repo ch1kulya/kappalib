@@ -312,6 +312,15 @@ func main() {
 		}, api.HandleGetChapter)
 
 		huma.Register(humaApi, huma.Operation{
+			OperationID: "get-offline-chapters",
+			Method:      http.MethodGet,
+			Path:        "/offline/novels/{id}/chapters",
+			Summary:     "Get chapters with content for offline reading",
+			Security:    []map[string][]string{{"sessionCookie": {}}},
+			Tags:        []string{"Offline"},
+		}, api.HandleGetOfflineChapters)
+
+		huma.Register(humaApi, huma.Operation{
 			OperationID: "get-profile",
 			Method:      http.MethodGet,
 			Path:        "/profile/{id}",

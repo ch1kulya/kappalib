@@ -145,6 +145,12 @@ type ChaptersList struct {
 	Count    int              `json:"count"`
 }
 
+type OfflineChaptersPage struct {
+	NovelID   string    `json:"novel_id"`
+	Chapters  []Chapter `json:"chapters"`
+	NextAfter *int      `json:"next_after"`
+}
+
 type SitemapItem struct {
 	ID        string    `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
