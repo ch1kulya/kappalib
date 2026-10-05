@@ -2876,13 +2876,17 @@ html {
       }
     }
     &.pc-btn-action.pc-btn-danger {
+      background: var(--color-danger-dark);
+      border-color: var(--color-danger-glow);
+      color: var(--accent-text);
+      box-shadow: var(--accent-shadow-primary);
       @media (hover: hover) {
         &:hover {
-          color: var(--color-danger);
+          box-shadow: var(--accent-shadow-focus);
         }
       }
-      &:active {
-        color: var(--color-danger);
+      &:focus-visible {
+        box-shadow: var(--accent-shadow-focus);
       }
     }
   }
@@ -5692,9 +5696,10 @@ td:first-child {
   color: var(--tertiary);
 }
 
-.downloads-empty-hint {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
+.downloads-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .download-item-actions {

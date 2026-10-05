@@ -17,12 +17,19 @@ templ Downloads(props BaseProps) {
 			<div id="downloads-library">
 				<div class="chapters-header" style="margin-bottom: 1.5rem;">
 					<h2 style="margin: 0;">Загрузки</h2>
-					<button class="btn-text-danger" id="downloads-clear-all" style="display: none;">Удалить все</button>
+					<div class="downloads-header-actions">
+						<button class="btn-text-danger" id="downloads-clear-all" style="display: none;">Удалить все</button>
+						<button
+							type="button"
+							class="btn-text btn-help"
+							data-tip-title="Как скачать новеллу"
+							data-tip="Войдите в аккаунт, откройте страницу новеллы и нажмите кнопку со стрелкой в левом верхнем углу обложки. Сохранённые главы можно читать без интернета."
+						>Как скачать?</button>
+					</div>
 				</div>
 				<p class="downloads-summary" id="downloads-summary" style="display: none;"></p>
 				<div class="history-empty" id="downloads-empty" style="display: none;">
 					<p>Загруженных новелл нет</p>
-					<p class="downloads-empty-hint">Откройте страницу новеллы и нажмите на значок загрузки на обложке, чтобы читать её без интернета.</p>
 				</div>
 				<div class="history-empty" id="downloads-unsupported" style="display: none;">
 					<p>Ваш браузер не поддерживает чтение без интернета</p>
