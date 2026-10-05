@@ -859,11 +859,13 @@ function initDownloadsPage(): void {
   const unsupported = document.getElementById("downloads-unsupported");
   const summary = document.getElementById("downloads-summary");
   const clearAll = document.getElementById("downloads-clear-all");
-  if (!library || !list || !empty || !unsupported || !summary || !clearAll) return;
+  const help = document.getElementById("downloads-help");
+  if (!library || !list || !empty || !unsupported || !summary || !clearAll || !help) return;
   if (library.style.display === "none") return;
 
   if (!isOfflineSupported()) {
     unsupported.style.display = "";
+    help.style.display = "none";
     return;
   }
 
@@ -911,6 +913,7 @@ function initDownloadsPage(): void {
     const hasEntries = entries.length > 0;
     empty.style.display = hasEntries ? "none" : "";
     clearAll.style.display = hasEntries ? "" : "none";
+    help.style.display = hasEntries ? "none" : "";
     summary.style.display = hasEntries ? "" : "none";
     summary.textContent = `${novelsLabel(novels.length)} · ${formatBytes(totalBytes)}`;
   };
