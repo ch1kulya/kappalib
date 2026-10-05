@@ -228,6 +228,7 @@ func main() {
 		r.Get("/bookmarks", h.Bookmarks)
 		r.Get("/list", h.List)
 		r.Get("/downloads", h.Downloads)
+		r.Get("/offline/library", h.OfflineLibrary)
 		r.Get("/offline/reader", h.OfflineReader)
 		r.Get("/updates", h.Updates)
 		r.Get("/dmca", h.StaticPage("dmca", "DMCA"))

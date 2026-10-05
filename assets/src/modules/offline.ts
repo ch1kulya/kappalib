@@ -285,10 +285,6 @@ function chapterDocumentTitle(chapter: OfflineChapter): string {
   return chapter.title === UNTITLED_CHAPTER ? prefix : `${prefix}: ${chapter.title}`;
 }
 
-function connectionTitle(): string {
-  return navigator.onLine ? "Сервер недоступен" : "Нет подключения к интернету";
-}
-
 function requireElement<T extends Element = HTMLElement>(root: ParentNode, selector: string): T {
   const element = root.querySelector<T>(selector);
   if (!element) throw new Error(`Element ${selector} not found`);
@@ -326,21 +322,6 @@ function setCover(img: HTMLImageElement, coverUrl: string | null, alt: string): 
   wrapper?.style.setProperty("--bg-url", `url(${JSON.stringify(src)})`);
 }
 
-function showNotice(title: string, text: string, withAction: boolean): void {
-  const notice = document.getElementById("offline-notice");
-  if (!notice) return;
-  field(notice, "noticeTitle").textContent = title;
-  field(notice, "noticeText").textContent = text;
-  const action = document.getElementById("offline-notice-action");
-  if (action) action.style.display = withAction ? "" : "none";
-  notice.style.display = "";
-}
-
-function hideNotice(): void {
-  const notice = document.getElementById("offline-notice");
-  if (notice) notice.style.display = "none";
-}
-
 function closeDropdown(root: HTMLElement): void {
   root.classList.remove("active");
   root.querySelector(".dropdown-btn")?.setAttribute("aria-expanded", "false");
@@ -362,20 +343,13 @@ export async function renderOfflinePage(): Promise<void> {
 }
 
 async function renderOfflineReader(root: HTMLElement): Promise<void> {
-  const bookmarkBtn = document.getElementById("header-bookmark-btn");
-  if (bookmarkBtn) bookmarkBtn.style.display = "none";
-
   const match = OFFLINE_CHAPTER_PATH_RE.exec(window.location.pathname);
   const [novel, chapter] = match && isOfflineSupported()
     ? await Promise.all([getOfflineNovel(match[1]), getOfflineChapter(match[2])])
     : [undefined, undefined];
 
   if (!novel || !chapter || chapter.novelId !== novel.id) {
-    showNotice(
-      "Глава недоступна офлайн",
-      "Эта глава не сохранена на устройстве. Откройте загрузки, чтобы выбрать сохранённую новеллу.",
-      true,
-    );
+    window.location.replace("/downloads");
     return;
   }
 
@@ -474,21 +448,9 @@ function fillChapterNavigation(
 
 async function renderDownloadsShell(): Promise<void> {
   const match = OFFLINE_NOVEL_PATH_RE.exec(window.location.pathname);
-  if (match && isOfflineSupported()) {
-    const novel = await getOfflineNovel(match[1]);
-    if (novel) {
-      await renderOfflineNovel(novel);
-      return;
-    }
-  }
-
-  if (window.location.pathname !== "/downloads") {
-    showNotice(
-      connectionTitle(),
-      "Эта страница недоступна офлайн. Ниже — новеллы, сохранённые для чтения без интернета.",
-      false,
-    );
-  }
+  if (!match || !isOfflineSupported()) return;
+  const novel = await getOfflineNovel(match[1]);
+  if (novel) await renderOfflineNovel(novel);
 }
 
 async function renderOfflineNovel(novel: OfflineNovel): Promise<void> {
@@ -528,7 +490,6 @@ async function renderOfflineNovel(novel: OfflineNovel): Promise<void> {
   container.style.display = "";
   library.style.display = "none";
   document.title = `${novel.title} — kappalib`;
-  showNotice(connectionTitle(), "Показана копия новеллы, сохранённая на устройстве.", true);
   if (novel.ageRating === "18+") window.isAdultContent = true;
 }
 
@@ -867,19 +828,6 @@ function initDownloadsPage(): void {
     unsupported.style.display = "";
     help.style.display = "none";
     return;
-  }
-
-  if (window.location.pathname === "/downloads") {
-    const updateNotice = () => {
-      if (navigator.onLine) {
-        hideNotice();
-      } else {
-        showNotice("Нет подключения к интернету", "Доступны новеллы, сохранённые на устройстве.", false);
-      }
-    };
-    updateNotice();
-    window.addEventListener("online", updateNotice);
-    window.addEventListener("offline", updateNotice);
   }
 
   const items = new Map<string, HTMLElement>();

@@ -1051,16 +1051,24 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	h.render(w, r, views.List(props))
 }
 
-func (h *Handler) Downloads(w http.ResponseWriter, r *http.Request) {
-	props := views.BaseProps{
+func (h *Handler) downloadsProps(r *http.Request, isOffline bool) views.BaseProps {
+	return views.BaseProps{
 		Title:          "Загрузки — kappalib",
 		Description:    "Новеллы, сохранённые для чтения без интернета.",
 		Canonical:      "https://kappalib.rip/downloads",
 		Version:        h.assetVersion,
 		IsLoggedIn:     h.hasSession(r),
+		IsOffline:      isOffline,
 		ReaderSettings: h.getReaderSettings(r),
 	}
-	h.render(w, r, views.Downloads(props))
+}
+
+func (h *Handler) Downloads(w http.ResponseWriter, r *http.Request) {
+	h.render(w, r, views.Downloads(h.downloadsProps(r, false)))
+}
+
+func (h *Handler) OfflineLibrary(w http.ResponseWriter, r *http.Request) {
+	h.render(w, r, views.Downloads(h.downloadsProps(r, true)))
 }
 
 func (h *Handler) OfflineReader(w http.ResponseWriter, r *http.Request) {
@@ -1071,6 +1079,7 @@ func (h *Handler) OfflineReader(w http.ResponseWriter, r *http.Request) {
 		Version:        h.assetVersion,
 		IsChapterPage:  true,
 		IsLoggedIn:     h.hasSession(r),
+		IsOffline:      true,
 		ReaderSettings: h.getReaderSettings(r),
 	}
 	h.render(w, r, views.OfflineReader(props))

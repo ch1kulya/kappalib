@@ -100,15 +100,21 @@ templ Header(props BaseProps) {
 			if props.IsChapterPage {
 				<a href={ templ.SafeURL(chapterBackURL(props.Novel)) } class="header-left"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="header-logo"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"></path></svg></a>
 				<div class="header-buttons">
-					<button class="header-right js-bookmark-toggle" id="header-bookmark-btn" aria-label="Добавить закладку">
-						@IconBookmark("header-profile-icon")
-					</button>
+					if props.IsOffline {
+						@OfflineBadge()
+					} else {
+						<button class="header-right js-bookmark-toggle" id="header-bookmark-btn" aria-label="Добавить закладку">
+							@IconBookmark("header-profile-icon")
+						</button>
+					}
 					<button class="header-right" id="header-settings-btn" aria-label="Настройки">
 						@IconSettings("header-profile-icon")
 					</button>
-					<button class="header-right" id="header-profile-btn" aria-label="Профиль">
-						@IconUser("header-profile-icon")
-					</button>
+					if !props.IsOffline {
+						<button class="header-right" id="header-profile-btn" aria-label="Профиль">
+							@IconUser("header-profile-icon")
+						</button>
+					}
 				</div>
 			} else {
 				if props.IsHomePage {
@@ -122,16 +128,20 @@ templ Header(props BaseProps) {
 						<span class="visually-hidden">kappalib</span>
 					</a>
 				}
-				<div class="search-bar" id="search-component">
-					<div class="search-input-wrapper">
-						@IconSearch("search-icon")
-						<input type="text" placeholder="Поиск..." id="search-input" autocomplete="off" maxlength="50"/>
+				if props.IsOffline {
+					@OfflineBadge()
+				} else {
+					<div class="search-bar" id="search-component">
+						<div class="search-input-wrapper">
+							@IconSearch("search-icon")
+							<input type="text" placeholder="Поиск..." id="search-input" autocomplete="off" maxlength="50"/>
+						</div>
+						<div class="search-results" id="search-results" style="display: none;"></div>
 					</div>
-					<div class="search-results" id="search-results" style="display: none;"></div>
-				</div>
-				<button class="header-right" id="header-profile-btn" aria-label="Профиль">
-					@IconUser("header-profile-icon")
-				</button>
+					<button class="header-right" id="header-profile-btn" aria-label="Профиль">
+						@IconUser("header-profile-icon")
+					</button>
+				}
 			}
 		</div>
 	</header>
