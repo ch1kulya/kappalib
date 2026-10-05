@@ -598,8 +598,8 @@ function dropdownStatus(state: OfflineState, newChapters: number): string {
       return ERROR_MESSAGES[state.error];
     case "ready": {
       const saved = state.saved < state.total
-        ? `На устройстве: ${state.saved} из ${state.total}`
-        : `На устройстве: ${chaptersLabel(state.saved)}`;
+        ? `${state.saved} из ${state.total}`
+        : chaptersLabel(state.saved);
       const details = `${saved} · ${formatBytes(state.bytes)}`;
       return newChapters > 0 ? `${details}. Новых глав: ${newChapters}` : details;
     }
