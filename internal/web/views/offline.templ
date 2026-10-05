@@ -1,0 +1,156 @@
+package views
+
+templ OfflineNotice() {
+	<div class="announcement-banner offline-notice" id="offline-notice" style="display: none;">
+		<div class="announcement-content">
+			<span class="announcement-title" data-field="noticeTitle"></span>
+			<span class="announcement-description" data-field="noticeText"></span>
+		</div>
+		<a href="/downloads" class="announcement-action" id="offline-notice-action" style="display: none;">Загрузки</a>
+	</div>
+}
+
+templ Downloads(props BaseProps) {
+	@Base(props) {
+		<div class="history-page downloads-page" id="downloads-page">
+			@OfflineNotice()
+			<div id="downloads-library">
+				<div class="chapters-header" style="margin-bottom: 1.5rem;">
+					<h2 style="margin: 0;">Загрузки</h2>
+					<button class="btn-text-danger" id="downloads-clear-all" style="display: none;">Удалить все</button>
+				</div>
+				<p class="downloads-summary" id="downloads-summary" style="display: none;"></p>
+				<div class="history-empty" id="downloads-empty" style="display: none;">
+					<p>Загруженных новелл нет</p>
+					<p class="downloads-empty-hint">Откройте страницу новеллы и нажмите на значок загрузки на обложке, чтобы читать её без интернета.</p>
+				</div>
+				<div class="history-empty" id="downloads-unsupported" style="display: none;">
+					<p>Ваш браузер не поддерживает чтение без интернета</p>
+				</div>
+				<div class="history-list" id="downloads-list"></div>
+			</div>
+			<div id="offline-novel" style="display: none;"></div>
+		</div>
+		<template id="tpl-download-item">
+			<div class="history-item download-item" data-novel-id="">
+				<a href="" class="history-poster-link">
+					<div class="poster-wrapper">
+						<img src="" alt="" loading="lazy"/>
+					</div>
+				</a>
+				<div class="history-content">
+					<div class="history-info">
+						<a href="" class="history-title">
+							<h3 data-field="title"></h3>
+						</a>
+						<span class="history-meta" data-field="meta"></span>
+					</div>
+					<div class="history-progress-wrapper">
+						<div class="reading-progress-container">
+							<div class="progress-labels">
+								<span class="progress-text" data-field="progress"></span>
+								<span class="progress-percent" data-field="percent"></span>
+							</div>
+							<div class="progress-bar-bg">
+								<div class="progress-bar-fill" data-field="progressBar"></div>
+							</div>
+						</div>
+					</div>
+					<div class="download-item-actions" data-field="actions" style="display: none;"></div>
+				</div>
+				<button class="history-remove" aria-label="Удалить загрузку">
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+				</button>
+			</div>
+		</template>
+		<template id="tpl-offline-novel">
+			<div class="novel-detail">
+				<div class="novel-header">
+					<div class="novel-cover-container">
+						<div class="poster-wrapper">
+							<img src="" alt="" decoding="async" data-field="cover"/>
+						</div>
+						<div class="desktop-actions">
+							@offlineReadingActions()
+						</div>
+					</div>
+					<div class="novel-info">
+						<h1 data-field="title"></h1>
+						<div class="meta">
+							<span class="badge" data-field="author"></span>
+							<span class="badge" data-field="status"></span>
+							<span class="badge badge-danger" data-field="ageRating" style="display: none;"></span>
+						</div>
+						<div class="description-wrapper" data-field="descriptionWrapper">
+							<div class="description" id="novel-description" data-field="description"></div>
+						</div>
+						<div class="mobile-actions">
+							@offlineReadingActions()
+						</div>
+					</div>
+				</div>
+				<div class="chapters-section">
+					<div class="chapters-header">
+						<h2>Главы</h2>
+					</div>
+					<div class="toc-search">
+						<svg class="toc-search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+						<input type="text" id="toc-search-input" placeholder="Поиск по главам..." autocomplete="off"/>
+					</div>
+					<div class="chapters-list" id="chapters-list"></div>
+				</div>
+			</div>
+		</template>
+		<template id="tpl-offline-chapter-item">
+			<a href="" class="chapter-item" data-chapter-id="" data-sort-value="">
+				<span class="chapter-num"></span>
+				<span class="chapter-title"></span>
+			</a>
+		</template>
+	}
+}
+
+templ offlineReadingActions() {
+	<div class="reading-progress-container" data-field="progress" style="display: none;">
+		<div class="progress-labels">
+			<span class="progress-text"></span>
+			<span class="progress-percent"></span>
+		</div>
+		<div class="progress-bar-bg">
+			<div class="progress-bar-fill"></div>
+		</div>
+	</div>
+	<a href="" class="action-btn btn-start" data-field="read"></a>
+}
+
+templ OfflineReader(props BaseProps) {
+	@Base(props) {
+		<div class="chapter-reader" id="offline-reader">
+			@OfflineNotice()
+		</div>
+		<template id="tpl-offline-chapter">
+			<div id="reading-tracker" style="display: none;"></div>
+			<h1 data-field="heading"></h1>
+			<div class="chapter-content" data-field="content"></div>
+			<div class="source-card" data-field="source">
+				<img src="" alt="" class="source-logo" data-field="sourceLogo"/>
+				<div class="source-logo-placeholder" data-field="sourcePlaceholder" style="display: none;"></div>
+				<div class="source-info">
+					<span class="source-label" data-field="sourceLabel"></span>
+					<span class="source-name" data-field="sourceName"></span>
+				</div>
+				<div class="source-date" data-field="sourceDate"></div>
+			</div>
+			<div class="chapter-navigation">
+				<a href="" data-field="prev">
+					<button class="action-btn">&lt;-- Назад</button>
+				</a>
+				<button disabled class="action-btn" data-field="prevDisabled">&lt;-- Назад</button>
+				<a class="nav-btn js-next-chapter" href="" data-field="next">
+					<button class="action-btn">Вперед --&gt;</button>
+				</a>
+				<button class="action-btn" disabled data-field="nextDisabled">Вперед --&gt;</button>
+			</div>
+		</template>
+	}
+}

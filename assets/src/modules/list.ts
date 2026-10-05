@@ -19,7 +19,7 @@ interface EnrichedListCategory {
 
 type UserList = Record<string, EnrichedListCategory>;
 
-const FALLBACK_COVER =
+export const FALLBACK_COVER =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect fill='%23ecf0f1' width='200' height='300'/%3E%3C/svg%3E";
 
 const LIST_STATUSES: { slug: string; label: string }[] = [

@@ -82,7 +82,7 @@ function cloneTemplate(id: string): DocumentFragment {
 
 const VOLUME_TAG_RE = /\[((?:Начало|Конец)(?:\s+\d+\s+тома)?)\]/g;
 
-function renderRichText(el: HTMLElement, text: string): void {
+export function renderRichText(el: HTMLElement, text: string): void {
   el.replaceChildren();
   if (!text.includes("[")) {
     el.textContent = text;

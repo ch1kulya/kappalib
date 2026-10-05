@@ -277,6 +277,13 @@ func BrandIconURL(scheme, file string) string {
 	return "/assets/icons/" + scheme + "/" + file
 }
 
+func chapterBackURL(novel *models.Novel) string {
+	if novel == nil {
+		return "/downloads"
+	}
+	return "/" + novel.ID
+}
+
 func chapterContentClasses(settings ReaderSettings) string {
 	classes := "chapter-content"
 	classes += " density-" + settings.Density

@@ -129,3 +129,33 @@ templ IconBadge(name string, class string) {
 		}
 	</svg>
 }
+
+templ IconDownload(class string) {
+	<svg class={ class } width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<circle cx="12" cy="12" r="10"></circle>
+		<path d="M12 8v8"></path>
+		<path d="m8 12 4 4 4-4"></path>
+	</svg>
+}
+
+templ IconDownloadDone(class string) {
+	<svg class={ class } width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<circle cx="12" cy="12" r="10"></circle>
+		<path d="m9 12 2 2 4-4"></path>
+	</svg>
+}
+
+templ IconDownloadError(class string) {
+	<svg class={ class } width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<circle cx="12" cy="12" r="10"></circle>
+		<path d="M12 8v4"></path>
+		<path d="M12 16h.01"></path>
+	</svg>
+}
+
+templ IconDownloadProgress(class string) {
+	<svg class={ class } width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+		<circle class="of-ring-track" cx="12" cy="12" r="9"></circle>
+		<circle class="of-ring-fill" cx="12" cy="12" r="9" pathLength="100"></circle>
+	</svg>
+}

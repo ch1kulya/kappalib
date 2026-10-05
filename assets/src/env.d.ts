@@ -4,5 +4,6 @@ declare var process: {
     TURNSTILE_COMMENTS_SITE_KEY: string;
     SMARTCAPTCHA_SITE_KEY: string;
     S3_PUBLIC_URL: string;
+    ASSET_VERSION: string;
   };
 };

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -30,6 +32,8 @@ import (
 //go:embed docs.html
 var docsHTML string
 
+var assetVersion string
+
 var requiredEnvVars = []string{
 	"DATABASE_URL",
 	"PHARE_TOKEN",
@@ -55,49 +59,69 @@ var requiredEnvVars = []string{
 	"ALLOWED_ORIGIN",
 }
 
-func buildAssets() error {
+func newAssetVersion() (string, error) {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func buildAssets(version string) error {
 	logger.Info("Building assets...")
 
 	apiUrl := "/api"
 
-	result := esbuild.Build(esbuild.BuildOptions{
-		EntryPoints: []string{
-			"./assets/src/app.ts",
-			"./assets/src/styles/main.css",
-		},
-		Outdir:            "./assets/static/dist",
+	common := esbuild.BuildOptions{
 		Bundle:            true,
 		MinifyWhitespace:  true,
 		MinifyIdentifiers: true,
 		MinifySyntax:      true,
-		Sourcemap:         esbuild.SourceMapLinked,
 		Write:             true,
 		Platform:          esbuild.PlatformBrowser,
 		Target:            esbuild.ES2020,
-		Format:            esbuild.FormatESModule,
 		TreeShaking:       esbuild.TreeShakingTrue,
 		Define: map[string]string{
 			"process.env.API_URL":                     fmt.Sprintf("\"%s\"", apiUrl),
 			"process.env.TURNSTILE_COMMENTS_SITE_KEY": fmt.Sprintf("\"%s\"", os.Getenv("TURNSTILE_COMMENTS_SITE_KEY")),
 			"process.env.SMARTCAPTCHA_SITE_KEY":       fmt.Sprintf("\"%s\"", os.Getenv("SMARTCAPTCHA_SITE_KEY")),
 			"process.env.S3_PUBLIC_URL":               fmt.Sprintf("\"%s\"", os.Getenv("S3_PUBLIC_URL")),
+			"process.env.ASSET_VERSION":               fmt.Sprintf("\"%s\"", version),
 		},
-		External: []string{"/assets/fonts/*", "/assets/icons/*"},
 		Engines: []esbuild.Engine{
 			{Name: esbuild.EngineChrome, Version: "100"},
 		},
-	})
-
-	if len(result.Errors) > 0 {
-		var errMsgs []string
-		for _, e := range result.Errors {
-			errMsgs = append(errMsgs, e.Text)
-		}
-		return fmt.Errorf("build errors: %s", strings.Join(errMsgs, "; "))
 	}
 
-	for _, warn := range result.Warnings {
-		logger.Warn("Build warning: %s", warn.Text)
+	app := common
+	app.EntryPoints = []string{
+		"./assets/src/app.ts",
+		"./assets/src/styles/main.css",
+	}
+	app.Outdir = "./assets/static/dist"
+	app.Sourcemap = esbuild.SourceMapLinked
+	app.Format = esbuild.FormatESModule
+	app.External = []string{"/assets/fonts/*", "/assets/icons/*"}
+
+	worker := common
+	worker.EntryPoints = []string{"./assets/src/sw.ts"}
+	worker.Outfile = web.ServiceWorkerPath
+	worker.Format = esbuild.FormatIIFE
+
+	for _, opts := range []esbuild.BuildOptions{app, worker} {
+		result := esbuild.Build(opts)
+
+		if len(result.Errors) > 0 {
+			var errMsgs []string
+			for _, e := range result.Errors {
+				errMsgs = append(errMsgs, e.Text)
+			}
+			return fmt.Errorf("build errors: %s", strings.Join(errMsgs, "; "))
+		}
+
+		for _, warn := range result.Warnings {
+			logger.Warn("Build warning: %s", warn.Text)
+		}
 	}
 
 	logger.Info("Assets built successfully")
@@ -144,7 +168,13 @@ func init() {
 		logger.Fatal("Database initialization failed: %v", err)
 	}
 
-	if err := buildAssets(); err != nil {
+	version, err := newAssetVersion()
+	if err != nil {
+		logger.Fatal("Failed to generate asset version: %v", err)
+	}
+	assetVersion = version
+
+	if err := buildAssets(assetVersion); err != nil {
 		logger.Fatal("Assets build failed: %v", err)
 	}
 }
@@ -176,7 +206,7 @@ func main() {
 	r.Use(web.WwwRedirect)
 	r.Use(web.SecurityHeadersMiddleware)
 
-	h := web.NewHandler()
+	h := web.NewHandler(assetVersion)
 	r.NotFound(h.NotFound)
 
 	webRateLimiter := web.NewRateLimiter()
@@ -187,6 +217,7 @@ func main() {
 		fileServer := http.FileServer(http.Dir("./assets/static"))
 		r.Handle("/assets/*", http.StripPrefix("/assets", web.StaticCacheMiddleware(fileServer)))
 
+		r.Get("/sw.js", h.ServiceWorker)
 		r.Get("/robots.txt", h.RobotsTxt)
 		r.Get("/sitemap.xml", h.Sitemap)
 		r.Get(fmt.Sprintf("/%s.txt", os.Getenv("INDEX_NOW_KEY")), h.IndexNowKey)
@@ -196,6 +227,8 @@ func main() {
 		r.Get("/comments", h.MyComments)
 		r.Get("/bookmarks", h.Bookmarks)
 		r.Get("/list", h.List)
+		r.Get("/downloads", h.Downloads)
+		r.Get("/offline/reader", h.OfflineReader)
 		r.Get("/updates", h.Updates)
 		r.Get("/dmca", h.StaticPage("dmca", "DMCA"))
 		r.Get("/privacy", h.StaticPage("privacy", "Политика конфиденциальности"))

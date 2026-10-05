@@ -44,6 +44,29 @@ templ Novel(props NovelProps) {
 						</div>
 					</div>
 					if len(props.Chapters) > 0 {
+						<div
+							class="dropdown novel-offline-dropdown"
+							data-novel-id={ props.Novel.ID }
+							data-chapter-count={ fmt.Sprintf("%d", len(props.Chapters)) }
+							data-state="none"
+							style="display: none;"
+						>
+							<button class="dropdown-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Чтение без интернета" title="Чтение без интернета">
+								<span class="of-btn-icon">
+									@IconDownload("of-icon of-icon-none")
+									@IconDownloadProgress("of-icon of-icon-progress")
+									@IconDownloadDone("of-icon of-icon-ready")
+									@IconDownload("of-icon of-icon-update")
+									@IconDownloadError("of-icon of-icon-error")
+								</span>
+							</button>
+							<div class="dropdown-menu" role="menu">
+								<div class="dropdown-menu-inner">
+									<div class="of-status" data-field="status"></div>
+									<div class="of-actions" data-field="actions"></div>
+								</div>
+							</div>
+						</div>
 						<div class="desktop-actions">
 							if props.LastChapterID != "" {
 								<div class="reading-progress-container">
