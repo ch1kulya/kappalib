@@ -6,7 +6,7 @@ SELECT
         JOIN comments c ON cv.comment_id = c.id
         WHERE
             c.user_id = $1
-            AND c.status != 'deleted'
+            AND c.status = 'approved'
             AND cv.created_at < CURRENT_DATE - INTERVAL '29 days'), 0),
     COALESCE((
         SELECT
@@ -16,6 +16,6 @@ SELECT
         WHERE
             c.user_id = $1
             AND ca.user_id != $1
-            AND ca.status != 'deleted'
-            AND c.status != 'deleted'
-            AND ca.created_at < CURRENT_DATE - INTERVAL '29 days'), 0)
+            AND ca.status = 'approved'
+            AND c.status = 'approved'
+            AND ca.approved_at < CURRENT_DATE - INTERVAL '29 days'), 0)

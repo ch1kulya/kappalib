@@ -1,6 +1,7 @@
 import { trackEvent } from "./analytics";
 import { getAvatarUrl, profileManager, updateProfileBadges, xsrfHeaders } from "./profile";
 import { getSettings } from "./settings";
+import { initTooltips } from "./tooltip";
 
 const API_URL = process.env.API_URL;
 const TURNSTILE_COMMENTS_SITE_KEY = process.env.TURNSTILE_COMMENTS_SITE_KEY || "";
@@ -2486,74 +2487,106 @@ function renderMyComments(
   }
 }
 
-function buildSparklinePath(
-  values: number[],
-  width: number,
-  height: number,
-): string {
-  if (values.length === 0) return "";
+interface StatMetric {
+  label: string;
+  total: number;
+  values: number[];
+  signed: boolean;
+}
 
-  const all = [...values];
-  const min = Math.min(...all);
-  const max = Math.max(...all);
+function parseStatDay(day: string): Date {
+  const [year, month, date] = day.split("-").map(Number);
+  return new Date(year, month - 1, date);
+}
 
-  if (min === max) {
-    const y = height / 2;
-    return `M0,${y} L${width},${y}`;
+function formatStatDay(date: Date): string {
+  return `${date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" })} ${date.getFullYear()}`;
+}
+
+function formatChartDay(date: Date): string {
+  return date.toLocaleDateString("ru-RU", { day: "numeric", month: "short" }).replace(".", "");
+}
+
+function formatSigned(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function signAttr(value: number): string {
+  if (value > 0) return ` data-sign="pos"`;
+  if (value < 0) return ` data-sign="neg"`;
+  return "";
+}
+
+function chartStep(range: number): number {
+  const raw = Math.max(range, 1) / 3;
+  const magnitude = 10 ** Math.floor(Math.log10(raw));
+  const factor = raw <= magnitude ? 1 : raw <= 2 * magnitude ? 2 : raw <= 5 * magnitude ? 5 : 10;
+  return Math.max(1, factor * magnitude);
+}
+
+function renderStatChart(metric: StatMetric, dates: Date[]): string {
+  const { label, total, values, signed } = metric;
+  const change = values.reduce((sum, v) => sum + v, 0);
+  const period = `за ${values.length} ${pluralize(values.length, "день", "дня", "дней")}`;
+  const summary = change === 0 ? `без изменений ${period}` : `${formatSigned(change)} ${period}`;
+
+  const points: number[] = [];
+  let running = total - change;
+  for (const value of values) {
+    running += value;
+    points.push(running);
   }
 
-  const padding = 2;
-  const range = max - min;
-  const stepX = values.length > 1 ? width / (values.length - 1) : width;
+  const max = Math.max(0, ...points);
+  const min = Math.min(0, ...points);
+  const step = chartStep(max - min);
+  const top = Math.ceil(max / step) * step || (min < 0 ? 0 : step);
+  const bottom = Math.floor(min / step) * step;
+  const position = (value: number) => (value - bottom) / (top - bottom);
+  const x = (i: number) => (((i + 0.5) / points.length) * 100).toFixed(2);
+  const y = (value: number) => ((1 - position(value)) * 100).toFixed(2);
 
-  const points = values.map((v, i) => {
-    const x = values.length > 1 ? i * stepX : width / 2;
-    const y = height - padding - ((v - min) / range) * (height - padding * 2);
-    return `${x},${y}`;
-  });
+  const path = points.map((point, i) => `${i === 0 ? "M" : "L"}${x(i)} ${y(point)}`).join(" ");
+  const area = `${path} L${x(points.length - 1)} 100 L${x(0)} 100 Z`;
 
-  return `M${points.join(" L")}`;
-}
+  let lines = "";
+  let axis = "";
+  for (let tick = bottom; tick <= top; tick += step) {
+    lines += `<span class="mc-chart-line"${tick === 0 ? " data-zero" : ""} style="--at: ${position(tick)}"></span>`;
+    axis += `<span>${tick}</span>`;
+  }
 
-function buildSparklineAreaPath(
-  values: number[],
-  width: number,
-  height: number,
-): string {
-  if (values.length === 0) return "";
+  const days = points
+    .map((point, i) => {
+      const delta = values[i] === 0 ? "" : `, ${formatSigned(values[i])} за день`;
+      const tip = `data-tip-title="${formatStatDay(dates[i])}" data-tip="${label}: ${point}${delta}"`;
+      return `<span class="mc-chart-day" style="--at: ${position(point).toFixed(3)}" ${tip}></span>`;
+    })
+    .join("");
 
-  const line = buildSparklinePath(values, width, height);
-  return `${line} L${width},${height} L0,${height} Z`;
-}
+  const ticks = dates
+    .map((date, i) => {
+      if ((dates.length - 1 - i) % 7 !== 0) return "";
+      return `<span style="grid-column: ${i + 1}">${formatChartDay(date)}</span>`;
+    })
+    .join("");
 
-function renderStatCard(
-  label: string,
-  value: number,
-  values: number[],
-  color: string,
-  prefix: string = "",
-  id: string = "0",
-): string {
-  const width = 240;
-  const height = 40;
-  const linePath = buildSparklinePath(values, width, height);
-  const areaPath = buildSparklineAreaPath(values, width, height);
-
-  return `<div class="mc-stat-card">
-    <div class="mc-stat-header">
-      <span class="mc-stat-label">${label}</span>
-      <span class="mc-stat-value" style="color: ${color}">${prefix}${value}</span>
+  return `<div class="mc-chart" style="--days: ${values.length}">
+    <div class="mc-chart-header">
+      <span class="mc-chart-label">${label}</span>
+      <span class="mc-chart-summary">${summary}</span>
+      <span class="catalog-stat-value"${signed ? signAttr(total) : ""}>${total}</span>
     </div>
-    <svg class="mc-stat-sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="grad-${id}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${color}" stop-opacity="0.25"/>
-          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <path d="${areaPath}" fill="url(#grad-${id})"/>
-      <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
+    <div class="mc-chart-axis" aria-hidden="true">${axis}</div>
+    <div class="mc-chart-plot" role="img" aria-label="${label}: ${total}, ${summary}">
+      ${lines}
+      <svg class="mc-chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <path class="mc-chart-area" d="${area}"/>
+        <path class="mc-chart-path" d="${path}"/>
+      </svg>
+      ${days}
+    </div>
+    <div class="mc-chart-dates" aria-hidden="true">${ticks}</div>
   </div>`;
 }
 
@@ -2572,34 +2605,28 @@ async function loadCommentStats(): Promise<void> {
     }
 
     const data: CommentStats = await res.json();
+    const dates = data.days.map((d) => parseStatDay(d.day));
 
-    const ratingValues = data.days.map((d) => d.rating);
-    const repliesValues = data.days.map((d) => d.replies);
-
-    const ratingPrefix = data.rating > 0 ? "+" : "";
-    const ratingColor = data.rating === 0
-      ? "var(--secondary)"
-      : data.rating > 0
-      ? "var(--accent-primary)"
-      : "var(--color-danger)";
-
-    container.innerHTML = renderStatCard(
-      "Рейтинг",
-      data.rating,
-      ratingValues,
-      ratingColor,
-      ratingPrefix,
-      "rating",
+    container.innerHTML = renderStatChart(
+      {
+        label: "Рейтинг",
+        total: data.rating,
+        values: data.days.map((d) => d.rating),
+        signed: true,
+      },
+      dates,
     )
-      + renderStatCard(
-        "Ответы",
-        data.replies,
-        repliesValues,
-        "var(--secondary)",
-        "",
-        "replies",
+      + renderStatChart(
+        {
+          label: "Ответы",
+          total: data.replies,
+          values: data.days.map((d) => d.replies),
+          signed: false,
+        },
+        dates,
       );
 
+    initTooltips([container]);
     container.style.display = "flex";
   } catch {
     container.style.display = "none";
