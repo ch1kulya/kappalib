@@ -248,7 +248,7 @@ export function initSearch(): void {
   }
 }
 
-function mapStatus(status: string): string {
+export function mapStatus(status: string): string {
   const statusMap: Record<string, string> = {
     ongoing: "Онгоинг",
     completed: "Завершено",

@@ -6,6 +6,7 @@ import { initDescription } from "./modules/description";
 import Dropdown from "./modules/dropdown";
 import { initHistoryPage } from "./modules/history";
 import { initListPage, initNovelListDropdown } from "./modules/list";
+import { initOffline, renderOfflinePage } from "./modules/offline";
 import { initProfile, initProfileModal } from "./modules/profile";
 import { initReadingProgressSaver, refreshLastReadTotalChapters } from "./modules/progress";
 import { initSearch } from "./modules/search";
@@ -23,8 +24,10 @@ declare global {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   try {
+    await renderOfflinePage();
+
     document
       .querySelectorAll<HTMLLinkElement>("link.lazy-font")
       .forEach((link) => {
@@ -64,6 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initChaptersBookmarks();
     initUserProfilePage();
     initHelpTooltips();
+    initOffline();
 
     if (document.querySelector(".cr-wrapper")) {
       refreshLastReadTotalChapters();

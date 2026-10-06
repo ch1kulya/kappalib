@@ -277,6 +277,13 @@ func BrandIconURL(scheme, file string) string {
 	return "/assets/icons/" + scheme + "/" + file
 }
 
+func chapterBackURL(novel *models.Novel) string {
+	if novel == nil {
+		return "/downloads"
+	}
+	return "/" + novel.ID
+}
+
 func chapterContentClasses(settings ReaderSettings) string {
 	classes := "chapter-content"
 	classes += " density-" + settings.Density
@@ -323,6 +330,15 @@ func chapterTitleClasses(settings ReaderSettings) string {
 }
 
 var volumeTagRe = regexp.MustCompile(`\[((?:Начало|Конец)(?:\s+\d+\s+тома)?)\]`)
+
+func listStatusLabel(status string) string {
+	for _, opt := range ListStatuses {
+		if opt.Slug == status {
+			return opt.Label
+		}
+	}
+	return "В список"
+}
 
 func lsRemoveWrapStyle(status string) string {
 	if status == "" {

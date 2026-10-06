@@ -2876,13 +2876,17 @@ html {
       }
     }
     &.pc-btn-action.pc-btn-danger {
+      background: var(--color-danger-dark);
+      border-color: var(--color-danger-glow);
+      color: var(--accent-text);
+      box-shadow: var(--accent-shadow-primary);
       @media (hover: hover) {
         &:hover {
-          color: var(--color-danger);
+          box-shadow: var(--accent-shadow-focus);
         }
       }
-      &:active {
-        color: var(--color-danger);
+      &:focus-visible {
+        box-shadow: var(--accent-shadow-focus);
       }
     }
   }
@@ -5500,25 +5504,48 @@ td:first-child {
   pointer-events: none;
 }
 
-/* Novel List */
+/* Novel Actions */
+.novel-actions-row {
+  position: relative;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  container-type: inline-size;
+}
+
+.novel-actions-row .dropdown {
+  position: static;
+}
+
+.novel-actions-row .dropdown-menu {
+  left: 0;
+  right: 0;
+  min-width: 0;
+  text-align: left;
+}
+
 .novel-list-dropdown {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  z-index: 5;
+  flex: 1;
+  min-width: 0;
+}
+
+.novel-list-dropdown .dropdown-btn,
+.novel-offline-dropdown .dropdown-btn {
+  height: 32px;
+  justify-content: center;
+  color: var(--secondary);
+  font-size: 0.85rem;
 }
 
 .novel-list-dropdown .dropdown-btn {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  justify-content: center;
-  border-radius: 6px;
-  color: var(--tertiary);
+  width: 100%;
+  gap: 0.4rem;
+  padding: 0 0.75rem;
 }
 
 @media (hover: hover) {
-  .novel-list-dropdown .dropdown-btn:hover {
+  .novel-list-dropdown .dropdown-btn:hover,
+  .novel-offline-dropdown .dropdown-btn:hover {
     color: var(--primary);
   }
 }
@@ -5527,15 +5554,13 @@ td:first-child {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.novel-list-dropdown .dropdown-menu {
-  left: auto;
-  right: 0;
-  @media (min-width: 600px) {
-    left: 0;
-    right: auto;
-  }
+.ls-btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ls-item-label {
@@ -5577,19 +5602,149 @@ td:first-child {
   color: var(--list-favorite);
 }
 
-.novel-list-dropdown .dropdown-item-remove {
+.novel-list-dropdown .dropdown-item-remove,
+.novel-offline-dropdown .dropdown-item-remove {
   color: var(--color-danger);
 }
 
 @media (hover: hover) {
-  .novel-list-dropdown .dropdown-item-remove:hover {
+  .novel-list-dropdown .dropdown-item-remove:hover,
+  .novel-offline-dropdown .dropdown-item-remove:hover {
     background: color-mix(in srgb, var(--color-danger), transparent 90%);
     color: var(--color-danger);
   }
 }
 
-.novel-list-dropdown .dropdown-item-remove:active {
+.novel-list-dropdown .dropdown-item-remove:active,
+.novel-offline-dropdown .dropdown-item-remove:active {
   background: color-mix(in srgb, var(--color-danger), transparent 90%);
+}
+
+/* Offline Downloads */
+.novel-offline-dropdown .dropdown-btn {
+  width: 32px;
+  padding: 0;
+}
+
+.of-btn-label {
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container (min-width: 300px) {
+  .novel-offline-dropdown {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .novel-offline-dropdown .dropdown-btn {
+    width: 100%;
+    gap: 0.4rem;
+    padding: 0 0.75rem;
+  }
+
+  .of-btn-label {
+    display: inline;
+  }
+}
+
+.novel-offline-dropdown[data-state="progress"] .dropdown-btn,
+.novel-offline-dropdown[data-state="update"] .dropdown-btn {
+  color: var(--accent-primary);
+}
+
+.novel-offline-dropdown[data-state="ready"] .dropdown-btn {
+  color: var(--color-success);
+}
+
+.novel-offline-dropdown[data-state="error"] .dropdown-btn {
+  color: var(--color-danger);
+}
+
+.of-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.of-icon {
+  display: none;
+  flex-shrink: 0;
+}
+
+.novel-offline-dropdown[data-state="none"] .of-icon-none,
+.novel-offline-dropdown[data-state="progress"] .of-icon-progress,
+.novel-offline-dropdown[data-state="ready"] .of-icon-ready,
+.novel-offline-dropdown[data-state="update"] .of-icon-update,
+.novel-offline-dropdown[data-state="error"] .of-icon-error {
+  display: block;
+}
+
+.of-ring-track {
+  opacity: 0.25;
+}
+
+.of-ring-fill {
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 - var(--of-progress, 0));
+  transform: rotate(-90deg);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: stroke-dashoffset 0.3s ease;
+}
+
+.header-offline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.header-offline-icon {
+  flex-shrink: 0;
+  color: var(--color-warning);
+}
+
+.downloads-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  margin: -0.75rem 0 1.25rem;
+}
+
+.downloads-summary {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--tertiary);
+}
+
+.downloads-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-right: -0.5rem;
+}
+
+.downloads-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chapter-item.is-offline-missing {
+  opacity: 0.5;
 }
 
 .ls-items .mc-empty {

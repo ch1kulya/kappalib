@@ -12,4 +12,5 @@
     "noEmit": true,
   },
   "include": ["assets/src/**/*"],
+  "exclude": ["assets/src/sw.ts"],
 }

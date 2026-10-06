@@ -22,6 +22,7 @@ type BaseProps struct {
 	ReaderSettings     ReaderSettings
 	IsSevere           bool
 	IsMyCommentsPage   bool
+	IsOffline          bool
 	GlobalAnnouncement *models.GlobalAnnouncement
 }
 

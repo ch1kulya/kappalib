@@ -159,6 +159,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 var noCachePrefixes = []string{
 	"/api/profile/",
 	"/api/webhook/",
+	"/api/offline/",
 }
 
 func hasAuth(r *http.Request) bool {

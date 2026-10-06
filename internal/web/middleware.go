@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -141,8 +142,20 @@ func generateNonce() string {
 	return base64.StdEncoding.EncodeToString(b)
 }
 
+func originOf(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
+}
+
 func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 	airHash := os.Getenv("AIR_PROXY_HASH")
+	connectSrc := "connect-src 'self' "
+	if s3Origin := originOf(os.Getenv("S3_PUBLIC_URL")); s3Origin != "" {
+		connectSrc += s3Origin + " "
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nonce := generateNonce()
@@ -154,7 +167,8 @@ func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 
 		var cspBuilder strings.Builder
 		cspBuilder.WriteString("default-src 'self'; ")
-		cspBuilder.WriteString("connect-src 'self' https://stats.kappalib.rip https://cdn.jsdelivr.net/ https://proxy.scalar.com https://smartcaptcha.yandexcloud.net https://smartcaptcha.cloud.yandex.ru; ")
+		cspBuilder.WriteString(connectSrc)
+		cspBuilder.WriteString("https://stats.kappalib.rip https://cdn.jsdelivr.net/ https://proxy.scalar.com https://smartcaptcha.yandexcloud.net https://smartcaptcha.cloud.yandex.ru; ")
 		cspBuilder.WriteString("img-src 'self' https: data:; ")
 
 		fmt.Fprintf(&cspBuilder, "script-src 'self' 'nonce-%s' https://stats.kappalib.rip https://challenges.cloudflare.com https://cdn.jsdelivr.net https://smartcaptcha.yandexcloud.net https://smartcaptcha.cloud.yandex.ru", nonce)
