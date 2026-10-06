@@ -832,7 +832,7 @@ async function fetchChapterCounts(ids: string[]): Promise<Map<string, number>> {
     const novels: { id: string; chapter_count: number }[] = await res.json();
     return novels;
   }));
-  return new Map(pages.flat().map((novel) => [novel.id, novel.chapter_count]));
+  return new Map(pages.flat().map((novel): [string, number] => [novel.id, novel.chapter_count]));
 }
 
 async function mapWithConcurrency<T, R>(
@@ -915,7 +915,7 @@ function initDownloadsPage(): void {
 
   const refresh = async () => {
     const [novels, jobs] = await Promise.all([listOfflineNovels(), listOfflineJobs()]);
-    const jobMap = new Map(jobs.map((job) => [job.novelId, job]));
+    const jobMap = new Map(jobs.map((job): [string, OfflineJob] => [job.novelId, job]));
     const pending = jobs
       .filter((job) => !novels.some((novel) => novel.id === job.novelId))
       .map((job) => ({ novelId: job.novelId, job }));
@@ -989,6 +989,8 @@ function initDownloadsPage(): void {
 }
 
 export function initOffline(): void {
+  initDownloadsPage();
+
   const dropdowns = document.querySelectorAll<HTMLElement>(".novel-offline-dropdown[data-novel-id]");
   if (!isOfflineSupported()) {
     dropdowns.forEach((root) => {
@@ -998,7 +1000,6 @@ export function initOffline(): void {
   }
 
   dropdowns.forEach((root) => initOfflineDropdown(root));
-  initDownloadsPage();
 
   if (!hasOfflineData()) return;
 
