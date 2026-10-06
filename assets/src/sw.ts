@@ -3,11 +3,13 @@ import {
   clearOfflineData,
   deleteOfflineJob,
   deleteOfflineNovel,
+  forEachOfflineChapter,
   getOfflineChapter,
   getOfflineJob,
   getOfflineNovel,
   getSavedChapters,
   listOfflineJobs,
+  listOfflineNovels,
   NOVEL_ID_RE,
   OFFLINE_CHAPTER_PATH_RE,
   OFFLINE_NOVEL_PATH_RE,
@@ -83,6 +85,9 @@ const STATIC_CACHE = `${STATIC_CACHE_PREFIX}${VERSION}`;
 const FONTS_CACHE = "kpl-fonts";
 const FONT_STYLES_CACHE = "kpl-font-styles";
 const COVERS_CACHE = "kpl-covers";
+const MEDIA_CACHE = "kpl-media";
+const MEDIA_CONCURRENCY = 4;
+const IMG_SRC_RE = /<img\b[^>]*?\ssrc\s*=\s*(["'])(.*?)\1/gi;
 const FONTS_CACHE_LIMIT = 600;
 const FONT_ORIGIN = "https://cdn.jsdelivr.net";
 const LIBRARY_SHELL = "/offline/library";
@@ -196,7 +201,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.destination === "image" && request.mode === "no-cors") {
-    event.respondWith(coverFirst(request));
+    event.respondWith(imageFirst(request));
   }
 });
 
@@ -294,39 +299,91 @@ async function trimCache(cache: Cache, limit: number): Promise<void> {
   await Promise.all(keys.slice(0, excess).map((key) => cache.delete(key)));
 }
 
-async function coverFirst(request: Request): Promise<Response> {
-  const cached = await caches.match(request.url, { cacheName: COVERS_CACHE });
+async function imageFirst(request: Request): Promise<Response> {
+  const cached = (await caches.match(request.url, { cacheName: COVERS_CACHE }))
+    ?? (await caches.match(request.url, { cacheName: MEDIA_CACHE }));
   return cached ?? fetch(request);
 }
 
-async function cacheCover(coverUrl: string | null, signal: AbortSignal): Promise<void> {
-  if (!coverUrl) return;
+async function cacheImages(cacheName: string, urls: string[], signal: AbortSignal): Promise<void> {
+  if (urls.length === 0) return;
+  let cache: Cache;
   try {
-    const cache = await caches.open(COVERS_CACHE);
-    if (await cache.match(coverUrl)) return;
-    const response = await fetchCover(coverUrl, signal);
-    if (signal.aborted) return;
-    if (response.ok || response.type === "opaque") {
-      await cache.put(coverUrl, response);
-    }
+    cache = await caches.open(cacheName);
   } catch (err) {
-    if (!signal.aborted) console.warn("Failed to cache cover", err);
+    console.warn("Failed to open image cache", err);
+    return;
   }
-}
 
-async function fetchCover(coverUrl: string, signal: AbortSignal): Promise<Response> {
-  try {
-    return await fetch(coverUrl, { mode: "cors", credentials: "omit", signal });
-  } catch (err) {
-    if (signal.aborted) throw err;
-    return fetch(coverUrl, { mode: "no-cors", credentials: "omit", signal });
-  }
+  let next = 0;
+  const worker = async () => {
+    while (next < urls.length && !signal.aborted) {
+      const url = urls[next++];
+      try {
+        if (await cache.match(url)) continue;
+        const response = await fetch(url, { mode: "cors", credentials: "omit", cache: "no-store", signal });
+        if (signal.aborted) return;
+        if (response.ok) {
+          await cache.put(url, response);
+        }
+      } catch (err) {
+        if (!signal.aborted) console.warn("Failed to cache image", url, err);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(MEDIA_CONCURRENCY, urls.length) }, worker));
 }
 
 async function removeCover(coverUrl: string | null): Promise<void> {
   if (!coverUrl) return;
   const cache = await caches.open(COVERS_CACHE);
   await cache.delete(coverUrl);
+}
+
+async function removeUnusedMedia(urls: string[]): Promise<void> {
+  if (urls.length === 0) return;
+  const novels = await listOfflineNovels();
+  const used = new Set(novels.flatMap((novel) => novel.media ?? []));
+  const cache = await caches.open(MEDIA_CACHE);
+  await Promise.all(urls.filter((url) => !used.has(url)).map((url) => cache.delete(url)));
+}
+
+async function removeNovelData(novelId: string): Promise<void> {
+  const novel = await getOfflineNovel(novelId);
+  await deleteOfflineNovel(novelId);
+  await removeCover(novel?.coverUrl ?? null);
+  await removeUnusedMedia(novel?.media ?? []);
+}
+
+function normalizeMediaUrl(rawUrl: string | null): string | null {
+  const trimmed = rawUrl?.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed, self.location.origin);
+    if (url.origin === self.location.origin) return null;
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function chapterMediaUrls(chapter: OfflineChapter): string[] {
+  const urls: string[] = [];
+  for (const match of chapter.content.matchAll(IMG_SRC_RE)) {
+    const url = normalizeMediaUrl(match[2].replace(/&amp;/g, "&"));
+    if (url) urls.push(url);
+  }
+  const logo = normalizeMediaUrl(chapter.source?.logoUrl ?? null);
+  if (logo) urls.push(logo);
+  return urls;
+}
+
+async function savedChapterMedia(novelId: string): Promise<string[]> {
+  const media = new Set<string>();
+  await forEachOfflineChapter(novelId, (chapter) => {
+    chapterMediaUrls(chapter).forEach((url) => media.add(url));
+  });
+  return [...media];
 }
 
 function parseCommand(data: unknown): OfflineCommand | null {
@@ -355,30 +412,23 @@ async function handleCommand(command: OfflineCommand): Promise<void> {
       await stopJob(command.novelId);
       const novel = await getOfflineNovel(command.novelId);
       if (novel && novel.savedCount === 0) {
-        await deleteOfflineNovel(command.novelId);
-        await removeCover(novel.coverUrl);
+        await removeNovelData(command.novelId);
       } else {
         await deleteOfflineJob(command.novelId);
       }
       broadcast(command.novelId, await currentState(command.novelId));
       return;
     }
-    case "redownload": {
+    case "redownload":
       await stopJob(command.novelId);
-      const novel = await getOfflineNovel(command.novelId);
-      await deleteOfflineNovel(command.novelId);
-      await removeCover(novel?.coverUrl ?? null);
+      await removeNovelData(command.novelId);
       await startDownload(command.novelId);
       return;
-    }
-    case "delete": {
+    case "delete":
       await stopJob(command.novelId);
-      const novel = await getOfflineNovel(command.novelId);
-      await deleteOfflineNovel(command.novelId);
-      await removeCover(novel?.coverUrl ?? null);
+      await removeNovelData(command.novelId);
       broadcast(command.novelId, { kind: "none" });
       return;
-    }
     case "delete-all":
       queue.length = 0;
       if (active) {
@@ -388,6 +438,7 @@ async function handleCommand(command: OfflineCommand): Promise<void> {
       }
       await clearOfflineData();
       await caches.delete(COVERS_CACHE);
+      await caches.delete(MEDIA_CACHE);
       broadcast(null, { kind: "none" });
       return;
     case "resume":
@@ -540,6 +591,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
   );
   const toc = sortToc([...serverToc, ...kept]);
   const tocIds = new Set(toc.map((entry) => entry.id));
+  const media = existing ? existing.media ?? (await savedChapterMedia(novelId)) : [];
 
   throwIfAborted(signal);
   let novel: OfflineNovel = {
@@ -551,6 +603,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
     status: apiNovel.status,
     ageRating: apiNovel.age_rating,
     coverUrl: normalizeCover(apiNovel.cover_url),
+    media,
     toc,
     savedCount: saved.size,
     bytes: existing?.bytes ?? 0,
@@ -564,7 +617,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
       console.warn("Failed to remove stale cover", err);
     });
   }
-  const coverTask = cacheCover(novel.coverUrl, signal);
+  const coverTask = cacheImages(COVERS_CACHE, novel.coverUrl ? [novel.coverUrl] : [], signal);
   try {
     novel = await removeOfflineChapters(novel, replaced);
     replaced.forEach((id) => saved.delete(id));
@@ -574,6 +627,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
     job.updatedAt = Date.now();
     await putOfflineJob(job);
     broadcast(novelId, offlineStateOf(undefined, job));
+    await cacheImages(MEDIA_CACHE, media, signal);
 
     const firstMissing = toc.find((entry) => !saved.has(entry.id));
     let after: number | null = firstMissing ? firstMissing.num - 1 : null;
@@ -589,6 +643,9 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
         .map(toOfflineChapter);
 
       if (fresh.length > 0) {
+        const batchMedia = [...new Set(fresh.flatMap(chapterMediaUrls))];
+        const knownMedia = new Set(novel.media ?? []);
+        const newMedia = batchMedia.filter((url) => !knownMedia.has(url));
         const added = fresh.filter((c) => !tocIds.has(c.id));
         added.forEach((c) => tocIds.add(c.id));
         const updated: OfflineNovel = {
@@ -596,6 +653,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
           toc: added.length > 0
             ? sortToc([...novel.toc, ...added.map((c) => ({ id: c.id, num: c.num, title: c.title }))])
             : novel.toc,
+          media: newMedia.length > 0 ? [...(novel.media ?? []), ...newMedia] : novel.media,
           savedCount: novel.savedCount + fresh.length,
           bytes: novel.bytes + fresh.reduce((sum, c) => sum + c.bytes, 0),
           updatedAt: Date.now(),
@@ -616,6 +674,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
         job.total = progress.total;
         job.updatedAt = progress.updatedAt;
         broadcast(novelId, offlineStateOf(undefined, job));
+        await cacheImages(MEDIA_CACHE, batchMedia, signal);
       }
 
       after = page.next_after;

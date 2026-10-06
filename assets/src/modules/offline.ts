@@ -69,6 +69,7 @@ const sizeFormatter = new Intl.NumberFormat("ru-RU", {
 });
 
 const listeners = new Set<OfflineListener>();
+const startedDownloads = new Set<string>();
 let listening = false;
 let pendingCommands = 0;
 let lastWorkerActivity = Date.now();
@@ -179,9 +180,28 @@ function listenToWorker(): void {
     if (event.data.state.kind === "queued" || event.data.state.kind === "downloading") {
       startWatchdog();
     }
+    trackDownloadOutcome(event.data);
     notifyListeners(event.data);
   });
   navigator.serviceWorker.startMessages();
+}
+
+function trackDownloadOutcome({ novelId, state }: OfflineBroadcast): void {
+  if (novelId === null) {
+    startedDownloads.clear();
+    return;
+  }
+  if (!startedDownloads.has(novelId)) return;
+
+  if (state.kind === "ready") {
+    startedDownloads.delete(novelId);
+    trackEvent("offline_download_complete", { novel_id: novelId, chapters: state.saved });
+  } else if (state.kind === "error") {
+    startedDownloads.delete(novelId);
+    trackEvent("offline_download_error", { novel_id: novelId, reason: state.error });
+  } else if (state.kind === "none") {
+    startedDownloads.delete(novelId);
+  }
 }
 
 function createStateSync(sync: () => Promise<void>): (active: boolean) => void {
@@ -263,7 +283,8 @@ async function requestDownloads(
   try {
     for (const novelId of novelIds) {
       await postCommand({ type, novelId });
-      trackEvent(`offline_${type}`, { novel_id: novelId });
+      startedDownloads.add(novelId);
+      trackEvent(type === "redownload" ? "offline_redownload" : "offline_download", { novel_id: novelId });
     }
     startWatchdog();
   } catch (err) {
@@ -286,10 +307,13 @@ async function runAction(action: string | undefined, novelId: string): Promise<v
       await requestDownloads([novelId], "redownload");
       return;
     case "cancel":
+      startedDownloads.delete(novelId);
+      trackEvent("offline_cancel", { novel_id: novelId });
       await sendCommand({ type: "cancel", novelId });
       return;
     case "delete":
       if (!confirm("Удалить сохранённую новеллу с устройства?")) return;
+      startedDownloads.delete(novelId);
       trackEvent("offline_delete", { novel_id: novelId });
       await sendCommand({ type: "delete", novelId });
       return;
@@ -1020,13 +1044,14 @@ function initDownloadsPage(): void {
     }
   });
 
-  const startBulk = (button: HTMLElement, novelIds: string[]) => {
+  const startBulk = (button: HTMLElement, event: string, novelIds: string[]) => {
     if (novelIds.length === 0) return;
     button.style.display = "none";
+    trackEvent(event, { count: novelIds.length });
     void requestDownloads(novelIds);
   };
-  resumeAll.addEventListener("click", () => startBulk(resumeAll, partialIds()));
-  updateAll.addEventListener("click", () => startBulk(updateAll, updatableIds()));
+  resumeAll.addEventListener("click", () => startBulk(resumeAll, "offline_resume_all", partialIds()));
+  updateAll.addEventListener("click", () => startBulk(updateAll, "offline_update_all", updatableIds()));
 
   clearAll.addEventListener("click", () => {
     if (!confirm("Удалить все сохранённые новеллы с устройства?")) return;
