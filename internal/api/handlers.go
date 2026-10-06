@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -79,6 +81,12 @@ type NovelIDInput struct {
 
 type ChapterIDInput struct {
 	ID string `path:"id" pattern:"^chp_[a-z0-9]{8}$"`
+}
+
+type GetOfflineChaptersInput struct {
+	ID    string `path:"id" pattern:"^nvl_[a-z0-9]{8}$"`
+	After string `query:"after" pattern:"^-?[0-9]{1,9}$"`
+	Limit int    `query:"limit" default:"50" minimum:"1" maximum:"50"`
 }
 
 type BatchNovelsInput struct {
@@ -252,6 +260,10 @@ type ChaptersListResponse struct {
 	Body models.ChaptersList
 }
 
+type OfflineChaptersResponse struct {
+	Body models.OfflineChaptersPage
+}
+
 type ProfileResponse struct {
 	Body models.ProfilePublic
 }
@@ -405,6 +417,35 @@ func HandleGetChaptersList(ctx context.Context, input *NovelIDInput) (*ChaptersL
 		return nil, huma.Error500InternalServerError("Failed to fetch chapters")
 	}
 	return &ChaptersListResponse{Body: *chapters}, nil
+}
+
+func HandleGetOfflineChapters(ctx context.Context, input *GetOfflineChaptersInput) (*OfflineChaptersResponse, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	after := math.MinInt32
+	if input.After != "" {
+		after, err = strconv.Atoi(input.After)
+		if err != nil {
+			return nil, huma.Error422UnprocessableEntity("Invalid cursor")
+		}
+	}
+
+	page, err := data.GetOfflineChapters(ctx, userID, input.ID, after, input.Limit)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRateLimitExceeded):
+			return nil, huma.ErrorWithHeaders(huma.Error429TooManyRequests("Too many requests"), http.Header{"Retry-After": {"1"}})
+		case errors.Is(err, data.ErrNovelNotFound):
+			return nil, huma.Error404NotFound("Novel not found")
+		default:
+			return nil, huma.Error500InternalServerError("Failed to fetch chapters")
+		}
+	}
+
+	return &OfflineChaptersResponse{Body: *page}, nil
 }
 
 func HandleGetChapter(ctx context.Context, input *ChapterIDInput) (*ChapterResponse, error) {

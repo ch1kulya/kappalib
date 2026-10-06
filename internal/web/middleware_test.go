@@ -184,3 +184,25 @@ func TestRateLimiter_EmergencyCleanup(t *testing.T) {
 		t.Fatalf("expected visitor map to contain only 1 new visitor, got %d", count)
 	}
 }
+
+func TestOriginOf(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{name: "https url with path", raw: "https://cdn.kappalib.rip/covers", want: "https://cdn.kappalib.rip"},
+		{name: "http url with port", raw: "http://localhost:9000/bucket", want: "http://localhost:9000"},
+		{name: "empty", raw: "", want: ""},
+		{name: "host without scheme", raw: "cdn.kappalib.rip", want: ""},
+		{name: "unsupported scheme", raw: "ftp://cdn.kappalib.rip", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := originOf(tt.raw); got != tt.want {
+				t.Errorf("originOf(%q) = %q, want %q", tt.raw, got, tt.want)
+			}
+		})
+	}
+}

@@ -19,7 +19,7 @@ interface EnrichedListCategory {
 
 type UserList = Record<string, EnrichedListCategory>;
 
-const FALLBACK_COVER =
+export const FALLBACK_COVER =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect fill='%23ecf0f1' width='200' height='300'/%3E%3C/svg%3E";
 
 const LIST_STATUSES: { slug: string; label: string }[] = [
@@ -33,25 +33,45 @@ const LIST_STATUSES: { slug: string; label: string }[] = [
 ];
 
 let cachedList: UserList | null = null;
+let inFlightList: Promise<UserList> | null = null;
+let listGeneration = 0;
 const hydrateFns: (() => void)[] = [];
 
 function hydrateAll(): void {
   hydrateFns.forEach((fn) => fn());
 }
 
-async function fetchUserList(force = false): Promise<UserList> {
-  if (cachedList && !force) return cachedList;
+async function requestUserList(): Promise<UserList | null> {
   try {
     const res = await fetch(`${API_URL}/profile/me/list`, {
       credentials: "include",
     });
-    if (!res.ok) return {};
-    const data: UserList = await res.json();
-    cachedList = data;
-    return cachedList;
+    if (!res.ok) return null;
+    return await res.json();
   } catch {
-    return {};
+    return null;
   }
+}
+
+function fetchUserList(force = false): Promise<UserList> {
+  if (cachedList && !force) return Promise.resolve(cachedList);
+  if (inFlightList && !force) return inFlightList;
+
+  const generation = ++listGeneration;
+  inFlightList = requestUserList().then((data) => {
+    if (generation === listGeneration) {
+      if (data) cachedList = data;
+      inFlightList = null;
+    }
+    return data ?? {};
+  });
+  return inFlightList;
+}
+
+function invalidateUserList(): void {
+  listGeneration++;
+  cachedList = null;
+  inFlightList = null;
 }
 
 function findStatusOfNovel(list: UserList, novelId: string): string | null {
@@ -102,7 +122,7 @@ async function removeFromList(novelId: string): Promise<boolean> {
       headers: xsrfHeaders(),
     });
     if (res.ok) {
-      cachedList = null;
+      invalidateUserList();
       trackEvent("list_remove");
       return true;
     }
@@ -261,7 +281,12 @@ function initNovelListDropdownInstance(dropdownEl: HTMLElement): void {
   const iconSlot = dropdownEl.querySelector(
     ".ls-btn-icon",
   ) as HTMLElement | null;
-  const defaultIcon = iconSlot?.querySelector("svg")?.cloneNode(true) ?? null;
+  const labelEl = dropdownEl.querySelector(
+    ".ls-btn-label",
+  ) as HTMLElement | null;
+  const defaultIcon = dropdownEl
+    .querySelector<HTMLTemplateElement>("template.ls-btn-default-icon")
+    ?.content.firstElementChild ?? null;
   const removeWrap = dropdownEl.querySelector(
     ".ls-remove-wrap",
   ) as HTMLElement | null;
@@ -282,6 +307,9 @@ function initNovelListDropdownInstance(dropdownEl: HTMLElement): void {
         item.setAttribute("aria-selected", String(isSelected));
       });
     if (removeWrap) removeWrap.style.display = slug ? "" : "none";
+    if (labelEl) {
+      labelEl.textContent = LIST_STATUSES.find((s) => s.slug === slug)?.label ?? "В список";
+    }
     if (iconSlot) {
       iconSlot.replaceChildren();
       if (slug) {
@@ -326,7 +354,7 @@ function initNovelListDropdownInstance(dropdownEl: HTMLElement): void {
         return;
       }
       trackEvent(previous ? "list_move" : "list_add");
-      cachedList = null;
+      invalidateUserList();
       hydrateAll();
     } catch {
       alert("Ошибка сети при обновлении списка");

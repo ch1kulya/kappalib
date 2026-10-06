@@ -79,13 +79,7 @@ func GetChapter(ctx context.Context, id string) (*models.Chapter, error) {
 			return nil, err
 		}
 
-		if sourceName != nil {
-			label := "Источник перевода"
-			if sourceLabel != nil && *sourceLabel != "" {
-				label = *sourceLabel
-			}
-			c.Source = &models.Source{Name: *sourceName, LogoURL: sourceLogo, Label: label}
-		}
+		c.Source = buildChapterSource(sourceName, sourceLogo, sourceLabel)
 
 		return &c, nil
 	})
@@ -93,6 +87,17 @@ func GetChapter(ctx context.Context, id string) (*models.Chapter, error) {
 		return nil, err
 	}
 	return value.(*models.Chapter), nil
+}
+
+func buildChapterSource(name, logoURL, label *string) *models.Source {
+	if name == nil {
+		return nil
+	}
+	sourceLabel := "Источник перевода"
+	if label != nil && *label != "" {
+		sourceLabel = *label
+	}
+	return &models.Source{Name: *name, LogoURL: logoURL, Label: sourceLabel}
 }
 
 func GetLatestUpdates(ctx context.Context, limit int) ([]models.NovelUpdate, error) {

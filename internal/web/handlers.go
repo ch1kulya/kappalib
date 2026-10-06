@@ -2,8 +2,6 @@ package web
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -113,13 +111,11 @@ func (h *Handler) globalAnnouncement(ctx context.Context) *models.GlobalAnnounce
 	return ann
 }
 
-func NewHandler() *Handler {
-	b := make([]byte, 4)
-	if _, err := rand.Read(b); err != nil {
-		panic(err)
-	}
+const ServiceWorkerPath = "./assets/static/dist/sw.js"
+
+func NewHandler(assetVersion string) *Handler {
 	return &Handler{
-		assetVersion: hex.EncodeToString(b)[:8],
+		assetVersion: assetVersion,
 	}
 }
 
@@ -1053,6 +1049,46 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		GlobalAnnouncement: h.globalAnnouncement(r.Context()),
 	}
 	h.render(w, r, views.List(props))
+}
+
+func (h *Handler) downloadsProps(r *http.Request, isOffline bool) views.BaseProps {
+	return views.BaseProps{
+		Title:          "Загрузки — kappalib",
+		Description:    "Новеллы, сохранённые для чтения без интернета.",
+		Canonical:      "https://kappalib.rip/downloads",
+		Version:        h.assetVersion,
+		IsLoggedIn:     h.hasSession(r),
+		IsOffline:      isOffline,
+		ReaderSettings: h.getReaderSettings(r),
+	}
+}
+
+func (h *Handler) Downloads(w http.ResponseWriter, r *http.Request) {
+	h.render(w, r, views.Downloads(h.downloadsProps(r, false)))
+}
+
+func (h *Handler) OfflineLibrary(w http.ResponseWriter, r *http.Request) {
+	h.render(w, r, views.Downloads(h.downloadsProps(r, true)))
+}
+
+func (h *Handler) OfflineReader(w http.ResponseWriter, r *http.Request) {
+	props := views.BaseProps{
+		Title:          "Офлайн-чтение — kappalib",
+		Description:    "Чтение сохранённых глав без интернета.",
+		Canonical:      "https://kappalib.rip/offline/reader",
+		Version:        h.assetVersion,
+		IsChapterPage:  true,
+		IsLoggedIn:     h.hasSession(r),
+		IsOffline:      true,
+		ReaderSettings: h.getReaderSettings(r),
+	}
+	h.render(w, r, views.OfflineReader(props))
+}
+
+func (h *Handler) ServiceWorker(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	http.ServeFile(w, r, ServiceWorkerPath)
 }
 
 func (h *Handler) UserProfile(w http.ResponseWriter, r *http.Request) {

@@ -181,7 +181,7 @@ WITH texts AS (
 )
 INSERT INTO public.chapters (id, novel_id, chapter_num, title, title_en, content, source_id, created_at)
 SELECT
-    'chp_mock' || lpad(n.i::text, 3, '0') || lpad(c::text, 4, '0'),
+    'chp_m' || lpad(n.i::text, 3, '0') || lpad(c::text, 4, '0'),
     n.id,
     c,
     t.titles[(c + n.i) % 15 + 1],

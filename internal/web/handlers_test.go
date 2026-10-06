@@ -407,7 +407,7 @@ func TestIsPrefetchOrPrerender(t *testing.T) {
 func TestStaticPageCaching(t *testing.T) {
 	cache.C.Set("static_page:terms", "<p>cached terms content</p>", 1*time.Hour)
 
-	h := NewHandler()
+	h := NewHandler("test")
 	handler := h.StaticPage("terms", "Пользовательское соглашение")
 
 	req := httptest.NewRequest(http.MethodGet, "/terms", nil)

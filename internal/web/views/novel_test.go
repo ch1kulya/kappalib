@@ -30,9 +30,21 @@ func TestNovelRendersListStatusIcon(t *testing.T) {
 		return sb.String()
 	}
 
+	iconSlot := func(html string) string {
+		start := strings.Index(html, `<span class="ls-btn-icon" aria-hidden="true">`)
+		if start == -1 {
+			t.Fatal("list button icon slot not rendered")
+		}
+		end := strings.Index(html[start:], "</span>")
+		return html[start : start+end]
+	}
+
 	empty := render("")
-	if !strings.Contains(empty, "ls-btn-plus") {
+	if !strings.Contains(iconSlot(empty), "ls-btn-plus") {
 		t.Error("empty status should render plus icon")
+	}
+	if !strings.Contains(empty, `<span class="ls-btn-label">В список</span>`) {
+		t.Error("empty status should render default label")
 	}
 	if strings.Contains(empty, `class="ls-remove-wrap" style="display: block"`) {
 		t.Error("empty status should hide remove wrap")
@@ -42,8 +54,11 @@ func TestNovelRendersListStatusIcon(t *testing.T) {
 	}
 
 	withStatus := render("reading")
-	if strings.Contains(withStatus, "ls-btn-plus") {
+	if strings.Contains(iconSlot(withStatus), "ls-btn-plus") {
 		t.Error("status set should not render plus icon")
+	}
+	if !strings.Contains(withStatus, `<span class="ls-btn-label">Читаю</span>`) {
+		t.Error("status set should render status label")
 	}
 	if !strings.Contains(withStatus, `data-slug="reading"`) {
 		t.Error("status set should render status icon with data-slug")
