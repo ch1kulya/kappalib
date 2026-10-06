@@ -551,6 +551,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
       console.warn("Failed to remove stale cover", err);
     });
   }
+  await cacheCover(novel.coverUrl);
 
   novel = await removeOfflineChapters(novel, replaced);
   replaced.forEach((id) => saved.delete(id));
@@ -613,7 +614,6 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
     complete: novel.toc.every((entry) => saved.has(entry.id)),
     updatedAt: Date.now(),
   });
-  await cacheCover(novel.coverUrl);
 }
 
 function sortToc(entries: OfflineTocEntry[]): OfflineTocEntry[] {

@@ -53,6 +53,7 @@ const WATCHDOG_INTERVAL_MS = 10000;
 const WATCHDOG_STALL_MS = 20000;
 const BATCH_IDS_LIMIT = 50;
 const UPDATE_CHECK_CONCURRENCY = 4;
+const WORKER_ACTIVATION_TIMEOUT_MS = 30000;
 
 const ERROR_MESSAGES: Record<OfflineJobError, string> = {
   auth: "Войдите в аккаунт, чтобы продолжить загрузку",
@@ -115,15 +116,23 @@ function waitForActiveWorker(
   }
 
   return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      worker.removeEventListener("statechange", onStateChange);
+    };
     const onStateChange = () => {
       if (worker.state === "activated") {
-        worker.removeEventListener("statechange", onStateChange);
+        cleanup();
         resolve(worker);
       } else if (worker.state === "redundant") {
-        worker.removeEventListener("statechange", onStateChange);
+        cleanup();
         reject(new Error("Service worker installation failed"));
       }
     };
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Service worker activation timed out"));
+    }, WORKER_ACTIVATION_TIMEOUT_MS);
     worker.addEventListener("statechange", onStateChange);
   });
 }
