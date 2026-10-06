@@ -33,25 +33,39 @@ const LIST_STATUSES: { slug: string; label: string }[] = [
 ];
 
 let cachedList: UserList | null = null;
+let inFlightList: Promise<UserList> | null = null;
 const hydrateFns: (() => void)[] = [];
 
 function hydrateAll(): void {
   hydrateFns.forEach((fn) => fn());
 }
 
-async function fetchUserList(force = false): Promise<UserList> {
-  if (cachedList && !force) return cachedList;
-  try {
-    const res = await fetch(`${API_URL}/profile/me/list`, {
-      credentials: "include",
-    });
-    if (!res.ok) return {};
-    const data: UserList = await res.json();
-    cachedList = data;
-    return cachedList;
-  } catch {
-    return {};
-  }
+function fetchUserList(force = false): Promise<UserList> {
+  if (cachedList && !force) return Promise.resolve(cachedList);
+  if (inFlightList && !force) return inFlightList;
+
+  const request = (async (): Promise<UserList> => {
+    try {
+      const res = await fetch(`${API_URL}/profile/me/list`, {
+        credentials: "include",
+      });
+      if (!res.ok) return {};
+      const data: UserList = await res.json();
+      if (inFlightList === request) cachedList = data;
+      return data;
+    } catch {
+      return {};
+    } finally {
+      if (inFlightList === request) inFlightList = null;
+    }
+  })();
+  inFlightList = request;
+  return request;
+}
+
+function invalidateUserList(): void {
+  cachedList = null;
+  inFlightList = null;
 }
 
 function findStatusOfNovel(list: UserList, novelId: string): string | null {
@@ -102,7 +116,7 @@ async function removeFromList(novelId: string): Promise<boolean> {
       headers: xsrfHeaders(),
     });
     if (res.ok) {
-      cachedList = null;
+      invalidateUserList();
       trackEvent("list_remove");
       return true;
     }
@@ -334,7 +348,7 @@ function initNovelListDropdownInstance(dropdownEl: HTMLElement): void {
         return;
       }
       trackEvent(previous ? "list_move" : "list_add");
-      cachedList = null;
+      invalidateUserList();
       hydrateAll();
     } catch {
       alert("Ошибка сети при обновлении списка");
