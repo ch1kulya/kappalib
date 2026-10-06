@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"sync"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/ch1kulya/kappalib/internal/models"
 
 	"github.com/ch1kulya/logger"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/time/rate"
 )
 
@@ -71,17 +73,16 @@ func GetOfflineChapters(ctx context.Context, userID, novelID string, after, limi
 		return nil, ErrRateLimitExceeded
 	}
 
-	dbCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	exists, err := listNovelExists(dbCtx, novelID)
-	if err != nil {
-		logger.Error("GetOfflineChapters: Failed to check novel %s: %v", novelID, err)
+	if _, err := GetNovel(ctx, novelID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNovelNotFound
+		}
+		logger.Error("GetOfflineChapters: Failed to load novel %s: %v", novelID, err)
 		return nil, err
 	}
-	if !exists {
-		return nil, ErrNovelNotFound
-	}
+
+	dbCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
 	rows, err := database.DB.Query(dbCtx, queryChaptersGetRange, novelID, after, limit+1)
 	if err != nil {
@@ -110,12 +111,15 @@ func GetOfflineChapters(ctx context.Context, userID, novelID string, after, limi
 		return nil, err
 	}
 
+	return paginateOfflineChapters(novelID, chapters, limit), nil
+}
+
+func paginateOfflineChapters(novelID string, chapters []models.Chapter, limit int) *models.OfflineChaptersPage {
 	page := &models.OfflineChaptersPage{NovelID: novelID, Chapters: chapters}
 	if len(chapters) > limit {
 		page.Chapters = chapters[:limit]
 		next := page.Chapters[limit-1].ChapterNum
 		page.NextAfter = &next
 	}
-
-	return page, nil
+	return page
 }
