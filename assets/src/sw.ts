@@ -301,25 +301,27 @@ async function coverFirst(request: Request): Promise<Response> {
   return cached ?? fetch(request);
 }
 
-async function cacheCover(coverUrl: string | null): Promise<void> {
+async function cacheCover(coverUrl: string | null, signal: AbortSignal): Promise<void> {
   if (!coverUrl) return;
   try {
     const cache = await caches.open(COVERS_CACHE);
     if (await cache.match(coverUrl)) return;
-    const response = await fetchCover(coverUrl);
+    const response = await fetchCover(coverUrl, signal);
+    if (signal.aborted) return;
     if (response.ok || response.type === "opaque") {
       await cache.put(coverUrl, response);
     }
   } catch (err) {
-    console.warn("Failed to cache cover", err);
+    if (!signal.aborted) console.warn("Failed to cache cover", err);
   }
 }
 
-async function fetchCover(coverUrl: string): Promise<Response> {
+async function fetchCover(coverUrl: string, signal: AbortSignal): Promise<Response> {
   try {
-    return await fetch(coverUrl, { mode: "cors", credentials: "omit" });
-  } catch {
-    return fetch(coverUrl, { mode: "no-cors", credentials: "omit" });
+    return await fetch(coverUrl, { mode: "cors", credentials: "omit", signal });
+  } catch (err) {
+    if (signal.aborted) throw err;
+    return fetch(coverUrl, { mode: "no-cors", credentials: "omit", signal });
   }
 }
 
@@ -551,69 +553,72 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
       console.warn("Failed to remove stale cover", err);
     });
   }
-  await cacheCover(novel.coverUrl);
+  const coverTask = cacheCover(novel.coverUrl, signal);
+  try {
+    novel = await removeOfflineChapters(novel, replaced);
+    replaced.forEach((id) => saved.delete(id));
 
-  novel = await removeOfflineChapters(novel, replaced);
-  replaced.forEach((id) => saved.delete(id));
+    job.done = saved.size;
+    job.total = toc.length;
+    job.updatedAt = Date.now();
+    await putOfflineJob(job);
+    broadcast(novelId, offlineStateOf(undefined, job));
 
-  job.done = saved.size;
-  job.total = toc.length;
-  job.updatedAt = Date.now();
-  await putOfflineJob(job);
-  broadcast(novelId, offlineStateOf(undefined, job));
+    const firstMissing = toc.find((entry) => !saved.has(entry.id));
+    let after: number | null = firstMissing ? firstMissing.num - 1 : null;
 
-  const firstMissing = toc.find((entry) => !saved.has(entry.id));
-  let after: number | null = firstMissing ? firstMissing.num - 1 : null;
+    while (after !== null) {
+      const page = await fetchOfflinePage(novelId, after, signal);
+      if (page.next_after !== null && page.next_after <= after) {
+        throw new DownloadError("unknown");
+      }
 
-  while (after !== null) {
-    const page = await fetchOfflinePage(novelId, after, signal);
-    if (page.next_after !== null && page.next_after <= after) {
-      throw new DownloadError("unknown");
+      const fresh = page.chapters
+        .filter((c) => c.novel_id === novelId && !saved.has(c.id))
+        .map(toOfflineChapter);
+
+      if (fresh.length > 0) {
+        const added = fresh.filter((c) => !tocIds.has(c.id));
+        added.forEach((c) => tocIds.add(c.id));
+        const updated: OfflineNovel = {
+          ...novel,
+          toc: added.length > 0
+            ? sortToc([...novel.toc, ...added.map((c) => ({ id: c.id, num: c.num, title: c.title }))])
+            : novel.toc,
+          savedCount: novel.savedCount + fresh.length,
+          bytes: novel.bytes + fresh.reduce((sum, c) => sum + c.bytes, 0),
+          updatedAt: Date.now(),
+        };
+        const progress: OfflineJob = {
+          ...job,
+          done: saved.size + fresh.length,
+          total: updated.toc.length,
+          updatedAt: Date.now(),
+        };
+
+        throwIfAborted(signal);
+        await saveOfflineChapters(updated, fresh, progress);
+
+        novel = updated;
+        fresh.forEach((c) => saved.set(c.id, c.num));
+        job.done = progress.done;
+        job.total = progress.total;
+        job.updatedAt = progress.updatedAt;
+        broadcast(novelId, offlineStateOf(undefined, job));
+      }
+
+      after = page.next_after;
     }
 
-    const fresh = page.chapters
-      .filter((c) => c.novel_id === novelId && !saved.has(c.id))
-      .map(toOfflineChapter);
-
-    if (fresh.length > 0) {
-      const added = fresh.filter((c) => !tocIds.has(c.id));
-      added.forEach((c) => tocIds.add(c.id));
-      const updated: OfflineNovel = {
-        ...novel,
-        toc: added.length > 0
-          ? sortToc([...novel.toc, ...added.map((c) => ({ id: c.id, num: c.num, title: c.title }))])
-          : novel.toc,
-        savedCount: novel.savedCount + fresh.length,
-        bytes: novel.bytes + fresh.reduce((sum, c) => sum + c.bytes, 0),
-        updatedAt: Date.now(),
-      };
-      const progress: OfflineJob = {
-        ...job,
-        done: saved.size + fresh.length,
-        total: updated.toc.length,
-        updatedAt: Date.now(),
-      };
-
-      throwIfAborted(signal);
-      await saveOfflineChapters(updated, fresh, progress);
-
-      novel = updated;
-      fresh.forEach((c) => saved.set(c.id, c.num));
-      job.done = progress.done;
-      job.total = progress.total;
-      job.updatedAt = progress.updatedAt;
-      broadcast(novelId, offlineStateOf(undefined, job));
-    }
-
-    after = page.next_after;
+    throwIfAborted(signal);
+    await putOfflineNovel({
+      ...novel,
+      complete: novel.toc.every((entry) => saved.has(entry.id)),
+      updatedAt: Date.now(),
+    });
+  } finally {
+    await coverTask;
   }
-
-  throwIfAborted(signal);
-  await putOfflineNovel({
-    ...novel,
-    complete: novel.toc.every((entry) => saved.has(entry.id)),
-    updatedAt: Date.now(),
-  });
 }
 
 function sortToc(entries: OfflineTocEntry[]): OfflineTocEntry[] {
