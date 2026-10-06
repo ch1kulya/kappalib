@@ -5504,25 +5504,36 @@ td:first-child {
   pointer-events: none;
 }
 
-/* Novel List */
+/* Novel Actions */
+.novel-actions-row {
+  position: relative;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
 .novel-list-dropdown {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  z-index: 5;
+  flex: 1;
+  min-width: 0;
+}
+
+.novel-list-dropdown .dropdown-btn,
+.novel-offline-dropdown .dropdown-btn {
+  height: 32px;
+  justify-content: center;
+  color: var(--secondary);
+  font-size: 0.85rem;
 }
 
 .novel-list-dropdown .dropdown-btn {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  justify-content: center;
-  border-radius: 6px;
-  color: var(--tertiary);
+  width: 100%;
+  gap: 0.4rem;
+  padding: 0 0.75rem;
 }
 
 @media (hover: hover) {
-  .novel-list-dropdown .dropdown-btn:hover {
+  .novel-list-dropdown .dropdown-btn:hover,
+  .novel-offline-dropdown .dropdown-btn:hover {
     color: var(--primary);
   }
 }
@@ -5531,15 +5542,22 @@ td:first-child {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+
+.ls-btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .novel-list-dropdown .dropdown-menu {
-  left: auto;
-  right: 0;
-  @media (min-width: 600px) {
-    left: 0;
-    right: auto;
-  }
+  left: 0;
+  right: auto;
+}
+
+.novel-actions-row .dropdown-menu {
+  text-align: left;
 }
 
 .ls-item-label {
@@ -5601,25 +5619,12 @@ td:first-child {
 
 /* Offline Downloads */
 .novel-offline-dropdown {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  z-index: 5;
+  position: static;
 }
 
 .novel-offline-dropdown .dropdown-btn {
-  width: 24px;
-  height: 24px;
+  width: 32px;
   padding: 0;
-  justify-content: center;
-  border-radius: 6px;
-  color: var(--tertiary);
-}
-
-@media (hover: hover) {
-  .novel-offline-dropdown .dropdown-btn:hover {
-    color: var(--primary);
-  }
 }
 
 .novel-offline-dropdown[data-state="progress"] .dropdown-btn,
@@ -5637,8 +5642,8 @@ td:first-child {
 
 .novel-offline-dropdown .dropdown-menu {
   left: 0;
-  right: auto;
-  min-width: 240px;
+  right: 0;
+  min-width: 0;
 }
 
 .of-btn-icon {

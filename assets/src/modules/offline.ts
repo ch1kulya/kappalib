@@ -587,7 +587,7 @@ function dropdownActions(state: OfflineState, newChapters: number): HTMLElement[
 function dropdownStatus(state: OfflineState, newChapters: number): string {
   switch (state.kind) {
     case "none":
-      return "Сохраните новеллу на устройство, чтобы читать её без интернета";
+      return "";
     case "queued":
       return "В очереди на загрузку";
     case "downloading":
@@ -647,7 +647,9 @@ function initOfflineDropdown(root: HTMLElement): void {
       : 0;
     root.dataset.state = dropdownIconState(state, newChapters);
     root.style.setProperty("--of-progress", String(progress));
-    status.textContent = dropdownStatus(state, newChapters);
+    const statusText = dropdownStatus(state, newChapters);
+    status.textContent = statusText;
+    status.style.display = statusText ? "" : "none";
     actions.replaceChildren(...dropdownActions(state, newChapters));
   };
 

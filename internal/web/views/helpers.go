@@ -331,6 +331,15 @@ func chapterTitleClasses(settings ReaderSettings) string {
 
 var volumeTagRe = regexp.MustCompile(`\[((?:Начало|Конец)(?:\s+\d+\s+тома)?)\]`)
 
+func listStatusLabel(status string) string {
+	for _, opt := range ListStatuses {
+		if opt.Slug == status {
+			return opt.Label
+		}
+	}
+	return "В список"
+}
+
 func lsRemoveWrapStyle(status string) string {
 	if status == "" {
 		return "display: none;"

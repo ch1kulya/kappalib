@@ -261,7 +261,12 @@ function initNovelListDropdownInstance(dropdownEl: HTMLElement): void {
   const iconSlot = dropdownEl.querySelector(
     ".ls-btn-icon",
   ) as HTMLElement | null;
-  const defaultIcon = iconSlot?.querySelector("svg")?.cloneNode(true) ?? null;
+  const labelEl = dropdownEl.querySelector(
+    ".ls-btn-label",
+  ) as HTMLElement | null;
+  const defaultIcon = dropdownEl
+    .querySelector<HTMLTemplateElement>("template.ls-btn-default-icon")
+    ?.content.firstElementChild ?? null;
   const removeWrap = dropdownEl.querySelector(
     ".ls-remove-wrap",
   ) as HTMLElement | null;
@@ -282,6 +287,9 @@ function initNovelListDropdownInstance(dropdownEl: HTMLElement): void {
         item.setAttribute("aria-selected", String(isSelected));
       });
     if (removeWrap) removeWrap.style.display = slug ? "" : "none";
+    if (labelEl) {
+      labelEl.textContent = LIST_STATUSES.find((s) => s.slug === slug)?.label ?? "В список";
+    }
     if (iconSlot) {
       iconSlot.replaceChildren();
       if (slug) {
