@@ -68,7 +68,9 @@ templ Base(props BaseProps) {
 				}
 			}
 			<link rel="stylesheet" href={ fmt.Sprintf("/assets/dist/styles/main.css?v=%s", props.Version) }/>
-			@initUmami(props.ReaderSettings.ColorScheme)
+			if !props.IsOffline {
+				@initUmami(props.ReaderSettings.ColorScheme)
+			}
 		</head>
 		<body>
 			<div id="app">
