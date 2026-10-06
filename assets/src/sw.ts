@@ -82,8 +82,9 @@ const API_URL = process.env.API_URL;
 const STATIC_CACHE_PREFIX = "kpl-static-";
 const STATIC_CACHE = `${STATIC_CACHE_PREFIX}${VERSION}`;
 const FONTS_CACHE = "kpl-fonts";
+const FONT_STYLES_CACHE = "kpl-font-styles";
 const COVERS_CACHE = "kpl-covers";
-const FONTS_CACHE_LIMIT = 300;
+const FONTS_CACHE_LIMIT = 600;
 const FONT_ORIGIN = "https://cdn.jsdelivr.net";
 const COVER_ORIGIN = originOf(process.env.S3_PUBLIC_URL);
 const LIBRARY_SHELL = "/offline/library";
@@ -185,10 +186,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (
-    url.origin === FONT_ORIGIN
-    && (request.destination === "style" || request.destination === "font")
-  ) {
+  if (url.origin === FONT_ORIGIN && request.destination === "style") {
+    event.respondWith(cacheFirst(event, FONT_STYLES_CACHE));
+    return;
+  }
+
+  if (url.origin === FONT_ORIGIN && request.destination === "font") {
     event.respondWith(cacheFirst(event, FONTS_CACHE, FONTS_CACHE_LIMIT));
     return;
   }
@@ -593,6 +596,11 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
     complete: novel.toc.every((entry) => saved.has(entry.id)),
     updatedAt: Date.now(),
   });
+  if (existing?.coverUrl && existing.coverUrl !== novel.coverUrl) {
+    await removeCover(existing.coverUrl).catch((err) => {
+      console.warn("Failed to remove stale cover", err);
+    });
+  }
   await cacheCover(novel.coverUrl);
 }
 
