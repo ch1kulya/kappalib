@@ -31,7 +31,7 @@ func TestNovelRendersListStatusIcon(t *testing.T) {
 	}
 
 	iconSlot := func(html string) string {
-		start := strings.Index(html, `<span class="ls-btn-icon">`)
+		start := strings.Index(html, `<span class="ls-btn-icon" aria-hidden="true">`)
 		if start == -1 {
 			t.Fatal("list button icon slot not rendered")
 		}

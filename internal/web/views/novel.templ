@@ -199,8 +199,8 @@ templ novelActions(props NovelProps) {
 	}
 	<div class="novel-actions-row">
 		<div class="dropdown novel-list-dropdown" data-novel-id={ props.Novel.ID }>
-			<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Добавить в список" title="Добавить в список">
-				<span class="ls-btn-icon">
+			<button class="dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+				<span class="ls-btn-icon" aria-hidden="true">
 					if props.ListStatus != "" {
 						@IconListStatus(props.ListStatus, "ls-icon")
 					} else {
@@ -240,10 +240,9 @@ templ novelActions(props NovelProps) {
 				class="dropdown novel-offline-dropdown"
 				data-novel-id={ props.Novel.ID }
 				data-state="none"
-				style="display: none;"
 			>
-				<button class="dropdown-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Чтение без интернета" title="Чтение без интернета">
-					<span class="of-btn-icon">
+				<button class="dropdown-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Скачать" title="Скачать">
+					<span class="of-btn-icon" aria-hidden="true">
 						@IconDownloadTray("of-icon of-icon-none")
 						@IconDownloadProgress("of-icon of-icon-progress")
 						@IconDownloadDone("of-icon of-icon-ready")

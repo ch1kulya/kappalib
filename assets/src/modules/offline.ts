@@ -6,6 +6,7 @@ import {
   getOfflineChapter,
   getOfflineJob,
   getOfflineNovel,
+  getOfflineState,
   getSavedChapters,
   listOfflineJobs,
   listOfflineNovels,
@@ -25,6 +26,17 @@ import {
 } from "./offline-db";
 import { profileManager } from "./profile";
 import { getProgressCookie, NovelProgress } from "./progress";
+import { mapStatus } from "./search";
+
+interface DropdownView {
+  icon: string;
+  label: string;
+  status: string;
+  download: string | null;
+  cancel: boolean;
+  retry: boolean;
+  remove: boolean;
+}
 
 interface DownloadEntry {
   novelId: string;
@@ -40,12 +52,7 @@ const UNTITLED_CHAPTER = "Без названия";
 const WATCHDOG_INTERVAL_MS = 10000;
 const WATCHDOG_STALL_MS = 20000;
 const BATCH_IDS_LIMIT = 50;
-
-const STATUS_LABELS: Record<string, string> = {
-  ongoing: "Онгоинг",
-  completed: "Завершено",
-  announced: "Анонс",
-};
+const UPDATE_CHECK_CONCURRENCY = 4;
 
 const ERROR_MESSAGES: Record<OfflineJobError, string> = {
   auth: "Войдите в аккаунт, чтобы продолжить загрузку",
@@ -147,8 +154,12 @@ function ensureChannel(): void {
     if (event.data.state.kind === "queued" || event.data.state.kind === "downloading") {
       startWatchdog();
     }
-    listeners.forEach((listener) => listener(event.data));
+    notifyListeners(event.data);
   };
+}
+
+function notifyListeners(message: OfflineBroadcast): void {
+  listeners.forEach((listener) => listener(message));
 }
 
 function subscribe(listener: OfflineListener): void {
@@ -200,6 +211,7 @@ async function requestDownload(novelId: string): Promise<void> {
 
   markOfflineData();
   void requestPersistentStorage();
+  notifyListeners({ novelId, state: { kind: "queued", done: 0, total: 0 } });
 
   try {
     await postCommand({ type: "download", novelId });
@@ -207,6 +219,8 @@ async function requestDownload(novelId: string): Promise<void> {
     trackEvent("offline_download", { novel_id: novelId });
   } catch (err) {
     console.error("Failed to start offline download", err);
+    const state = await getOfflineState(novelId).catch((): OfflineState => ({ kind: "none" }));
+    notifyListeners({ novelId, state });
     alert("Не удалось начать загрузку. Обновите страницу и попробуйте снова");
   }
 }
@@ -254,12 +268,6 @@ function percentOf(done: number, total: number): number {
 function readingPercent(chapterNum: number, total: number): number {
   if (chapterNum <= 0 || total <= 0) return 0;
   return Math.min(100, Math.max(1, Math.floor((chapterNum / total) * 100)));
-}
-
-function mapStatus(status: string): string {
-  const label = STATUS_LABELS[status.toLowerCase()];
-  if (label) return label;
-  return status ? status[0].toUpperCase() + status.slice(1) : status;
 }
 
 function isHttpUrl(value: string | null): value is string {
@@ -353,10 +361,13 @@ async function renderOfflineReader(root: HTMLElement): Promise<void> {
     return;
   }
 
+  const saved = await getSavedChapters(novel.id);
+  const available = novel.toc.filter((entry) => saved.has(entry.id));
+  const index = available.findIndex((entry) => entry.id === chapter.id);
+  const prev = index > 0 ? available[index - 1] : undefined;
+  const next = index >= 0 ? available[index + 1] : undefined;
+
   const fragment = cloneTemplate("tpl-offline-chapter");
-  const index = novel.toc.findIndex((entry) => entry.id === chapter.id);
-  const prev = index > 0 ? novel.toc[index - 1] : undefined;
-  const next = index >= 0 ? novel.toc[index + 1] : undefined;
 
   const tracker = requireElement(fragment, "#reading-tracker");
   tracker.dataset.novelId = novel.id;
@@ -539,83 +550,86 @@ function createTocItem(novelId: string, entry: OfflineTocEntry, available: boole
   return item;
 }
 
-interface DropdownItems {
-  download: string | null;
-  cancel: boolean;
-  retry: boolean;
-  remove: boolean;
-}
-
-function dropdownItems(state: OfflineState, newChapters: number): DropdownItems {
+function dropdownView(state: OfflineState, newChapters: number): DropdownView {
   switch (state.kind) {
     case "none":
-      return { download: "Скачать новеллу", cancel: false, retry: false, remove: false };
+      return {
+        icon: "none",
+        label: "Скачать",
+        status: "",
+        download: "Скачать новеллу",
+        cancel: false,
+        retry: false,
+        remove: false,
+      };
     case "queued":
+      return {
+        icon: "progress",
+        label: "В очереди",
+        status: "В очереди на загрузку",
+        download: null,
+        cancel: true,
+        retry: false,
+        remove: false,
+      };
     case "downloading":
-      return { download: null, cancel: true, retry: false, remove: false };
+      return {
+        icon: "progress",
+        label: `Загрузка ${percentOf(state.done, state.total)}%`,
+        status: state.total > 0
+          ? `Загружено ${state.done} из ${state.total}`
+          : "Подготовка загрузки…",
+        download: null,
+        cancel: true,
+        retry: false,
+        remove: false,
+      };
     case "error":
-      return { download: null, cancel: false, retry: true, remove: true };
+      return {
+        icon: "error",
+        label: "Ошибка",
+        status: ERROR_MESSAGES[state.error],
+        download: null,
+        cancel: false,
+        retry: true,
+        remove: true,
+      };
     case "ready": {
-      let download: string | null = null;
-      if (state.saved < state.total) {
-        download = "Докачать";
-      } else if (newChapters > 0) {
-        download = `Скачать новые главы (${newChapters})`;
-      }
-      return { download, cancel: false, retry: false, remove: true };
-    }
-  }
-}
-
-function dropdownStatus(state: OfflineState, newChapters: number): string {
-  switch (state.kind) {
-    case "none":
-      return "";
-    case "queued":
-      return "В очереди на загрузку";
-    case "downloading":
-      return state.total > 0
-        ? `Загружено ${state.done} из ${state.total}`
-        : "Подготовка загрузки…";
-    case "error":
-      return ERROR_MESSAGES[state.error];
-    case "ready": {
-      const saved = state.saved < state.total
-        ? `${state.saved} из ${state.total}`
-        : chaptersLabel(state.saved);
+      const partial = state.saved < state.total;
+      const saved = partial ? `${state.saved} из ${state.total}` : chaptersLabel(state.saved);
       const details = `${saved} · ${formatBytes(state.bytes)}`;
-      return newChapters > 0 ? `${details}. Новых глав: ${newChapters}` : details;
+      if (partial) {
+        return {
+          icon: "update",
+          label: "Докачать",
+          status: details,
+          download: "Докачать",
+          cancel: false,
+          retry: false,
+          remove: true,
+        };
+      }
+      if (newChapters > 0) {
+        return {
+          icon: "update",
+          label: "Обновить",
+          status: `${details}. Новых глав: ${newChapters}`,
+          download: `Скачать новые главы (${newChapters})`,
+          cancel: false,
+          retry: false,
+          remove: true,
+        };
+      }
+      return {
+        icon: "ready",
+        label: "Скачано",
+        status: details,
+        download: null,
+        cancel: false,
+        retry: false,
+        remove: true,
+      };
     }
-  }
-}
-
-function dropdownButtonLabel(state: OfflineState, newChapters: number): string {
-  switch (state.kind) {
-    case "none":
-      return "Скачать";
-    case "queued":
-      return "В очереди";
-    case "downloading":
-      return `Загрузка ${percentOf(state.done, state.total)}%`;
-    case "error":
-      return "Ошибка";
-    case "ready":
-      if (state.saved < state.total) return "Докачать";
-      return newChapters > 0 ? "Обновить" : "Скачано";
-  }
-}
-
-function dropdownIconState(state: OfflineState, newChapters: number): string {
-  switch (state.kind) {
-    case "none":
-      return "none";
-    case "queued":
-    case "downloading":
-      return "progress";
-    case "error":
-      return "error";
-    case "ready":
-      return state.saved < state.total || newChapters > 0 ? "update" : "ready";
   }
 }
 
@@ -625,6 +639,7 @@ function initOfflineDropdown(root: HTMLElement): void {
 
   const status = field(root, "status");
   const menu = requireElement(root, ".dropdown-menu");
+  const button = requireElement(root, ".dropdown-btn");
   const label = requireElement(root, ".of-btn-label");
   const downloadItem = requireElement(root, "[data-item=\"download\"]");
   const downloadLabel = field(downloadItem, "downloadLabel");
@@ -646,22 +661,22 @@ function initOfflineDropdown(root: HTMLElement): void {
   };
 
   const render = () => {
-    const newChapters = newChapterCount();
+    const view = dropdownView(state, newChapterCount());
     const progress = state.kind === "queued" || state.kind === "downloading"
       ? percentOf(state.done, state.total)
       : 0;
-    root.dataset.state = dropdownIconState(state, newChapters);
-    label.textContent = dropdownButtonLabel(state, newChapters);
+    root.dataset.state = view.icon;
     root.style.setProperty("--of-progress", String(progress));
-    const statusText = dropdownStatus(state, newChapters);
-    status.textContent = statusText;
-    status.style.display = statusText ? "" : "none";
-    const items = dropdownItems(state, newChapters);
-    if (items.download) downloadLabel.textContent = items.download;
-    downloadItem.style.display = items.download ? "" : "none";
-    cancelItem.style.display = items.cancel ? "" : "none";
-    retryItem.style.display = items.retry ? "" : "none";
-    deleteItem.style.display = items.remove ? "" : "none";
+    label.textContent = view.label;
+    button.setAttribute("aria-label", view.label);
+    button.title = view.label;
+    status.textContent = view.status;
+    status.style.display = view.status ? "" : "none";
+    if (view.download) downloadLabel.textContent = view.download;
+    downloadItem.style.display = view.download ? "" : "none";
+    cancelItem.style.display = view.cancel ? "" : "none";
+    retryItem.style.display = view.retry ? "" : "none";
+    deleteItem.style.display = view.remove ? "" : "none";
   };
 
   const refresh = async () => {
@@ -699,7 +714,6 @@ function initOfflineDropdown(root: HTMLElement): void {
   });
 
   render();
-  root.style.display = "";
   refresh().catch((err) => console.error("Failed to load offline state", err));
 }
 
@@ -804,18 +818,38 @@ function fillDownloadItem(
 }
 
 async function fetchChapterCounts(ids: string[]): Promise<Map<string, number>> {
-  const counts = new Map<string, number>();
+  const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += BATCH_IDS_LIMIT) {
+    chunks.push(ids.slice(i, i + BATCH_IDS_LIMIT));
+  }
+  const pages = await Promise.all(chunks.map(async (chunk) => {
     const res = await fetch(`${API_URL}/novels/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: ids.slice(i, i + BATCH_IDS_LIMIT) }),
+      body: JSON.stringify({ ids: chunk }),
     });
-    if (!res.ok) continue;
+    if (!res.ok) return [];
     const novels: { id: string; chapter_count: number }[] = await res.json();
-    novels.forEach((novel) => counts.set(novel.id, novel.chapter_count));
-  }
-  return counts;
+    return novels;
+  }));
+  return new Map(pages.flat().map((novel) => [novel.id, novel.chapter_count]));
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  task: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await task(items[index]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }
 
 async function fetchNewChapterCount(novel: OfflineNovel): Promise<number> {
@@ -897,14 +931,18 @@ function initDownloadsPage(): void {
     if (!navigator.onLine || novels.length === 0) return;
     const counts = await fetchChapterCounts(novels.map((novel) => novel.id));
     const candidates = novels.filter((novel) => (counts.get(novel.id) ?? 0) > novel.toc.length);
-    for (const novel of candidates) {
-      const count = await fetchNewChapterCount(novel);
-      if (count > 0) {
-        newChapters.set(novel.id, count);
+    const found = await mapWithConcurrency(
+      candidates,
+      UPDATE_CHECK_CONCURRENCY,
+      (novel) => fetchNewChapterCount(novel).catch(() => 0),
+    );
+    candidates.forEach((novel, index) => {
+      if (found[index] > 0) {
+        newChapters.set(novel.id, found[index]);
       } else {
         newChapters.delete(novel.id);
       }
-    }
+    });
     render();
   };
 
@@ -951,11 +989,15 @@ function initDownloadsPage(): void {
 }
 
 export function initOffline(): void {
-  if (!isOfflineSupported()) return;
+  const dropdowns = document.querySelectorAll<HTMLElement>(".novel-offline-dropdown[data-novel-id]");
+  if (!isOfflineSupported()) {
+    dropdowns.forEach((root) => {
+      root.style.display = "none";
+    });
+    return;
+  }
 
-  document
-    .querySelectorAll<HTMLElement>(".novel-offline-dropdown[data-novel-id]")
-    .forEach((root) => initOfflineDropdown(root));
+  dropdowns.forEach((root) => initOfflineDropdown(root));
   initDownloadsPage();
 
   if (!hasOfflineData()) return;
