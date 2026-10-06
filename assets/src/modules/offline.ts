@@ -212,7 +212,8 @@ function stopWatchdog(): void {
   watchdogTimer = null;
 }
 
-async function requestDownload(novelId: string): Promise<void> {
+async function requestDownloads(novelIds: string[]): Promise<void> {
+  if (novelIds.length === 0) return;
   if (!profileManager.isLoggedIn()) {
     alert("Войдите в аккаунт, чтобы скачать новеллу");
     return;
@@ -220,16 +221,22 @@ async function requestDownload(novelId: string): Promise<void> {
 
   markOfflineData();
   void requestPersistentStorage();
-  notifyListeners({ novelId, state: { kind: "queued", done: 0, total: 0 } });
+  novelIds.forEach((novelId) => {
+    notifyListeners({ novelId, state: { kind: "queued", done: 0, total: 0 } });
+  });
 
   try {
-    await postCommand({ type: "download", novelId });
+    for (const novelId of novelIds) {
+      await postCommand({ type: "download", novelId });
+      trackEvent("offline_download", { novel_id: novelId });
+    }
     startWatchdog();
-    trackEvent("offline_download", { novel_id: novelId });
   } catch (err) {
     console.error("Failed to start offline download", err);
-    const state = await getOfflineState(novelId).catch((): OfflineState => ({ kind: "none" }));
-    notifyListeners({ novelId, state });
+    await Promise.all(novelIds.map(async (novelId) => {
+      const state = await getOfflineState(novelId).catch((): OfflineState => ({ kind: "none" }));
+      notifyListeners({ novelId, state });
+    }));
     alert("Не удалось начать загрузку. Обновите страницу и попробуйте снова");
   }
 }
@@ -237,7 +244,7 @@ async function requestDownload(novelId: string): Promise<void> {
 async function runAction(action: string | undefined, novelId: string): Promise<void> {
   switch (action) {
     case "download":
-      await requestDownload(novelId);
+      await requestDownloads([novelId]);
       return;
     case "cancel":
       await sendCommand({ type: "cancel", novelId });
@@ -622,7 +629,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
         return {
           icon: "update",
           label: "Обновить",
-          status: `${details}. Новых глав: ${newChapters}`,
+          status: details,
           download: "Скачать новые главы",
           cancel: false,
           retry: false,
@@ -739,7 +746,6 @@ function fillItemState(
   item: HTMLElement,
   novelId: string,
   state: OfflineState,
-  newChapters: number,
   progress: Record<string, NovelProgress>,
 ): void {
   const text = field(item, "progress");
@@ -784,10 +790,6 @@ function fillItemState(
     buttons.push(itemButton("cancel", "Отменить"));
   } else if (state.kind === "error") {
     buttons.push(itemButton("download", "Повторить"));
-  } else if (state.kind === "ready" && state.saved < state.total) {
-    buttons.push(itemButton("download", "Докачать"));
-  } else if (state.kind === "ready" && newChapters > 0) {
-    buttons.push(itemButton("download", "Скачать новые главы"));
   }
 
   const actions = field(item, "actions");
@@ -798,7 +800,6 @@ function fillItemState(
 function fillDownloadItem(
   item: HTMLElement,
   entry: DownloadEntry,
-  newChapters: number,
   progress: Record<string, NovelProgress>,
 ): void {
   const { novelId, novel, job } = entry;
@@ -823,7 +824,7 @@ function fillDownloadItem(
     setCover(img, novel?.coverUrl ?? null, novel?.title ?? "");
   }
 
-  fillItemState(item, novelId, offlineStateOf(novel, job), newChapters, progress);
+  fillItemState(item, novelId, offlineStateOf(novel, job), progress);
 }
 
 async function fetchChapterCounts(ids: string[]): Promise<Map<string, number>> {
@@ -874,10 +875,18 @@ function initDownloadsPage(): void {
   const list = document.getElementById("downloads-list");
   const empty = document.getElementById("downloads-empty");
   const unsupported = document.getElementById("downloads-unsupported");
+  const summaryRow = document.getElementById("downloads-summary-row");
   const summary = document.getElementById("downloads-summary");
+  const resumeAll = document.getElementById("downloads-resume-all");
+  const updateAll = document.getElementById("downloads-update-all");
   const clearAll = document.getElementById("downloads-clear-all");
   const help = document.getElementById("downloads-help");
-  if (!library || !list || !empty || !unsupported || !summary || !clearAll || !help) return;
+  if (
+    !library || !list || !empty || !unsupported || !summaryRow || !summary
+    || !resumeAll || !updateAll || !clearAll || !help
+  ) {
+    return;
+  }
   if (library.style.display === "none") return;
 
   if (!isOfflineSupported()) {
@@ -890,6 +899,16 @@ function initDownloadsPage(): void {
   const newChapters = new Map<string, number>();
   let entries: DownloadEntry[] = [];
 
+  const idleNovels = (): OfflineNovel[] => entries.flatMap((entry) => (entry.novel && !entry.job ? [entry.novel] : []));
+  const partialIds = (): string[] =>
+    idleNovels()
+      .filter((novel) => novel.savedCount < novel.toc.length)
+      .map((novel) => novel.id);
+  const updatableIds = (): string[] =>
+    idleNovels()
+      .filter((novel) => novel.savedCount >= novel.toc.length && (newChapters.get(novel.id) ?? 0) > 0)
+      .map((novel) => novel.id);
+
   const render = () => {
     const progress = getProgressCookie().novels;
     const seen = new Set<string>();
@@ -900,7 +919,7 @@ function initDownloadsPage(): void {
         item = requireElement(cloneTemplate("tpl-download-item"), ".download-item");
         items.set(entry.novelId, item);
       }
-      fillDownloadItem(item, entry, newChapters.get(entry.novelId) ?? 0, progress);
+      fillDownloadItem(item, entry, progress);
       list.appendChild(item);
       seen.add(entry.novelId);
     });
@@ -918,8 +937,10 @@ function initDownloadsPage(): void {
     empty.style.display = hasEntries ? "none" : "";
     clearAll.style.display = hasEntries ? "" : "none";
     help.style.display = hasEntries ? "none" : "";
-    summary.style.display = hasEntries ? "" : "none";
+    summaryRow.style.display = hasEntries ? "" : "none";
     summary.textContent = `${novelsLabel(novels.length)} · ${formatBytes(totalBytes)}`;
+    resumeAll.style.display = partialIds().length > 0 ? "" : "none";
+    updateAll.style.display = updatableIds().length > 0 ? "" : "none";
   };
 
   const refresh = async () => {
@@ -936,7 +957,7 @@ function initDownloadsPage(): void {
   };
 
   const checkUpdates = async () => {
-    const novels = entries.flatMap((entry) => (entry.novel && !entry.job ? [entry.novel] : []));
+    const novels = idleNovels();
     if (!navigator.onLine || novels.length === 0) return;
     const counts = await fetchChapterCounts(novels.map((novel) => novel.id));
     const candidates = novels.filter((novel) => (counts.get(novel.id) ?? 0) > novel.toc.length);
@@ -973,6 +994,14 @@ function initDownloadsPage(): void {
     }
   });
 
+  const startBulk = (button: HTMLElement, novelIds: string[]) => {
+    if (novelIds.length === 0) return;
+    button.style.display = "none";
+    void requestDownloads(novelIds);
+  };
+  resumeAll.addEventListener("click", () => startBulk(resumeAll, partialIds()));
+  updateAll.addEventListener("click", () => startBulk(updateAll, updatableIds()));
+
   clearAll.addEventListener("click", () => {
     if (!confirm("Удалить все сохранённые новеллы с устройства?")) return;
     trackEvent("offline_delete_all");
@@ -984,7 +1013,7 @@ function initDownloadsPage(): void {
     if (novelId && (state.kind === "queued" || state.kind === "downloading")) {
       const item = items.get(novelId);
       if (item) {
-        fillItemState(item, novelId, state, newChapters.get(novelId) ?? 0, getProgressCookie().novels);
+        fillItemState(item, novelId, state, getProgressCookie().novels);
         return;
       }
     }

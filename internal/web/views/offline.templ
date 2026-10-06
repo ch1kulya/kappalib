@@ -29,7 +29,13 @@ templ Downloads(props BaseProps) {
 						>Как скачать?</button>
 					</div>
 				</div>
-				<p class="downloads-summary" id="downloads-summary" style="display: none;"></p>
+				<div class="downloads-summary-row" id="downloads-summary-row" style="display: none;">
+					<p class="downloads-summary" id="downloads-summary"></p>
+					<div class="downloads-bulk-actions">
+						<button type="button" class="btn-text" id="downloads-resume-all" style="display: none;">Докачать</button>
+						<button type="button" class="btn-text" id="downloads-update-all" style="display: none;">Скачать новые главы</button>
+					</div>
+				</div>
 				<div class="history-empty" id="downloads-empty" style="display: none;">
 					<p>Загруженных новелл нет</p>
 				</div>
