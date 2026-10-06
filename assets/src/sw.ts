@@ -335,7 +335,7 @@ async function cacheImages(cacheName: string, urls: string[], signal: AbortSigna
 
 async function fetchImage(url: string, signal: AbortSignal): Promise<Response> {
   try {
-    return await fetch(url, { mode: "cors", credentials: "omit", signal });
+    return await fetch(url, { mode: "cors", credentials: "omit", cache: "no-store", signal });
   } catch (err) {
     if (signal.aborted) throw err;
     return fetch(url, { mode: "no-cors", credentials: "omit", signal });
