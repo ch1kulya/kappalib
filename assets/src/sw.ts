@@ -160,6 +160,7 @@ self.addEventListener("activate", (event) => {
           .filter((key) => key.startsWith(STATIC_CACHE_PREFIX) && key !== STATIC_CACHE)
           .map((key) => caches.delete(key)),
       );
+      await removeFontStylesFromFilesCache();
       if (self.registration.navigationPreload) {
         await self.registration.navigationPreload.enable();
       }
@@ -275,6 +276,17 @@ async function cacheFirst(event: FetchEvent, cacheName: string, limit?: number):
     );
   }
   return response;
+}
+
+async function removeFontStylesFromFilesCache(): Promise<void> {
+  if (!(await caches.has(FONTS_CACHE))) return;
+  const cache = await caches.open(FONTS_CACHE);
+  const requests = await cache.keys();
+  await Promise.all(
+    requests
+      .filter((request) => new URL(request.url).pathname.endsWith(".css"))
+      .map((request) => cache.delete(request)),
+  );
 }
 
 async function trimCache(cache: Cache, limit: number): Promise<void> {
@@ -534,6 +546,11 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
     updatedAt: Date.now(),
   };
   await putOfflineNovel(novel);
+  if (existing?.coverUrl && existing.coverUrl !== novel.coverUrl) {
+    await removeCover(existing.coverUrl).catch((err) => {
+      console.warn("Failed to remove stale cover", err);
+    });
+  }
 
   novel = await removeOfflineChapters(novel, replaced);
   replaced.forEach((id) => saved.delete(id));
@@ -596,11 +613,6 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
     complete: novel.toc.every((entry) => saved.has(entry.id)),
     updatedAt: Date.now(),
   });
-  if (existing?.coverUrl && existing.coverUrl !== novel.coverUrl) {
-    await removeCover(existing.coverUrl).catch((err) => {
-      console.warn("Failed to remove stale cover", err);
-    });
-  }
   await cacheCover(novel.coverUrl);
 }
 
