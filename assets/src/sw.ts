@@ -3,6 +3,7 @@ import {
   clearOfflineData,
   deleteOfflineJob,
   deleteOfflineNovel,
+  forEachOfflineChapter,
   getOfflineChapter,
   getOfflineJob,
   getOfflineNovel,
@@ -320,9 +321,9 @@ async function cacheImages(cacheName: string, urls: string[], signal: AbortSigna
       const url = urls[next++];
       try {
         if (await cache.match(url)) continue;
-        const response = await fetchImage(url, signal);
+        const response = await fetch(url, { mode: "cors", credentials: "omit", cache: "no-store", signal });
         if (signal.aborted) return;
-        if (response.ok || response.type === "opaque") {
+        if (response.ok) {
           await cache.put(url, response);
         }
       } catch (err) {
@@ -331,15 +332,6 @@ async function cacheImages(cacheName: string, urls: string[], signal: AbortSigna
     }
   };
   await Promise.all(Array.from({ length: Math.min(MEDIA_CONCURRENCY, urls.length) }, worker));
-}
-
-async function fetchImage(url: string, signal: AbortSignal): Promise<Response> {
-  try {
-    return await fetch(url, { mode: "cors", credentials: "omit", cache: "no-store", signal });
-  } catch (err) {
-    if (signal.aborted) throw err;
-    return fetch(url, { mode: "no-cors", credentials: "omit", signal });
-  }
 }
 
 async function removeCover(coverUrl: string | null): Promise<void> {
@@ -375,15 +367,23 @@ function normalizeMediaUrl(rawUrl: string | null): string | null {
   }
 }
 
-function chapterMediaUrls(chapter: ApiChapter): string[] {
+function chapterMediaUrls(chapter: OfflineChapter): string[] {
   const urls: string[] = [];
   for (const match of chapter.content.matchAll(IMG_SRC_RE)) {
     const url = normalizeMediaUrl(match[2].replace(/&amp;/g, "&"));
     if (url) urls.push(url);
   }
-  const logo = normalizeMediaUrl(chapter.source?.logo_url ?? null);
+  const logo = normalizeMediaUrl(chapter.source?.logoUrl ?? null);
   if (logo) urls.push(logo);
   return urls;
+}
+
+async function savedChapterMedia(novelId: string): Promise<string[]> {
+  const media = new Set<string>();
+  await forEachOfflineChapter(novelId, (chapter) => {
+    chapterMediaUrls(chapter).forEach((url) => media.add(url));
+  });
+  return [...media];
 }
 
 function parseCommand(data: unknown): OfflineCommand | null {
@@ -591,6 +591,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
   );
   const toc = sortToc([...serverToc, ...kept]);
   const tocIds = new Set(toc.map((entry) => entry.id));
+  const media = existing ? existing.media ?? (await savedChapterMedia(novelId)) : [];
 
   throwIfAborted(signal);
   let novel: OfflineNovel = {
@@ -602,7 +603,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
     status: apiNovel.status,
     ageRating: apiNovel.age_rating,
     coverUrl: normalizeCover(apiNovel.cover_url),
-    media: existing?.media ?? [],
+    media,
     toc,
     savedCount: saved.size,
     bytes: existing?.bytes ?? 0,
@@ -617,7 +618,6 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
     });
   }
   const coverTask = cacheImages(COVERS_CACHE, novel.coverUrl ? [novel.coverUrl] : [], signal);
-  let mediaTask: Promise<void> = Promise.resolve();
   try {
     novel = await removeOfflineChapters(novel, replaced);
     replaced.forEach((id) => saved.delete(id));
@@ -627,6 +627,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
     job.updatedAt = Date.now();
     await putOfflineJob(job);
     broadcast(novelId, offlineStateOf(undefined, job));
+    await cacheImages(MEDIA_CACHE, media, signal);
 
     const firstMissing = toc.find((entry) => !saved.has(entry.id));
     let after: number | null = firstMissing ? firstMissing.num - 1 : null;
@@ -637,11 +638,12 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
         throw new DownloadError("unknown");
       }
 
-      const freshChapters = page.chapters.filter((c) => c.novel_id === novelId && !saved.has(c.id));
-      const fresh = freshChapters.map(toOfflineChapter);
+      const fresh = page.chapters
+        .filter((c) => c.novel_id === novelId && !saved.has(c.id))
+        .map(toOfflineChapter);
 
       if (fresh.length > 0) {
-        const batchMedia = [...new Set(freshChapters.flatMap(chapterMediaUrls))];
+        const batchMedia = [...new Set(fresh.flatMap(chapterMediaUrls))];
         const knownMedia = new Set(novel.media ?? []);
         const newMedia = batchMedia.filter((url) => !knownMedia.has(url));
         const added = fresh.filter((c) => !tocIds.has(c.id));
@@ -672,9 +674,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
         job.total = progress.total;
         job.updatedAt = progress.updatedAt;
         broadcast(novelId, offlineStateOf(undefined, job));
-        if (batchMedia.length > 0) {
-          mediaTask = mediaTask.then(() => cacheImages(MEDIA_CACHE, batchMedia, signal));
-        }
+        await cacheImages(MEDIA_CACHE, batchMedia, signal);
       }
 
       after = page.next_after;
@@ -687,7 +687,7 @@ async function downloadNovel(job: OfflineJob, signal: AbortSignal): Promise<void
       updatedAt: Date.now(),
     });
   } finally {
-    await Promise.all([coverTask, mediaTask]);
+    await coverTask;
   }
 }
 

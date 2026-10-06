@@ -229,6 +229,31 @@ export async function getSavedChapters(novelId: string): Promise<Map<string, num
   });
 }
 
+export async function forEachOfflineChapter(
+  novelId: string,
+  visit: (chapter: OfflineChapter) => void,
+): Promise<void> {
+  const db = await openOfflineDb();
+  const index = db
+    .transaction(CHAPTERS, "readonly")
+    .objectStore(CHAPTERS)
+    .index(BY_NOVEL);
+
+  return new Promise((resolve, reject) => {
+    const request = index.openCursor(novelRange(novelId));
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) {
+        resolve();
+        return;
+      }
+      visit(cursor.value as OfflineChapter);
+      cursor.continue();
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
 export async function saveOfflineChapters(
   novel: OfflineNovel,
   chapters: OfflineChapter[],
