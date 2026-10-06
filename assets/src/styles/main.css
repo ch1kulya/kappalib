@@ -5510,6 +5510,18 @@ td:first-child {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.5rem;
+  container-type: inline-size;
+}
+
+.novel-actions-row .dropdown {
+  position: static;
+}
+
+.novel-actions-row .dropdown-menu {
+  left: 0;
+  right: 0;
+  min-width: 0;
+  text-align: left;
 }
 
 .novel-list-dropdown {
@@ -5549,15 +5561,6 @@ td:first-child {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.novel-list-dropdown .dropdown-menu {
-  left: 0;
-  right: auto;
-}
-
-.novel-actions-row .dropdown-menu {
-  text-align: left;
 }
 
 .ls-item-label {
@@ -5618,13 +5621,33 @@ td:first-child {
 }
 
 /* Offline Downloads */
-.novel-offline-dropdown {
-  position: static;
-}
-
 .novel-offline-dropdown .dropdown-btn {
   width: 32px;
   padding: 0;
+}
+
+.of-btn-label {
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container (min-width: 300px) {
+  .novel-offline-dropdown {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .novel-offline-dropdown .dropdown-btn {
+    width: 100%;
+    gap: 0.4rem;
+    padding: 0 0.75rem;
+  }
+
+  .of-btn-label {
+    display: inline;
+  }
 }
 
 .novel-offline-dropdown[data-state="progress"] .dropdown-btn,
@@ -5638,12 +5661,6 @@ td:first-child {
 
 .novel-offline-dropdown[data-state="error"] .dropdown-btn {
   color: var(--color-danger);
-}
-
-.novel-offline-dropdown .dropdown-menu {
-  left: 0;
-  right: 0;
-  min-width: 0;
 }
 
 .of-btn-icon {

@@ -606,6 +606,22 @@ function dropdownStatus(state: OfflineState, newChapters: number): string {
   }
 }
 
+function dropdownButtonLabel(state: OfflineState, newChapters: number): string {
+  switch (state.kind) {
+    case "none":
+      return "Скачать";
+    case "queued":
+      return "В очереди";
+    case "downloading":
+      return `Загрузка ${percentOf(state.done, state.total)}%`;
+    case "error":
+      return "Ошибка";
+    case "ready":
+      if (state.saved < state.total) return "Докачать";
+      return newChapters > 0 ? "Обновить" : "Скачано";
+  }
+}
+
 function dropdownIconState(state: OfflineState, newChapters: number): string {
   switch (state.kind) {
     case "none":
@@ -626,6 +642,7 @@ function initOfflineDropdown(root: HTMLElement): void {
 
   const status = field(root, "status");
   const actions = field(root, "actions");
+  const label = requireElement(root, ".of-btn-label");
   const serverIds = Array.from(
     document.querySelectorAll<HTMLElement>("#chapters-list .chapter-item[data-chapter-id]"),
   )
@@ -646,6 +663,7 @@ function initOfflineDropdown(root: HTMLElement): void {
       ? percentOf(state.done, state.total)
       : 0;
     root.dataset.state = dropdownIconState(state, newChapters);
+    label.textContent = dropdownButtonLabel(state, newChapters);
     root.style.setProperty("--of-progress", String(progress));
     const statusText = dropdownStatus(state, newChapters);
     status.textContent = statusText;
