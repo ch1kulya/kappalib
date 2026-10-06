@@ -31,6 +31,7 @@ export interface OfflineNovel {
   status: string;
   ageRating: string | null;
   coverUrl: string | null;
+  media?: string[];
   toc: OfflineTocEntry[];
   savedCount: number;
   bytes: number;
