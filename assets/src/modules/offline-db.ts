@@ -1,4 +1,3 @@
-export const OFFLINE_CHANNEL = "kappalib-offline";
 export const OFFLINE_FLAG_KEY = "kappalib_offline_enabled";
 export const NOVEL_ID_RE = /^nvl_[a-z0-9]{8}$/;
 export const OFFLINE_NOVEL_PATH_RE = /^\/(nvl_[a-z0-9]+)\/?$/;

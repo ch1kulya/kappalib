@@ -10,7 +10,6 @@ import {
   getSavedChapters,
   listOfflineJobs,
   listOfflineNovels,
-  OFFLINE_CHANNEL,
   OFFLINE_CHAPTER_PATH_RE,
   OFFLINE_FLAG_KEY,
   OFFLINE_NOVEL_PATH_RE,
@@ -31,7 +30,7 @@ import { mapStatus } from "./search";
 interface DropdownView {
   icon: string;
   label: string;
-  status: string;
+  hint: string;
   download: string | null;
   cancel: boolean;
   retry: boolean;
@@ -55,6 +54,7 @@ const WATCHDOG_STALL_MS = 20000;
 const BATCH_IDS_LIMIT = 50;
 const UPDATE_CHECK_CONCURRENCY = 4;
 const WORKER_ACTIVATION_TIMEOUT_MS = 30000;
+const STATE_SYNC_INTERVAL_MS = 3000;
 
 const ERROR_MESSAGES: Record<OfflineJobError, string> = {
   auth: "Войдите в аккаунт, чтобы продолжить загрузку",
@@ -69,15 +69,15 @@ const sizeFormatter = new Intl.NumberFormat("ru-RU", {
 });
 
 const listeners = new Set<OfflineListener>();
-let channel: BroadcastChannel | null = null;
+let listening = false;
+let pendingCommands = 0;
 let lastWorkerActivity = Date.now();
 let watchdogTimer: number | null = null;
 
 function isOfflineSupported(): boolean {
   return window.isSecureContext
     && "serviceWorker" in navigator
-    && typeof indexedDB !== "undefined"
-    && typeof BroadcastChannel !== "undefined";
+    && typeof indexedDB !== "undefined";
 }
 
 function hasOfflineData(): boolean {
@@ -139,12 +139,17 @@ function waitForActiveWorker(
 }
 
 async function postCommand(command: OfflineCommand): Promise<void> {
-  const registration = await navigator.serviceWorker.register(
-    SERVICE_WORKER_URL,
-    { scope: "/" },
-  );
-  const worker = await waitForActiveWorker(registration);
-  worker.postMessage(command);
+  pendingCommands++;
+  try {
+    const registration = await navigator.serviceWorker.register(
+      SERVICE_WORKER_URL,
+      { scope: "/" },
+    );
+    const worker = await waitForActiveWorker(registration);
+    worker.postMessage(command);
+  } finally {
+    pendingCommands--;
+  }
 }
 
 async function sendCommand(command: OfflineCommand): Promise<void> {
@@ -156,15 +161,41 @@ async function sendCommand(command: OfflineCommand): Promise<void> {
   }
 }
 
-function ensureChannel(): void {
-  if (channel) return;
-  channel = new BroadcastChannel(OFFLINE_CHANNEL);
-  channel.onmessage = (event: MessageEvent<OfflineBroadcast>) => {
+function isOfflineBroadcast(data: unknown): data is OfflineBroadcast {
+  if (typeof data !== "object" || data === null) return false;
+  const { novelId, state } = data as { novelId?: unknown; state?: { kind?: unknown } };
+  return (novelId === null || typeof novelId === "string")
+    && typeof state === "object"
+    && state !== null
+    && typeof state.kind === "string";
+}
+
+function listenToWorker(): void {
+  if (listening) return;
+  listening = true;
+  navigator.serviceWorker.addEventListener("message", (event: MessageEvent) => {
+    if (!isOfflineBroadcast(event.data)) return;
     lastWorkerActivity = Date.now();
     if (event.data.state.kind === "queued" || event.data.state.kind === "downloading") {
       startWatchdog();
     }
     notifyListeners(event.data);
+  });
+  navigator.serviceWorker.startMessages();
+}
+
+function createStateSync(sync: () => Promise<void>): (active: boolean) => void {
+  let timer: number | null = null;
+  return (active: boolean) => {
+    if (active && timer === null) {
+      timer = window.setInterval(() => {
+        if (pendingCommands > 0) return;
+        sync().catch((err) => console.warn("Failed to sync offline state", err));
+      }, STATE_SYNC_INTERVAL_MS);
+    } else if (!active && timer !== null) {
+      window.clearInterval(timer);
+      timer = null;
+    }
   };
 }
 
@@ -173,7 +204,7 @@ function notifyListeners(message: OfflineBroadcast): void {
 }
 
 function subscribe(listener: OfflineListener): void {
-  ensureChannel();
+  listenToWorker();
   listeners.add(listener);
 }
 
@@ -197,7 +228,7 @@ async function resumePendingJobs(): Promise<void> {
 
 function startWatchdog(): void {
   if (watchdogTimer !== null) return;
-  ensureChannel();
+  listenToWorker();
   lastWorkerActivity = Date.now();
   watchdogTimer = window.setInterval(() => {
     if (!navigator.onLine) return;
@@ -580,7 +611,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
       return {
         icon: "none",
         label: "Скачать",
-        status: "",
+        hint: "Скачать для чтения без интернета",
         download: "Скачать новеллу",
         cancel: false,
         retry: false,
@@ -591,7 +622,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
       return {
         icon: "progress",
         label: "В очереди",
-        status: "В очереди на загрузку",
+        hint: "В очереди на загрузку",
         download: null,
         cancel: true,
         retry: false,
@@ -602,7 +633,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
       return {
         icon: "progress",
         label: `Загрузка ${percentOf(state.done, state.total)}%`,
-        status: state.total > 0
+        hint: state.total > 0
           ? `Загружено ${state.done} из ${state.total}`
           : "Подготовка загрузки…",
         download: null,
@@ -615,7 +646,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
       return {
         icon: "error",
         label: "Ошибка",
-        status: ERROR_MESSAGES[state.error],
+        hint: ERROR_MESSAGES[state.error],
         download: null,
         cancel: false,
         retry: true,
@@ -630,7 +661,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
         return {
           icon: "update",
           label: "Докачать",
-          status: details,
+          hint: details,
           download: "Докачать",
           cancel: false,
           retry: false,
@@ -642,7 +673,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
         return {
           icon: "update",
           label: "Обновить",
-          status: details,
+          hint: details,
           download: "Скачать новые главы",
           cancel: false,
           retry: false,
@@ -653,7 +684,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
       return {
         icon: "ready",
         label: "Скачано",
-        status: details,
+        hint: details,
         download: null,
         cancel: false,
         retry: false,
@@ -668,7 +699,6 @@ function initOfflineDropdown(root: HTMLElement): void {
   const novelId = root.dataset.novelId;
   if (!novelId) return;
 
-  const status = field(root, "status");
   const menu = requireElement(root, ".dropdown-menu");
   const button = requireElement(root, ".dropdown-btn");
   const label = requireElement(root, ".of-btn-label");
@@ -701,15 +731,14 @@ function initOfflineDropdown(root: HTMLElement): void {
     root.style.setProperty("--of-progress", String(progress));
     label.textContent = view.label;
     button.setAttribute("aria-label", view.label);
-    button.title = view.label;
-    status.textContent = view.status;
-    status.style.display = view.status ? "" : "none";
+    button.title = view.hint;
     if (view.download) downloadLabel.textContent = view.download;
     downloadItem.style.display = view.download ? "" : "none";
     cancelItem.style.display = view.cancel ? "" : "none";
     retryItem.style.display = view.retry ? "" : "none";
     redownloadItem.style.display = view.redownload ? "" : "none";
     deleteItem.style.display = view.remove ? "" : "none";
+    syncWhileActive(state.kind === "queued" || state.kind === "downloading");
   };
 
   const refresh = async () => {
@@ -727,6 +756,7 @@ function initOfflineDropdown(root: HTMLElement): void {
     tocIds = novel ? new Set(novel.toc.map((entry) => entry.id)) : null;
     render();
   };
+  const syncWhileActive = createStateSync(refresh);
 
   menu.addEventListener("click", (e) => {
     const button = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
@@ -942,6 +972,7 @@ function initDownloadsPage(): void {
     summary.textContent = `${novelsLabel(novels.length)} · ${formatBytes(totalBytes)}`;
     resumeAll.style.display = partialIds().length > 0 ? "" : "none";
     updateAll.style.display = updatableIds().length > 0 ? "" : "none";
+    syncWhileActive(entries.some((entry) => entry.job && entry.job.status !== "error"));
   };
 
   const refresh = async () => {
@@ -956,6 +987,7 @@ function initDownloadsPage(): void {
     entries = [...pending, ...stored];
     render();
   };
+  const syncWhileActive = createStateSync(refresh);
 
   const checkUpdates = async () => {
     const novels = idleNovels();
@@ -1038,7 +1070,7 @@ export function initOffline(): void {
   navigator.serviceWorker
     .register(SERVICE_WORKER_URL, { scope: "/" })
     .catch((err) => console.warn("Service worker registration failed", err));
-  ensureChannel();
+  listenToWorker();
   window.addEventListener("online", () => void resumePendingJobs());
   if (navigator.onLine) void resumePendingJobs();
 }

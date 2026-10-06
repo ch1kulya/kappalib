@@ -5695,15 +5695,6 @@ td:first-child {
   transition: stroke-dashoffset 0.3s ease;
 }
 
-.of-status {
-  padding: 0.5rem 0.75rem 0.6rem;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.8rem;
-  line-height: 1.4;
-  color: var(--tertiary);
-}
-
 .header-offline {
   display: flex;
   align-items: center;

@@ -9,7 +9,6 @@ import {
   getSavedChapters,
   listOfflineJobs,
   NOVEL_ID_RE,
-  OFFLINE_CHANNEL,
   OFFLINE_CHAPTER_PATH_RE,
   OFFLINE_NOVEL_PATH_RE,
   OfflineBroadcast,
@@ -114,11 +113,11 @@ class DownloadError extends Error {
   }
 }
 
-const channel = new BroadcastChannel(OFFLINE_CHANNEL);
 const queue: string[] = [];
 let active: ActiveJob | null = null;
 let draining: Promise<void> | null = null;
 let lastBatchAt = 0;
+let broadcastChain: Promise<void> = Promise.resolve();
 
 function originOf(rawUrl: string): string | null {
   try {
@@ -400,7 +399,12 @@ async function handleCommand(command: OfflineCommand): Promise<void> {
 
 function broadcast(novelId: string | null, state: OfflineState): void {
   const message: OfflineBroadcast = { novelId, state };
-  channel.postMessage(message);
+  broadcastChain = broadcastChain
+    .then(async () => {
+      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      clients.forEach((client) => client.postMessage(message));
+    })
+    .catch((err) => console.warn("Failed to notify clients", err));
 }
 
 async function currentState(novelId: string): Promise<OfflineState> {
