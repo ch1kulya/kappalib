@@ -77,6 +77,7 @@ export type OfflineState =
 export type OfflineCommand =
   | { type: "download"; novelId: string }
   | { type: "cancel"; novelId: string }
+  | { type: "redownload"; novelId: string }
   | { type: "delete"; novelId: string }
   | { type: "delete-all" }
   | { type: "resume" };

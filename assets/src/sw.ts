@@ -339,7 +339,7 @@ function parseCommand(data: unknown): OfflineCommand | null {
     return { type };
   }
   if (
-    (type === "download" || type === "cancel" || type === "delete")
+    (type === "download" || type === "redownload" || type === "cancel" || type === "delete")
     && typeof novelId === "string"
     && NOVEL_ID_RE.test(novelId)
   ) {
@@ -363,6 +363,14 @@ async function handleCommand(command: OfflineCommand): Promise<void> {
         await deleteOfflineJob(command.novelId);
       }
       broadcast(command.novelId, await currentState(command.novelId));
+      return;
+    }
+    case "redownload": {
+      await stopJob(command.novelId);
+      const novel = await getOfflineNovel(command.novelId);
+      await deleteOfflineNovel(command.novelId);
+      await removeCover(novel?.coverUrl ?? null);
+      await startDownload(command.novelId);
       return;
     }
     case "delete": {

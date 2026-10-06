@@ -5752,13 +5752,6 @@ td:first-child {
   gap: 0.25rem;
 }
 
-.download-item-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-left: -0.5rem;
-}
-
 .chapter-item.is-offline-missing {
   opacity: 0.5;
 }

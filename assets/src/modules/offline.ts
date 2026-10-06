@@ -35,6 +35,7 @@ interface DropdownView {
   download: string | null;
   cancel: boolean;
   retry: boolean;
+  redownload: boolean;
   remove: boolean;
 }
 
@@ -212,7 +213,10 @@ function stopWatchdog(): void {
   watchdogTimer = null;
 }
 
-async function requestDownloads(novelIds: string[]): Promise<void> {
+async function requestDownloads(
+  novelIds: string[],
+  type: "download" | "redownload" = "download",
+): Promise<void> {
   if (novelIds.length === 0) return;
   if (!profileManager.isLoggedIn()) {
     alert("Войдите в аккаунт, чтобы скачать новеллу");
@@ -227,8 +231,8 @@ async function requestDownloads(novelIds: string[]): Promise<void> {
 
   try {
     for (const novelId of novelIds) {
-      await postCommand({ type: "download", novelId });
-      trackEvent("offline_download", { novel_id: novelId });
+      await postCommand({ type, novelId });
+      trackEvent(`offline_${type}`, { novel_id: novelId });
     }
     startWatchdog();
   } catch (err) {
@@ -245,6 +249,10 @@ async function runAction(action: string | undefined, novelId: string): Promise<v
   switch (action) {
     case "download":
       await requestDownloads([novelId]);
+      return;
+    case "redownload":
+      if (!confirm("Скачать новеллу заново? Сохранённая копия будет заменена.")) return;
+      await requestDownloads([novelId], "redownload");
       return;
     case "cancel":
       await sendCommand({ type: "cancel", novelId });
@@ -576,6 +584,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
         download: "Скачать новеллу",
         cancel: false,
         retry: false,
+        redownload: false,
         remove: false,
       };
     case "queued":
@@ -586,6 +595,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
         download: null,
         cancel: true,
         retry: false,
+        redownload: false,
         remove: false,
       };
     case "downloading":
@@ -598,6 +608,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
         download: null,
         cancel: true,
         retry: false,
+        redownload: false,
         remove: false,
       };
     case "error":
@@ -608,6 +619,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
         download: null,
         cancel: false,
         retry: true,
+        redownload: false,
         remove: true,
       };
     case "ready": {
@@ -622,6 +634,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
           download: "Докачать",
           cancel: false,
           retry: false,
+          redownload: true,
           remove: true,
         };
       }
@@ -633,6 +646,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
           download: "Скачать новые главы",
           cancel: false,
           retry: false,
+          redownload: true,
           remove: true,
         };
       }
@@ -643,6 +657,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
         download: null,
         cancel: false,
         retry: false,
+        redownload: true,
         remove: true,
       };
     }
@@ -661,6 +676,7 @@ function initOfflineDropdown(root: HTMLElement): void {
   const downloadLabel = field(downloadItem, "downloadLabel");
   const cancelItem = requireElement(root, "[data-item=\"cancel\"]");
   const retryItem = requireElement(root, "[data-item=\"retry\"]");
+  const redownloadItem = requireElement(root, "[data-item=\"redownload\"]");
   const deleteItem = requireElement(root, "[data-item=\"delete\"]");
   const serverIds = Array.from(
     document.querySelectorAll<HTMLElement>("#chapters-list .chapter-item[data-chapter-id]"),
@@ -692,6 +708,7 @@ function initOfflineDropdown(root: HTMLElement): void {
     downloadItem.style.display = view.download ? "" : "none";
     cancelItem.style.display = view.cancel ? "" : "none";
     retryItem.style.display = view.retry ? "" : "none";
+    redownloadItem.style.display = view.redownload ? "" : "none";
     deleteItem.style.display = view.remove ? "" : "none";
   };
 
@@ -731,15 +748,6 @@ function initOfflineDropdown(root: HTMLElement): void {
 
   render();
   refresh().catch((err) => console.error("Failed to load offline state", err));
-}
-
-function itemButton(action: string, label: string): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "btn-text";
-  button.dataset.action = action;
-  button.textContent = label;
-  return button;
 }
 
 function fillItemState(
@@ -784,17 +792,6 @@ function fillItemState(
 
   field(item, "percent").textContent = percent > 0 ? `${percent}%` : "";
   field(item, "progressBar").style.width = `${percent}%`;
-
-  const buttons: HTMLButtonElement[] = [];
-  if (state.kind === "queued" || state.kind === "downloading") {
-    buttons.push(itemButton("cancel", "Отменить"));
-  } else if (state.kind === "error") {
-    buttons.push(itemButton("download", "Повторить"));
-  }
-
-  const actions = field(item, "actions");
-  actions.replaceChildren(...buttons);
-  actions.style.display = buttons.length > 0 ? "" : "none";
 }
 
 function fillDownloadItem(
@@ -900,10 +897,14 @@ function initDownloadsPage(): void {
   let entries: DownloadEntry[] = [];
 
   const idleNovels = (): OfflineNovel[] => entries.flatMap((entry) => (entry.novel && !entry.job ? [entry.novel] : []));
-  const partialIds = (): string[] =>
-    idleNovels()
+  const partialIds = (): string[] => [
+    ...entries
+      .filter((entry) => entry.job?.status === "error")
+      .map((entry) => entry.novelId),
+    ...idleNovels()
       .filter((novel) => novel.savedCount < novel.toc.length)
-      .map((novel) => novel.id);
+      .map((novel) => novel.id),
+  ];
   const updatableIds = (): string[] =>
     idleNovels()
       .filter((novel) => novel.savedCount >= novel.toc.length && (newChapters.get(novel.id) ?? 0) > 0)
@@ -984,13 +985,6 @@ function initDownloadsPage(): void {
     if (target.closest(".history-remove")) {
       e.preventDefault();
       void runAction("delete", novelId);
-      return;
-    }
-
-    const button = target.closest<HTMLElement>("[data-action]");
-    if (button) {
-      e.preventDefault();
-      void runAction(button.dataset.action, novelId);
     }
   });
 
