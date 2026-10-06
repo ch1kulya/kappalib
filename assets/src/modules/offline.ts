@@ -539,47 +539,30 @@ function createTocItem(novelId: string, entry: OfflineTocEntry, available: boole
   return item;
 }
 
-function dropdownButton(action: string, label: string, danger = false): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = danger ? "dropdown-item dropdown-item-remove" : "dropdown-item";
-  button.dataset.action = action;
-  button.setAttribute("role", "menuitem");
-  button.textContent = label;
-  return button;
+interface DropdownItems {
+  download: string | null;
+  cancel: boolean;
+  retry: boolean;
+  remove: boolean;
 }
 
-function downloadsLink(): HTMLAnchorElement {
-  const link = document.createElement("a");
-  link.className = "dropdown-item";
-  link.href = "/downloads";
-  link.setAttribute("role", "menuitem");
-  link.textContent = "Все загрузки";
-  return link;
-}
-
-function dropdownActions(state: OfflineState, newChapters: number): HTMLElement[] {
+function dropdownItems(state: OfflineState, newChapters: number): DropdownItems {
   switch (state.kind) {
     case "none":
-      return [dropdownButton("download", "Скачать новеллу"), downloadsLink()];
+      return { download: "Скачать новеллу", cancel: false, retry: false, remove: false };
     case "queued":
     case "downloading":
-      return [dropdownButton("cancel", "Отменить загрузку"), downloadsLink()];
+      return { download: null, cancel: true, retry: false, remove: false };
     case "error":
-      return [
-        dropdownButton("download", "Повторить загрузку"),
-        dropdownButton("delete", "Удалить с устройства", true),
-        downloadsLink(),
-      ];
+      return { download: null, cancel: false, retry: true, remove: true };
     case "ready": {
-      const items: HTMLElement[] = [];
+      let download: string | null = null;
       if (state.saved < state.total) {
-        items.push(dropdownButton("download", "Докачать"));
+        download = "Докачать";
       } else if (newChapters > 0) {
-        items.push(dropdownButton("download", `Скачать новые главы (${newChapters})`));
+        download = `Скачать новые главы (${newChapters})`;
       }
-      items.push(dropdownButton("delete", "Удалить с устройства", true), downloadsLink());
-      return items;
+      return { download, cancel: false, retry: false, remove: true };
     }
   }
 }
@@ -641,8 +624,13 @@ function initOfflineDropdown(root: HTMLElement): void {
   if (!novelId) return;
 
   const status = field(root, "status");
-  const actions = field(root, "actions");
+  const menu = requireElement(root, ".dropdown-menu");
   const label = requireElement(root, ".of-btn-label");
+  const downloadItem = requireElement(root, "[data-item=\"download\"]");
+  const downloadLabel = field(downloadItem, "downloadLabel");
+  const cancelItem = requireElement(root, "[data-item=\"cancel\"]");
+  const retryItem = requireElement(root, "[data-item=\"retry\"]");
+  const deleteItem = requireElement(root, "[data-item=\"delete\"]");
   const serverIds = Array.from(
     document.querySelectorAll<HTMLElement>("#chapters-list .chapter-item[data-chapter-id]"),
   )
@@ -668,7 +656,12 @@ function initOfflineDropdown(root: HTMLElement): void {
     const statusText = dropdownStatus(state, newChapters);
     status.textContent = statusText;
     status.style.display = statusText ? "" : "none";
-    actions.replaceChildren(...dropdownActions(state, newChapters));
+    const items = dropdownItems(state, newChapters);
+    if (items.download) downloadLabel.textContent = items.download;
+    downloadItem.style.display = items.download ? "" : "none";
+    cancelItem.style.display = items.cancel ? "" : "none";
+    retryItem.style.display = items.retry ? "" : "none";
+    deleteItem.style.display = items.remove ? "" : "none";
   };
 
   const refresh = async () => {
@@ -687,7 +680,7 @@ function initOfflineDropdown(root: HTMLElement): void {
     render();
   };
 
-  actions.addEventListener("click", (e) => {
+  menu.addEventListener("click", (e) => {
     const button = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
     if (!button) return;
     e.preventDefault();

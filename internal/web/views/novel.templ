@@ -227,7 +227,7 @@ templ novelActions(props NovelProps) {
 						<hr class="dropdown-divider"/>
 						<button class="dropdown-item dropdown-item-remove" data-value="__remove__" data-no-select="true" role="option" aria-selected="false">
 							<span class="ls-item-label">
-								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+								@IconTrash("")
 								<span>Удалить из списка</span>
 							</span>
 						</button>
@@ -255,7 +255,32 @@ templ novelActions(props NovelProps) {
 				<div class="dropdown-menu" role="menu">
 					<div class="dropdown-menu-inner">
 						<div class="of-status" data-field="status"></div>
-						<div class="of-actions" data-field="actions"></div>
+						<button class="dropdown-item" type="button" role="menuitem" data-no-select="true" data-action="download" data-item="download" style="display: none;">
+							<span class="ls-item-label">
+								@IconDownloadTray("ls-icon")
+								<span data-field="downloadLabel">Скачать новеллу</span>
+							</span>
+						</button>
+						<button class="dropdown-item" type="button" role="menuitem" data-no-select="true" data-action="cancel" data-item="cancel" style="display: none;">
+							<span class="ls-item-label">
+								@IconClose("ls-icon")
+								<span>Отменить загрузку</span>
+							</span>
+						</button>
+						<button class="dropdown-item" type="button" role="menuitem" data-no-select="true" data-action="download" data-item="retry" style="display: none;">
+							<span class="ls-item-label">
+								@IconRetry("ls-icon")
+								<span>Повторить загрузку</span>
+							</span>
+						</button>
+						<button class="dropdown-item dropdown-item-remove" type="button" role="menuitem" data-no-select="true" data-action="delete" data-item="delete" style="display: none;">
+							<span class="ls-item-label">
+								@IconTrash("ls-icon")
+								<span>Удалить с устройства</span>
+							</span>
+						</button>
+						<hr class="dropdown-divider"/>
+						<a class="dropdown-item" href="/downloads" role="menuitem" data-no-select="true">Перейти в загрузки</a>
 					</div>
 				</div>
 			</div>
