@@ -34,36 +34,42 @@ const LIST_STATUSES: { slug: string; label: string }[] = [
 
 let cachedList: UserList | null = null;
 let inFlightList: Promise<UserList> | null = null;
+let listGeneration = 0;
 const hydrateFns: (() => void)[] = [];
 
 function hydrateAll(): void {
   hydrateFns.forEach((fn) => fn());
 }
 
+async function requestUserList(): Promise<UserList | null> {
+  try {
+    const res = await fetch(`${API_URL}/profile/me/list`, {
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 function fetchUserList(force = false): Promise<UserList> {
   if (cachedList && !force) return Promise.resolve(cachedList);
   if (inFlightList && !force) return inFlightList;
 
-  const request = (async (): Promise<UserList> => {
-    try {
-      const res = await fetch(`${API_URL}/profile/me/list`, {
-        credentials: "include",
-      });
-      if (!res.ok) return {};
-      const data: UserList = await res.json();
-      if (inFlightList === request) cachedList = data;
-      return data;
-    } catch {
-      return {};
-    } finally {
-      if (inFlightList === request) inFlightList = null;
+  const generation = ++listGeneration;
+  inFlightList = requestUserList().then((data) => {
+    if (generation === listGeneration) {
+      if (data) cachedList = data;
+      inFlightList = null;
     }
-  })();
-  inFlightList = request;
-  return request;
+    return data ?? {};
+  });
+  return inFlightList;
 }
 
 function invalidateUserList(): void {
+  listGeneration++;
   cachedList = null;
   inFlightList = null;
 }
