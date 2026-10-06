@@ -85,7 +85,6 @@ const FONT_STYLES_CACHE = "kpl-font-styles";
 const COVERS_CACHE = "kpl-covers";
 const FONTS_CACHE_LIMIT = 600;
 const FONT_ORIGIN = "https://cdn.jsdelivr.net";
-const COVER_ORIGIN = originOf(process.env.S3_PUBLIC_URL);
 const LIBRARY_SHELL = "/offline/library";
 const READER_SHELL = "/offline/reader";
 const SHELL_URLS = [LIBRARY_SHELL, READER_SHELL];
@@ -196,7 +195,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (COVER_ORIGIN !== null && url.origin === COVER_ORIGIN && request.destination === "image") {
+  if (request.destination === "image" && request.mode === "no-cors") {
     event.respondWith(coverFirst(request));
   }
 });

@@ -111,7 +111,10 @@ func (h *Handler) globalAnnouncement(ctx context.Context) *models.GlobalAnnounce
 	return ann
 }
 
-const ServiceWorkerPath = "./assets/static/dist/sw.js"
+const (
+	ServiceWorkerPath = "./assets/static/dist/sw.js"
+	serviceWorkerCSP  = "default-src 'self'; script-src 'self'; connect-src 'self' https:"
+)
 
 func NewHandler(assetVersion string) *Handler {
 	return &Handler{
@@ -1088,6 +1091,7 @@ func (h *Handler) OfflineReader(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ServiceWorker(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Content-Security-Policy", serviceWorkerCSP)
 	http.ServeFile(w, r, ServiceWorkerPath)
 }
 

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -480,5 +482,31 @@ func TestKnownTagIDs(t *testing.T) {
 	}
 	if got := knownTagIDs([]int{3}, nil); len(got) != 0 {
 		t.Errorf("knownTagIDs without tags = %v, want empty", got)
+	}
+}
+
+func TestServiceWorkerHeaders(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.MkdirAll(filepath.Dir(ServiceWorkerPath), 0o755); err != nil {
+		t.Fatalf("create worker dir: %v", err)
+	}
+	if err := os.WriteFile(ServiceWorkerPath, []byte("self.addEventListener(\"fetch\", () => {});"), 0o644); err != nil {
+		t.Fatalf("write worker: %v", err)
+	}
+
+	h := NewHandler("test")
+
+	req := httptest.NewRequest(http.MethodGet, "/sw.js", nil)
+	rec := httptest.NewRecorder()
+	h.ServiceWorker(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Errorf("Cache-Control = %q, want %q", got, "no-cache")
+	}
+	if got := rec.Header().Get("Content-Security-Policy"); !strings.Contains(got, "connect-src 'self' https:") {
+		t.Errorf("Content-Security-Policy = %q, want worker connect-src allowing https", got)
 	}
 }

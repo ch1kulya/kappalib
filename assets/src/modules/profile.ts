@@ -80,6 +80,7 @@ class ProfileManager {
   }
 
   async fetchProfile(): Promise<ProfilePublic | null> {
+    if (!navigator.onLine) return null;
     try {
       const url = `${API_URL}/profile/me`;
       const res = await fetch(url, { credentials: "include" });
@@ -109,7 +110,7 @@ class ProfileManager {
   }
 
   async syncCookiesToServer(): Promise<void> {
-    if (!this.profileId) return;
+    if (!this.profileId || !navigator.onLine) return;
     const cookies = this.getKappalibCookies();
     try {
       const res = await fetch(`${API_URL}/profile/sync-cookies`, {

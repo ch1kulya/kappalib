@@ -76,7 +76,7 @@ class ActiveTimeTracker {
     if (this.activeSeconds <= 0 || this.isFlushing) return;
 
     const now = Date.now();
-    if (now < this.backoffUntil) return;
+    if (now < this.backoffUntil || !navigator.onLine) return;
 
     if (isUnload) {
       if (now - this.lastUnloadFlushTime < 2000) return;

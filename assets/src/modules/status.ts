@@ -16,6 +16,16 @@ export function initStatusBadge(): void {
 
   if (!widget || !dot || !text) return;
 
+  const showUnavailable = () => {
+    text.textContent = "Статус недоступен";
+    dot.style.backgroundColor = "var(--tertiary)";
+  };
+
+  if (!navigator.onLine) {
+    showUnavailable();
+    return;
+  }
+
   console.info("Fetching system status...");
 
   fetch("/status")
@@ -52,7 +62,6 @@ export function initStatusBadge(): void {
     })
     .catch((err) => {
       console.error("Failed to fetch system status", err);
-      text.textContent = "Статус недоступен";
-      dot.style.backgroundColor = "var(--tertiary)";
+      showUnavailable();
     });
 }
