@@ -623,7 +623,7 @@ function dropdownView(state: OfflineState, newChapters: number): DropdownView {
           icon: "update",
           label: "Обновить",
           status: `${details}. Новых глав: ${newChapters}`,
-          download: `Скачать новые главы (${newChapters})`,
+          download: "Скачать новые главы",
           cancel: false,
           retry: false,
           remove: true,
@@ -787,7 +787,7 @@ function fillItemState(
   } else if (state.kind === "ready" && state.saved < state.total) {
     buttons.push(itemButton("download", "Докачать"));
   } else if (state.kind === "ready" && newChapters > 0) {
-    buttons.push(itemButton("download", `Скачать новые главы (${newChapters})`));
+    buttons.push(itemButton("download", "Скачать новые главы"));
   }
 
   const actions = field(item, "actions");
