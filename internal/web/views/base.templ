@@ -78,6 +78,7 @@ templ Base(props BaseProps) {
 				if props.GlobalAnnouncement != nil {
 					@GlobalAnnouncementBar(props.GlobalAnnouncement)
 				}
+				@CookieNotice()
 				@AgeModal(props)
 				@Profile(props.IsLoggedIn)
 				@Settings()
@@ -222,6 +223,24 @@ script showAgeModalScript() {
 	})();
 }
 
+templ CookieNotice() {
+	<div class="cookie-notice" id="cookie-notice" style="display: none;">
+		<div class="cookie-notice-content">
+			<p class="cookie-notice-text">
+				Мы используем необходимые cookie для работы сайта, а также аналитику. Подробнее в <a href="/privacy" class="cookie-notice-link">Политике конфиденциальности</a>.
+			</p>
+			<div class="cookie-notice-actions">
+				<button type="button" class="action-btn cookie-notice-btn-decline" id="cookie-notice-decline">
+					Только необходимые
+				</button>
+				<button type="button" class="action-btn cookie-notice-btn-accept" id="cookie-notice-accept">
+					Принять все
+				</button>
+			</div>
+		</div>
+	</div>
+}
+
 templ AgeModal(props BaseProps) {
 	<div class="modal-overlay" id="age-modal" style="display: none;">
 		<div class="modal-content">
@@ -246,6 +265,12 @@ templ AgeModal(props BaseProps) {
 
 script initUmami(colorScheme string) {
 	(function() {
+        try {
+            if (localStorage.getItem("cookieConsent") === "declined") {
+                return;
+            }
+        } catch(e) {}
+
 		function load() {
 			var s1 = document.createElement("script");
 			s1.src = "https://stats.kappalib.rip/script.js";
