@@ -6231,3 +6231,57 @@ td:first-child {
     display: none;
   }
 }
+
+.cookie-notice {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  max-width: 420px;
+  width: calc(100% - 2.5rem);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-secondary);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  z-index: 100;
+}
+
+.cookie-notice-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cookie-notice-text {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--secondary);
+  margin: 0;
+}
+
+.cookie-notice-link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cookie-notice-btn {
+  margin-top: 0;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  align-self: flex-end;
+  width: auto;
+}
+
+@media (max-width: 600px) {
+  .cookie-notice {
+    bottom: 0.75rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+  }
+
+  .cookie-notice-btn {
+    width: 100%;
+  }
+}

@@ -2,6 +2,7 @@ import { initAgeGate } from "./modules/age";
 import { initBookmarkButton, initBookmarksPage, initChaptersBookmarks } from "./modules/bookmarks";
 import { initCatalogPage, initCatalogPagination } from "./modules/catalog";
 import { initComments, initMyCommentsPage } from "./modules/comments";
+import { initCookieNotice } from "./modules/cookie";
 import { initDescription } from "./modules/description";
 import Dropdown from "./modules/dropdown";
 import { initHistoryPage } from "./modules/history";
@@ -50,6 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     initCatalogSort();
     initTocFilter();
     initSearch();
+    initCookieNotice();
     initAgeGate();
     initDescription();
     initReadingProgressSaver();
