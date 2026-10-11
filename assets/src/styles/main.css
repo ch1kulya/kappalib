@@ -6248,9 +6248,13 @@ td:first-child {
   inset: 0;
   display: none;
   overflow: hidden;
-  background: rgba(var(--rgb-dark), 0.92);
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.05);
   touch-action: none;
   z-index: 105;
+  @media (prefers-color-scheme: dark) {
+    background: rgba(0, 0, 0, 0.1);
+  }
 
   &.open {
     display: block;
