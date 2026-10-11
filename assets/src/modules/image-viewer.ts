@@ -34,6 +34,7 @@ class ImageViewer {
   private static readonly EPS = 1e-6;
   private static readonly ZOOM_STEP = 1.25;
   private static readonly DRAG_THRESHOLD = 3;
+  private static readonly WHEEL_LINE_HEIGHT = 16;
 
   private readonly viewer: HTMLElement;
   private readonly img: HTMLImageElement;
@@ -55,8 +56,10 @@ class ImageViewer {
   private startY = 0;
   private startTx = 0;
   private startTy = 0;
+  private pressOnImage = false;
   private pinch: PinchState | null = null;
   private returnFocus: HTMLElement | null = null;
+  private readonly inertElements: HTMLElement[] = [];
 
   constructor(elements: ImageViewerElements) {
     this.viewer = elements.viewer;
@@ -74,7 +77,7 @@ class ImageViewer {
     return this.viewer.classList.contains("open");
   }
 
-  public open(src: string): void {
+  public open(src: string, alt: string): void {
     this.returnFocus = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
@@ -86,18 +89,18 @@ class ImageViewer {
     this.render();
 
     document.body.style.overflow = "hidden";
+    this.setPageInert(true);
     this.viewer.classList.add("open");
     this.viewer.setAttribute("aria-hidden", "false");
 
-    this.img.onload = () => {
-      this.img.onload = null;
-      this.fitToViewport();
-    };
+    this.img.classList.add("is-loading");
+    this.img.alt = alt;
+    this.img.onload = () => this.handleLoad();
+    this.img.onerror = () => this.close();
     this.img.src = src;
 
     if (this.img.complete && this.img.naturalWidth) {
-      this.img.onload = null;
-      this.fitToViewport();
+      this.handleLoad();
     }
 
     this.viewer.focus();
@@ -108,30 +111,60 @@ class ImageViewer {
 
     this.resetPointers();
     document.body.style.overflow = "";
+    this.setPageInert(false);
     this.viewer.classList.remove("open");
     this.viewer.setAttribute("aria-hidden", "true");
     this.returnFocus?.focus();
     this.returnFocus = null;
   }
 
-  private bindEvents(): void {
-    this.viewer.addEventListener("click", (e) => {
-      if (e.target === this.viewer) this.close();
-    });
+  public handleResize(): void {
+    if (this.isOpen() && this.isAtInitialScale()) this.fitToViewport();
+  }
 
+  private bindEvents(): void {
     this.closeBtn.addEventListener("click", () => this.close());
     this.zoomInBtn.addEventListener("click", () => this.zoomAtCenter(ImageViewer.ZOOM_STEP));
     this.zoomOutBtn.addEventListener("click", () => this.zoomAtCenter(1 / ImageViewer.ZOOM_STEP));
-    this.resetBtn.addEventListener("click", () => this.reset());
+    this.resetBtn.addEventListener("click", () => this.fitToViewport());
 
-    this.img.addEventListener("click", () => this.handleClick());
-    this.img.addEventListener("pointerdown", (e) => this.handlePointerDown(e));
-    this.img.addEventListener("pointermove", (e) => this.handlePointerMove(e));
-    this.img.addEventListener("pointerup", (e) => this.handlePointerEnd(e));
-    this.img.addEventListener("pointercancel", (e) => this.handlePointerEnd(e));
-    this.img.addEventListener("dragstart", (e) => e.preventDefault());
-
+    this.viewer.addEventListener("click", (e) => this.handleClick(e));
+    this.viewer.addEventListener("pointerdown", (e) => this.handlePointerDown(e));
+    this.viewer.addEventListener("pointermove", (e) => this.handlePointerMove(e));
+    this.viewer.addEventListener("pointerup", (e) => this.handlePointerEnd(e));
+    this.viewer.addEventListener("pointercancel", (e) => this.handlePointerEnd(e));
+    this.viewer.addEventListener("lostpointercapture", (e) => this.handlePointerEnd(e));
+    this.viewer.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
     this.viewer.addEventListener("wheel", (e) => this.handleWheel(e), { passive: false });
+    this.img.addEventListener("dragstart", (e) => e.preventDefault());
+  }
+
+  private setPageInert(inert: boolean): void {
+    if (!inert) {
+      this.inertElements.forEach((el) => {
+        el.inert = false;
+      });
+      this.inertElements.length = 0;
+      return;
+    }
+
+    for (const el of this.viewer.parentElement?.children ?? []) {
+      if (el instanceof HTMLElement && el !== this.viewer && !el.inert) {
+        el.inert = true;
+        this.inertElements.push(el);
+      }
+    }
+  }
+
+  private isPanelTarget(target: EventTarget | null): boolean {
+    return target instanceof Element && target.closest(".image-viewer-panel") !== null;
+  }
+
+  private handleLoad(): void {
+    this.img.onload = null;
+    this.img.onerror = null;
+    this.img.classList.remove("is-loading");
+    this.fitToViewport();
   }
 
   private resetPointers(): void {
@@ -146,9 +179,10 @@ class ImageViewer {
     const nw = this.img.naturalWidth;
     const nh = this.img.naturalHeight;
 
-    if (!nw || !nh) return;
+    if (nw && nh) {
+      this.initialScale = Math.min(1, this.viewer.clientWidth / nw, this.viewer.clientHeight / nh);
+    }
 
-    this.initialScale = Math.min(1, this.viewer.clientWidth / nw, this.viewer.clientHeight / nh);
     this.scale = this.initialScale;
     this.tx = 0;
     this.ty = 0;
@@ -165,13 +199,6 @@ class ImageViewer {
     return Math.abs(this.scale - this.initialScale) < ImageViewer.EPS;
   }
 
-  private reset(): void {
-    this.scale = this.initialScale;
-    this.tx = 0;
-    this.ty = 0;
-    this.render();
-  }
-
   private zoomAtCenter(factor: number): void {
     const next = this.clamp(this.scale * factor);
     if (next === this.scale) return;
@@ -183,25 +210,32 @@ class ImageViewer {
     this.render();
   }
 
-  private handleClick(): void {
-    if (this.moved) return;
+  private handleClick(e: MouseEvent): void {
+    if (this.isPanelTarget(e.target) || this.moved) return;
 
-    if (this.isAtInitialScale()) {
+    if (!this.pressOnImage) {
+      this.close();
+    } else if (this.isAtInitialScale()) {
       this.scale = this.clamp(this.initialScale * 2);
       this.render();
     } else {
-      this.reset();
+      this.fitToViewport();
     }
   }
 
   private handlePointerDown(e: PointerEvent): void {
+    if (this.isPanelTarget(e.target)) {
+      this.moved = true;
+      return;
+    }
     if (e.pointerType === "mouse" && e.button !== 0) return;
 
-    this.img.setPointerCapture(e.pointerId);
+    this.viewer.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (this.pointers.size === 1) {
       this.moved = false;
+      this.pressOnImage = e.target === this.img;
       this.startDrag(e.clientX, e.clientY);
     } else if (this.pointers.size === 2) {
       this.startPinch();
@@ -270,7 +304,9 @@ class ImageViewer {
   private handleWheel(e: WheelEvent): void {
     e.preventDefault();
 
-    const next = this.clamp(this.scale * Math.exp(-e.deltaY * 0.0015));
+    const lineHeight = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? ImageViewer.WHEEL_LINE_HEIGHT : 1;
+    const pageHeight = e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? this.viewer.clientHeight : 1;
+    const next = this.clamp(this.scale * Math.exp(-e.deltaY * lineHeight * pageHeight * 0.0015));
     if (next === this.scale) return;
 
     const dx = e.clientX - this.viewer.clientWidth / 2;
@@ -325,7 +361,7 @@ class ImageViewer {
   }
 
   private clamp(v: number): number {
-    return Math.min(Math.max(v, ImageViewer.MIN_SCALE), ImageViewer.MAX_SCALE);
+    return Math.min(Math.max(v, Math.min(ImageViewer.MIN_SCALE, this.initialScale)), ImageViewer.MAX_SCALE);
   }
 }
 
@@ -365,14 +401,16 @@ export function initImageViewer(): void {
     const src = image.currentSrc || image.src;
     if (!src) return;
 
-    e.preventDefault();
-    e.stopPropagation();
-    viewer.open(src);
+    if (image.closest(".spoiler")) e.stopPropagation();
+    viewer.open(src, image.alt);
   }, true);
 
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && viewer.isOpen()) {
-      viewer.close();
-    }
-  });
+  window.addEventListener("keydown", (e) => {
+    if (!viewer.isOpen()) return;
+
+    e.stopPropagation();
+    if (e.key === "Escape") viewer.close();
+  }, true);
+
+  window.addEventListener("resize", () => viewer.handleResize());
 }

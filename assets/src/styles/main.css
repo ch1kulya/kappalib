@@ -6250,7 +6250,6 @@ td:first-child {
   overflow: hidden;
   background: rgba(var(--rgb-dark), 0.92);
   touch-action: none;
-  overscroll-behavior: contain;
   z-index: 105;
 
   &.open {
@@ -6283,6 +6282,10 @@ td:first-child {
   &.is-dragging {
     cursor: grabbing;
   }
+
+  &.is-loading {
+    visibility: hidden;
+  }
 }
 
 .image-viewer-panel {
@@ -6297,33 +6300,6 @@ td:first-child {
   border-radius: 12px;
   background: var(--bg-primary);
   box-shadow: var(--shadow-primary);
-
-  & button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--tertiary);
-    cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-
-    &:hover,
-    &:focus-visible {
-      color: var(--primary);
-      border-color: var(--border);
-      box-shadow: var(--shadow-focus);
-    }
-  }
-}
-
-.image-viewer-icon {
-  width: 18px;
-  height: 18px;
 }
 
 .image-viewer-scale {

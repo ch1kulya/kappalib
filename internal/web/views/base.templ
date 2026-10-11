@@ -249,18 +249,18 @@ templ ImageViewer() {
 	<div class="image-viewer" id="image-viewer" role="dialog" aria-modal="true" aria-label="Просмотр изображения" aria-hidden="true" tabindex="-1">
 		<img class="image-viewer-img" id="image-viewer-img" alt="" draggable="false"/>
 		<div class="image-viewer-panel">
-			<button type="button" id="image-viewer-zoom-out" title="Уменьшить" aria-label="Уменьшить">
-				@IconMinus("image-viewer-icon")
+			<button type="button" id="image-viewer-zoom-out" class="toolbar-btn" title="Уменьшить" aria-label="Уменьшить">
+				@IconMinus("")
 			</button>
-			<span class="image-viewer-scale" id="image-viewer-scale" aria-live="polite">100%</span>
-			<button type="button" id="image-viewer-zoom-in" title="Увеличить" aria-label="Увеличить">
-				@IconPlus("image-viewer-icon")
+			<span class="image-viewer-scale" id="image-viewer-scale">100%</span>
+			<button type="button" id="image-viewer-zoom-in" class="toolbar-btn" title="Увеличить" aria-label="Увеличить">
+				@IconPlus("")
 			</button>
-			<button type="button" id="image-viewer-reset" title="Сбросить масштаб" aria-label="Сбросить масштаб">
-				@IconRetry("image-viewer-icon")
+			<button type="button" id="image-viewer-reset" class="toolbar-btn" title="Сбросить масштаб" aria-label="Сбросить масштаб">
+				@IconRetry("")
 			</button>
-			<button type="button" id="image-viewer-close" title="Закрыть" aria-label="Закрыть">
-				@IconClose("image-viewer-icon")
+			<button type="button" id="image-viewer-close" class="toolbar-btn" title="Закрыть" aria-label="Закрыть">
+				@IconClose("")
 			</button>
 		</div>
 	</div>
