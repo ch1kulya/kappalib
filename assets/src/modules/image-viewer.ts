@@ -85,6 +85,10 @@ class ImageViewer {
     this.ty = 0;
     this.render();
 
+    document.body.style.overflow = "hidden";
+    this.viewer.classList.add("open");
+    this.viewer.setAttribute("aria-hidden", "false");
+
     this.img.onload = () => {
       this.img.onload = null;
       this.fitToViewport();
@@ -96,10 +100,7 @@ class ImageViewer {
       this.fitToViewport();
     }
 
-    document.body.style.overflow = "hidden";
-    this.viewer.classList.add("open");
-    this.viewer.setAttribute("aria-hidden", "false");
-    this.closeBtn.focus();
+    this.viewer.focus();
   }
 
   public close(): void {
@@ -147,7 +148,7 @@ class ImageViewer {
 
     if (!nw || !nh) return;
 
-    this.initialScale = Math.min(1, window.innerWidth / nw, window.innerHeight / nh);
+    this.initialScale = Math.min(1, this.viewer.clientWidth / nw, this.viewer.clientHeight / nh);
     this.scale = this.initialScale;
     this.tx = 0;
     this.ty = 0;
@@ -272,8 +273,8 @@ class ImageViewer {
     const next = this.clamp(this.scale * Math.exp(-e.deltaY * 0.0015));
     if (next === this.scale) return;
 
-    const dx = e.clientX - window.innerWidth / 2;
-    const dy = e.clientY - window.innerHeight / 2;
+    const dx = e.clientX - this.viewer.clientWidth / 2;
+    const dy = e.clientY - this.viewer.clientHeight / 2;
     const k = next / this.scale;
 
     this.tx = dx * (1 - k) + this.tx * k;
@@ -304,8 +305,8 @@ class ImageViewer {
     const mid = this.getMidpoint();
     const newScale = this.clamp(this.pinch.startScale * (dist / this.pinch.startDist));
     const k = newScale / this.pinch.startScale;
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
+    const cx = this.viewer.clientWidth / 2;
+    const cy = this.viewer.clientHeight / 2;
 
     this.tx = (mid.x - cx) - (this.pinch.startMidX - cx) * k + this.pinch.startTx * k;
     this.ty = (mid.y - cy) - (this.pinch.startMidY - cy) * k + this.pinch.startTy * k;

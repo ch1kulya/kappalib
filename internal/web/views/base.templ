@@ -246,7 +246,7 @@ templ AgeModal(props BaseProps) {
 }
 
 templ ImageViewer() {
-	<div class="image-viewer" id="image-viewer" role="dialog" aria-modal="true" aria-label="Просмотр изображения" aria-hidden="true">
+	<div class="image-viewer" id="image-viewer" role="dialog" aria-modal="true" aria-label="Просмотр изображения" aria-hidden="true" tabindex="-1">
 		<img class="image-viewer-img" id="image-viewer-img" alt="" draggable="false"/>
 		<div class="image-viewer-panel">
 			<button type="button" id="image-viewer-zoom-out" title="Уменьшить" aria-label="Уменьшить">

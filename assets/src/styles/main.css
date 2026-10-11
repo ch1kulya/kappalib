@@ -6256,6 +6256,10 @@ td:first-child {
   &.open {
     display: block;
   }
+
+  &:focus {
+    outline: none;
+  }
 }
 
 .image-viewer-img {
