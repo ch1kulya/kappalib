@@ -19,7 +19,6 @@ interface ImageViewerElements {
   zoomInBtn: HTMLButtonElement;
   zoomOutBtn: HTMLButtonElement;
   resetBtn: HTMLButtonElement;
-  closeBtn: HTMLButtonElement;
 }
 
 const VIEWABLE_IMAGES_SELECTOR = [
@@ -42,7 +41,6 @@ class ImageViewer {
   private readonly zoomInBtn: HTMLButtonElement;
   private readonly zoomOutBtn: HTMLButtonElement;
   private readonly resetBtn: HTMLButtonElement;
-  private readonly closeBtn: HTMLButtonElement;
 
   private scale = 1;
   private tx = 0;
@@ -68,7 +66,6 @@ class ImageViewer {
     this.zoomInBtn = elements.zoomInBtn;
     this.zoomOutBtn = elements.zoomOutBtn;
     this.resetBtn = elements.resetBtn;
-    this.closeBtn = elements.closeBtn;
 
     this.bindEvents();
   }
@@ -123,7 +120,6 @@ class ImageViewer {
   }
 
   private bindEvents(): void {
-    this.closeBtn.addEventListener("click", () => this.close());
     this.zoomInBtn.addEventListener("click", () => this.zoomAtCenter(ImageViewer.ZOOM_STEP));
     this.zoomOutBtn.addEventListener("click", () => this.zoomAtCenter(1 / ImageViewer.ZOOM_STEP));
     this.resetBtn.addEventListener("click", () => this.fitToViewport());
@@ -378,9 +374,8 @@ export function initImageViewer(): void {
   const zoomInBtn = document.getElementById("image-viewer-zoom-in") as HTMLButtonElement | null;
   const zoomOutBtn = document.getElementById("image-viewer-zoom-out") as HTMLButtonElement | null;
   const resetBtn = document.getElementById("image-viewer-reset") as HTMLButtonElement | null;
-  const closeBtn = document.getElementById("image-viewer-close") as HTMLButtonElement | null;
 
-  if (!viewerEl || !img || !scaleLabel || !zoomInBtn || !zoomOutBtn || !resetBtn || !closeBtn) {
+  if (!viewerEl || !img || !scaleLabel || !zoomInBtn || !zoomOutBtn || !resetBtn) {
     return;
   }
 
@@ -391,7 +386,6 @@ export function initImageViewer(): void {
     zoomInBtn,
     zoomOutBtn,
     resetBtn,
-    closeBtn,
   });
 
   document.addEventListener("click", (e) => {
