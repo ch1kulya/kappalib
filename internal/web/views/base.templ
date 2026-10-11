@@ -78,6 +78,7 @@ templ Base(props BaseProps) {
 				if props.GlobalAnnouncement != nil {
 					@GlobalAnnouncementBar(props.GlobalAnnouncement)
 				}
+				@CookieNotice()
 				@AgeModal(props)
 				@ImageViewer()
 				@Profile(props.IsLoggedIn)
@@ -206,6 +207,19 @@ templ Footer(props BaseProps) {
 			</a>
 		</div>
 	</footer>
+}
+
+templ CookieNotice() {
+	<div class="cookie-notice" id="cookie-notice" style="display: none;">
+		<div class="cookie-notice-content">
+			<p class="cookie-notice-text">
+				Мы используем файлы Cookie для работы сайта. <a href="/privacy" class="cookie-notice-link">Подробнее</a>
+			</p>
+			<button type="button" class="action-btn cookie-notice-btn" id="cookie-notice-accept">
+				Понятно
+			</button>
+		</div>
+	</div>
 }
 
 script showAgeModalScript() {
