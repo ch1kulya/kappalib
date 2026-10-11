@@ -79,6 +79,7 @@ templ Base(props BaseProps) {
 					@GlobalAnnouncementBar(props.GlobalAnnouncement)
 				}
 				@AgeModal(props)
+				@ImageViewer()
 				@Profile(props.IsLoggedIn)
 				@Settings()
 				@BookmarkModal()
@@ -242,6 +243,24 @@ templ AgeModal(props BaseProps) {
 	if props.IsAdult {
 		@showAgeModalScript()
 	}
+}
+
+templ ImageViewer() {
+	<div class="image-viewer" id="image-viewer" role="dialog" aria-modal="true" aria-label="Просмотр изображения" aria-hidden="true" tabindex="-1">
+		<img class="image-viewer-img" id="image-viewer-img" alt="" draggable="false"/>
+		<div class="image-viewer-panel">
+			<button type="button" id="image-viewer-zoom-out" class="toolbar-btn" title="Уменьшить" aria-label="Уменьшить">
+				@IconMinus("")
+			</button>
+			<span class="image-viewer-scale" id="image-viewer-scale">100%</span>
+			<button type="button" id="image-viewer-zoom-in" class="toolbar-btn" title="Увеличить" aria-label="Увеличить">
+				@IconPlus("")
+			</button>
+			<button type="button" id="image-viewer-reset" class="toolbar-btn" title="Сбросить масштаб" aria-label="Сбросить масштаб">
+				@IconRetry("")
+			</button>
+		</div>
+	</div>
 }
 
 script initUmami(colorScheme string) {

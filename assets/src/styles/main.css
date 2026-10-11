@@ -6231,3 +6231,86 @@ td:first-child {
     display: none;
   }
 }
+
+/* Image Viewer */
+.novel-cover-container img,
+.chapter-content img,
+.comment-content img {
+  cursor: zoom-in;
+}
+
+:is(.novel-cover-container, .chapter-content, .comment-content) a img {
+  cursor: pointer;
+}
+
+.image-viewer {
+  position: fixed;
+  inset: 0;
+  display: none;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.05);
+  touch-action: none;
+  z-index: 105;
+  @media (prefers-color-scheme: dark) {
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  &.open {
+    display: block;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.image-viewer-img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  max-width: none;
+  max-height: none;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: none;
+  will-change: transform;
+  cursor: zoom-in;
+
+  &.is-zoomed {
+    cursor: zoom-out;
+  }
+
+  &.is-dragging {
+    cursor: grabbing;
+  }
+
+  &.is-loading {
+    visibility: hidden;
+  }
+}
+
+.image-viewer-panel {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-primary);
+}
+
+.image-viewer-scale {
+  min-width: 3.5rem;
+  text-align: center;
+  color: var(--secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
