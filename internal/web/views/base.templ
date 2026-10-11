@@ -246,14 +246,22 @@ templ AgeModal(props BaseProps) {
 }
 
 templ ImageViewer() {
-	<div class="viewer" id="viewer-id">
-		<img class="viewer-img" id="viewer-img-id" alt="" draggable="false"/>
-		<div class="viewer-panel">
-			<button type="button" id="viewer-zoom-out" title="Уменьшить">-</button>
-			<span class="viewer-scale" id="viewer-scale-id">100%</span>
-			<button type="button" id="viewer-zoom-in" title="Увеличить">+</button>
-			<button type="button" id="viewer-reset" title="Сбросить к исходному масштабу">⟲</button>
-			<button type="button" id="viewer-close" title="Закрыть">✕</button>
+	<div class="image-viewer" id="image-viewer" role="dialog" aria-modal="true" aria-label="Просмотр изображения" aria-hidden="true">
+		<img class="image-viewer-img" id="image-viewer-img" alt="" draggable="false"/>
+		<div class="image-viewer-panel">
+			<button type="button" id="image-viewer-zoom-out" title="Уменьшить" aria-label="Уменьшить">
+				@IconMinus("image-viewer-icon")
+			</button>
+			<span class="image-viewer-scale" id="image-viewer-scale" aria-live="polite">100%</span>
+			<button type="button" id="image-viewer-zoom-in" title="Увеличить" aria-label="Увеличить">
+				@IconPlus("image-viewer-icon")
+			</button>
+			<button type="button" id="image-viewer-reset" title="Сбросить масштаб" aria-label="Сбросить масштаб">
+				@IconRetry("image-viewer-icon")
+			</button>
+			<button type="button" id="image-viewer-close" title="Закрыть" aria-label="Закрыть">
+				@IconClose("image-viewer-icon")
+			</button>
 		</div>
 	</div>
 }

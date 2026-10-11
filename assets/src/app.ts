@@ -5,7 +5,7 @@ import { initComments, initMyCommentsPage } from "./modules/comments";
 import { initDescription } from "./modules/description";
 import Dropdown from "./modules/dropdown";
 import { initHistoryPage } from "./modules/history";
-import { initImageViewer } from "./modules/image-viever";
+import { initImageViewer } from "./modules/image-viewer";
 import { initListPage, initNovelListDropdown } from "./modules/list";
 import { initOffline, renderOfflinePage } from "./modules/offline";
 import { initProfile, initProfileModal } from "./modules/profile";
