@@ -7,7 +7,7 @@ export function initCookieNotice(): void {
     return;
   }
 
-  const isConfirmed = localStorage.getItem("cookieConsent") === "true";
+  const isConfirmed = localStorage.getItem("cookieNoticeDismissed") === "true";
   if (!isConfirmed) {
     console.info("Cookie notice required, showing banner");
     notice.style.display = "";
@@ -17,7 +17,7 @@ export function initCookieNotice(): void {
 
   acceptBtn.onclick = () => {
     console.info("Cookie notice confirmed");
-    localStorage.setItem("cookieConsent", "true");
+    localStorage.setItem("cookieNoticeDismissed", "true");
     notice.style.display = "none";
   };
 }

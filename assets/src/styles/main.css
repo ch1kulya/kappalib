@@ -6318,7 +6318,7 @@ td:first-child {
 /* Cookie Notice */
 .cookie-notice {
   position: fixed;
-  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  bottom: 1.25rem;
   right: 1.25rem;
   max-width: 360px;
   width: calc(100% - 2.5rem);
@@ -6350,6 +6350,7 @@ td:first-child {
 }
 
 .cookie-notice-btn {
+  width: auto;
   margin-top: 0;
   padding: 0.45rem 0.9rem;
   font-size: 0.85rem;
@@ -6360,7 +6361,7 @@ td:first-child {
 
 @media (max-width: 600px) {
   .cookie-notice {
-    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    bottom: 0.75rem;
     left: 0.75rem;
     right: 0.75rem;
     width: auto;
@@ -6372,7 +6373,6 @@ td:first-child {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
   }
 
   .cookie-notice-text {
@@ -6384,6 +6384,5 @@ td:first-child {
     align-self: center;
     padding: 0.4rem 0.75rem;
     font-size: 0.8rem;
-    width: auto;
   }
 }
