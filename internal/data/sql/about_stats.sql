@@ -3,31 +3,26 @@ SELECT
         SELECT
             count(*)
         FROM
-            novels
-    ),
+            novels),
     (
         SELECT
             coalesce(sum(chapters_count), 0)::bigint
         FROM
-            novels
-    ),
+            novels),
     (
         SELECT
             count(*)
         FROM
             sources
         WHERE
-            chapters_count > 0
-    ),
-    (
+            chapters_count > 0), (
         SELECT
             coalesce(sum(characters_count), 0)::bigint
         FROM
-            sources
-    ),
+            sources),
     (
         SELECT
             count(*)
         FROM
-            users
-    );
+            users);
+
