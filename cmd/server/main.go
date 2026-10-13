@@ -234,6 +234,7 @@ func main() {
 		r.Get("/sitemap.xml", h.Sitemap)
 		r.Get(fmt.Sprintf("/%s.txt", os.Getenv("INDEX_NOW_KEY")), h.IndexNowKey)
 		r.Get("/", h.Home)
+		r.Get("/about", h.About)
 		r.Get("/catalog", h.Catalog)
 		r.Get("/history", h.History)
 		r.Get("/comments", h.MyComments)

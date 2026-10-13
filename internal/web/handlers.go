@@ -193,6 +193,7 @@ func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	staticPages := []templates.StaticPage{
+		{Path: "about"},
 		{Path: "dmca"},
 		{Path: "privacy"},
 		{Path: "copyright"},
@@ -215,6 +216,29 @@ func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/xml")
 	_, _ = w.Write([]byte(content))
+}
+
+func (h *Handler) About(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	stats, err := data.GetAboutStats(ctx)
+	if err != nil {
+		logger.Warn("Failed to fetch stats for about page: %v", err)
+	}
+
+	props := views.AboutProps{
+		BaseProps: views.BaseProps{
+			Title:              "О проекте — kappalib",
+			Description:        "Информация о библиотеке веб-новелл kappalib, открытая статистика чтения и каталог.",
+			Canonical:          "https://kappalib.rip/about",
+			Version:            h.assetVersion,
+			IsLoggedIn:         h.hasSession(r),
+			ReaderSettings:     h.getReaderSettings(r),
+			GlobalAnnouncement: h.globalAnnouncement(ctx),
+		},
+		Stats: stats,
+	}
+
+	h.render(w, r, views.About(props))
 }
 
 func (h *Handler) getReaderSettings(r *http.Request) views.ReaderSettings {
