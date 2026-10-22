@@ -494,3 +494,18 @@ type EnrichedListCategory struct {
 	UpdatedAt int64               `json:"updatedAt"`
 	Novels    []EnrichedListEntry `json:"novels"`
 }
+
+type AboutDailyPoint struct {
+	Date         string `json:"date"`
+	TotalSeconds int64  `json:"total_seconds"`
+	ActiveUsers  int    `json:"active_users"`
+}
+
+type AboutStats struct {
+	NovelsCount     int64             `json:"novels_count"`
+	ChaptersCount   int64             `json:"chapters_count"`
+	SourcesCount    int64             `json:"sources_count"`
+	CharactersCount int64             `json:"characters_count"`
+	TotalUsers      int64             `json:"total_users"`
+	Daily           []AboutDailyPoint `json:"daily"`
+}

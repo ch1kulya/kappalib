@@ -142,9 +142,14 @@ templ Header(props BaseProps) {
 						</div>
 						<div class="search-results" id="search-results" style="display: none;"></div>
 					</div>
-					<button class="header-right" id="header-profile-btn" aria-label="Профиль">
-						@IconUser("header-profile-icon")
-					</button>
+					<div class="header-buttons">
+						<a href="/about" class="header-right" aria-label="О проекте" title="О проекте">
+							@IconInfo("header-profile-icon")
+						</a>
+						<button class="header-right" id="header-profile-btn" aria-label="Профиль">
+							@IconUser("header-profile-icon")
+						</button>
+					</div>
 				}
 			}
 		</div>
