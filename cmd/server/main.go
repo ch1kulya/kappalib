@@ -209,7 +209,6 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Use(middleware.RealIP)
 	r.Use(logger.Middleware)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
