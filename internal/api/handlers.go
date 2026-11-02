@@ -395,7 +395,10 @@ func HandleSearchNovels(ctx context.Context, input *SearchNovelsInput) (*SearchN
 func HandleGetNovel(ctx context.Context, input *NovelIDInput) (*NovelResponse, error) {
 	novel, err := data.GetNovel(ctx, input.ID)
 	if err != nil {
-		return nil, huma.Error404NotFound("Novel not found")
+		if errors.Is(err, data.ErrNovelNotFound) {
+			return nil, huma.Error404NotFound("Novel not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to fetch novel")
 	}
 	return &NovelResponse{Body: *novel}, nil
 }
@@ -451,7 +454,10 @@ func HandleGetOfflineChapters(ctx context.Context, input *GetOfflineChaptersInpu
 func HandleGetChapter(ctx context.Context, input *ChapterIDInput) (*ChapterResponse, error) {
 	chapter, err := data.GetChapter(ctx, input.ID)
 	if err != nil {
-		return nil, huma.Error404NotFound("Chapter not found")
+		if errors.Is(err, data.ErrChapterNotFound) {
+			return nil, huma.Error404NotFound("Chapter not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to fetch chapter")
 	}
 	return &ChapterResponse{Body: *chapter}, nil
 }
@@ -492,7 +498,10 @@ func HandleDeleteProfile(ctx context.Context, input *ProfileIDInput) (*DeletePro
 	}
 
 	if err := data.DeleteProfile(ctx, userID); err != nil {
-		return nil, huma.Error404NotFound("Profile not found")
+		if errors.Is(err, data.ErrProfileNotFound) {
+			return nil, huma.Error404NotFound("Profile not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to delete profile")
 	}
 
 	return &DeleteProfileResponse{
@@ -810,7 +819,10 @@ func HandleGetCurrentUser(ctx context.Context, input *struct{}) (*ProfileRespons
 
 	profile, err := data.GetProfile(ctx, userID)
 	if err != nil {
-		return nil, huma.Error404NotFound("Profile not found")
+		if errors.Is(err, data.ErrProfileNotFound) {
+			return nil, huma.Error404NotFound("Profile not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to fetch profile")
 	}
 
 	return &ProfileResponse{Body: *profile}, nil

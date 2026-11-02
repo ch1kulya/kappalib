@@ -724,3 +724,75 @@ func TestHandleGetOfflineChapters(t *testing.T) {
 		t.Errorf("expected 401 Unauthorized for unauthenticated request, got %d: %s", resp.Code, resp.Body.String())
 	}
 }
+
+func TestCacheMiddleware_ErrorResponsesAreNotStored(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+		want   string
+	}{
+		{name: "success stays public", status: http.StatusOK, want: "public, max-age=6000"},
+		{name: "not found stays public", status: http.StatusNotFound, want: "public, max-age=6000"},
+		{name: "rate limit", status: http.StatusTooManyRequests, want: "no-store"},
+		{name: "server error", status: http.StatusInternalServerError, want: "no-store"},
+		{name: "unavailable", status: http.StatusServiceUnavailable, want: "no-store"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := CacheMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.status)
+			}))
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/novels/search", nil))
+
+			if got := rec.Header().Get("Cache-Control"); got != tt.want {
+				t.Errorf("Cache-Control = %q, want %q", got, tt.want)
+			}
+			if rec.Code != tt.status {
+				t.Errorf("status = %d, want %d", rec.Code, tt.status)
+			}
+		})
+	}
+}
+
+func TestCacheMiddleware_OuterErrorsAreNotPublic(t *testing.T) {
+	recoverer := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer func() {
+				if recover() != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			}()
+			next.ServeHTTP(w, r)
+		})
+	}
+	handler := recoverer(CacheMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("boom")
+	})))
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/novels/search", nil))
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", rec.Code)
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "" {
+		t.Errorf("Cache-Control = %q, want none", got)
+	}
+}
+
+func TestCacheMiddleware_ImplicitSuccessKeepsCacheHeader(t *testing.T) {
+	handler := CacheMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	}))
+	empty := CacheMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+
+	for name, h := range map[string]http.Handler{"write": handler, "empty": empty} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/novels/search", nil))
+		if got := rec.Header().Get("Cache-Control"); got != "public, max-age=6000" {
+			t.Errorf("%s: Cache-Control = %q", name, got)
+		}
+	}
+}

@@ -74,11 +74,12 @@ export function initSearch(): void {
     uiManager.openSearch();
 
     timeout = window.setTimeout(async () => {
+      let loadingTimeout: number | null = null;
       try {
         console.info(`Searching for: "${query}"`);
         results.style.display = "block";
 
-        let loadingTimeout: number | null = setTimeout(() => {
+        loadingTimeout = setTimeout(() => {
           if (!uiManager.isSearchActive()) return;
           loadingTimeout = null;
           results.innerHTML = "";
@@ -91,11 +92,12 @@ export function initSearch(): void {
         const res = await fetch(
           `${API_URL}/novels/search?q=${encodeURIComponent(query)}`,
         );
-        const data: SearchResponse = await res.json();
-
         if (loadingTimeout !== null) {
           clearTimeout(loadingTimeout);
         }
+
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data: SearchResponse = await res.json();
 
         results.innerHTML = "";
         firstResultUrl = null;
@@ -194,6 +196,9 @@ export function initSearch(): void {
         results.appendChild(fragment);
       } catch (err) {
         console.error("Search API request failed", err);
+        if (loadingTimeout !== null) {
+          clearTimeout(loadingTimeout);
+        }
         if (!uiManager.isSearchActive()) return;
         results.innerHTML = "";
         firstResultUrl = null;

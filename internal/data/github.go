@@ -45,6 +45,8 @@ func parseUpdateTag(body string) string {
 	return strings.TrimSpace(body[start : start+end])
 }
 
+const appUpdatesFailureCooldown = time.Minute
+
 func GetAppUpdates(ctx context.Context, limit int) ([]models.AppUpdate, error) {
 	if limit < 0 {
 		limit = 0
@@ -55,8 +57,13 @@ func GetAppUpdates(ctx context.Context, limit int) ([]models.AppUpdate, error) {
 		ttl = 10 * time.Minute
 	}
 
+	failureKey := key + ":failure"
+	if cached, found := cache.C.Get(failureKey); found {
+		return nil, cached.(error)
+	}
+
 	value, err := cache.C.GetOrFetch(key, ttl, func() (any, error) {
-		reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		reqCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		defer cancel()
 
 		var updates []models.AppUpdate
@@ -85,18 +92,12 @@ func GetAppUpdates(ctx context.Context, limit int) ([]models.AppUpdate, error) {
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				logger.Error("GetAppUpdates: Failed to fetch PRs: %v", err)
-				if len(updates) > 0 {
-					return updates, nil
-				}
 				return nil, err
 			}
 
 			if resp.StatusCode != http.StatusOK {
 				_ = resp.Body.Close()
 				logger.Error("GetAppUpdates: GitHub API returned status %d", resp.StatusCode)
-				if len(updates) > 0 {
-					return updates, nil
-				}
 				return nil, fmt.Errorf("github api status: %d", resp.StatusCode)
 			}
 
@@ -104,9 +105,6 @@ func GetAppUpdates(ctx context.Context, limit int) ([]models.AppUpdate, error) {
 			if err := json.NewDecoder(resp.Body).Decode(&prs); err != nil {
 				_ = resp.Body.Close()
 				logger.Error("GetAppUpdates: Failed to decode response: %v", err)
-				if len(updates) > 0 {
-					return updates, nil
-				}
 				return nil, err
 			}
 			_ = resp.Body.Close()
@@ -158,6 +156,7 @@ func GetAppUpdates(ctx context.Context, limit int) ([]models.AppUpdate, error) {
 		return updates, nil
 	})
 	if err != nil {
+		cache.C.Set(failureKey, err, appUpdatesFailureCooldown)
 		return nil, err
 	}
 	return value.([]models.AppUpdate), nil

@@ -128,6 +128,9 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request, component templ
 }
 
 func (h *Handler) renderError(w http.ResponseWriter, r *http.Request, code int, title, message string) {
+	if code >= http.StatusInternalServerError {
+		w.Header().Set("Cache-Control", "no-store")
+	}
 	w.WriteHeader(code)
 	props := views.ErrorProps{
 		BaseProps: views.BaseProps{
@@ -143,6 +146,10 @@ func (h *Handler) renderError(w http.ResponseWriter, r *http.Request, code int, 
 		ErrorMessage: message,
 	}
 	h.render(w, r, views.Error(props))
+}
+
+func (h *Handler) renderUnavailable(w http.ResponseWriter, r *http.Request, message string) {
+	h.renderError(w, r, http.StatusServiceUnavailable, "Сервис временно недоступен", message)
 }
 
 func (h *Handler) NotFound(w http.ResponseWriter, r *http.Request) {
@@ -418,17 +425,24 @@ func (h *Handler) Novel(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	novel, err := data.GetNovel(r.Context(), id)
 	if err != nil {
-		h.renderError(w, r, http.StatusNotFound, "Новелла не найдена", "Мы не смогли найти запрашиваемую новеллу.")
+		if errors.Is(err, data.ErrNovelNotFound) {
+			h.renderError(w, r, http.StatusNotFound, "Новелла не найдена", "Мы не смогли найти запрашиваемую новеллу.")
+			return
+		}
+		logger.Error("Failed to fetch novel page: %v", err)
+		h.renderUnavailable(w, r, "Не удалось загрузить новеллу. Пожалуйста, попробуйте позже.")
+		return
+	}
+
+	chapters, err := data.GetChapters(r.Context(), id)
+	if err != nil {
+		logger.Error("Failed to fetch novel chapters: %v", err)
+		h.renderUnavailable(w, r, "Не удалось загрузить список глав. Пожалуйста, попробуйте позже.")
 		return
 	}
 
 	if !isPrefetchOrPrerender(r) {
 		go data.IncrementNovelViews(context.Background(), id)
-	}
-
-	chapters, err := data.GetChapters(r.Context(), id)
-	if err != nil || chapters == nil {
-		chapters = &models.ChaptersList{Chapters: []models.ChapterSummary{}}
 	}
 
 	firstChapterID := ""
@@ -549,12 +563,15 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 
 	dataResp, err := data.GetNovels(r.Context(), page, cookieData.SortOrder)
 	if err != nil {
-		h.renderError(w, r, http.StatusServiceUnavailable, "Сервис временно недоступен", "Не удалось загрузить список новелл. Пожалуйста, попробуйте позже.")
+		h.renderUnavailable(w, r, "Не удалось загрузить список новелл. Пожалуйста, попробуйте позже.")
 		logger.Error("Failed to fetch novels home page: %v", err)
 		return
 	}
 
-	latestUpdates, pinnedAppUpdate, _ := buildFeed(r.Context(), true)
+	latestUpdates, pinnedAppUpdate, err := buildFeed(r.Context(), true)
+	if err != nil {
+		logger.Warn("Failed to build home updates feed: %v", err)
+	}
 
 	canonical := "https://kappalib.rip"
 	if page > 1 {
@@ -610,21 +627,36 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 
 	novel, err := data.GetNovel(r.Context(), novelID)
 	if err != nil {
-		h.renderError(w, r, http.StatusNotFound, "Новелла не найдена", "Не удалось найти новеллу для этой главы.")
+		if errors.Is(err, data.ErrNovelNotFound) {
+			h.renderError(w, r, http.StatusNotFound, "Новелла не найдена", "Не удалось найти новеллу для этой главы.")
+			return
+		}
+		logger.Error("Failed to fetch novel for chapter page: %v", err)
+		h.renderUnavailable(w, r, "Не удалось загрузить главу. Пожалуйста, попробуйте позже.")
 		return
 	}
 
 	chapter, err := data.GetChapter(r.Context(), chapterID)
 	if err != nil {
-		h.renderError(w, r, http.StatusNotFound, "Глава не найдена", "Запрашиваемая глава не существует или была удалена.")
+		if errors.Is(err, data.ErrChapterNotFound) {
+			h.renderError(w, r, http.StatusNotFound, "Глава не найдена", "Запрашиваемая глава не существует или была удалена.")
+			return
+		}
+		logger.Error("Failed to fetch chapter page: %v", err)
+		h.renderUnavailable(w, r, "Не удалось загрузить главу. Пожалуйста, попробуйте позже.")
+		return
+	}
+
+	allChapters, err := data.GetChapters(r.Context(), novelID)
+	if err != nil {
+		logger.Error("Failed to fetch chapter navigation: %v", err)
+		h.renderUnavailable(w, r, "Не удалось загрузить главу. Пожалуйста, попробуйте позже.")
 		return
 	}
 
 	if !isPrefetchOrPrerender(r) {
 		go data.IncrementNovelViews(context.Background(), novelID)
 	}
-
-	allChapters, _ := data.GetChapters(r.Context(), novelID)
 	var prevID, nextID string
 
 	if allChapters != nil && len(allChapters.Chapters) > 0 {
@@ -720,7 +752,12 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Updates(w http.ResponseWriter, r *http.Request) {
-	allUpdates, pinnedAppUpdate, _ := buildFeed(r.Context(), false)
+	allUpdates, pinnedAppUpdate, err := buildFeed(r.Context(), false)
+	if err != nil {
+		logger.Error("Failed to build updates feed: %v", err)
+		h.renderUnavailable(w, r, "Не удалось загрузить обновления. Пожалуйста, попробуйте позже.")
+		return
+	}
 
 	title := "Обновления — kappalib"
 	description := "История обновлений новелл и сайта."
@@ -946,7 +983,9 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 	if !isPartial {
 		var err error
 		if filterTags, err = data.GetCatalogTags(r.Context()); err != nil {
-			logger.Warn("Failed to fetch catalog tags: %v", err)
+			logger.Error("Failed to fetch catalog tags: %v", err)
+			h.renderUnavailable(w, r, "Не удалось загрузить каталог. Пожалуйста, попробуйте позже.")
+			return
 		}
 		filter.TagIDs = knownTagIDs(filter.TagIDs, filterTags)
 		if searchQuery == "" {
@@ -958,7 +997,7 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 
 	dataResp, err := data.GetCatalogNovels(r.Context(), page, sortOrder, searchQuery, filter)
 	if err != nil {
-		h.renderError(w, r, http.StatusServiceUnavailable, "Сервис временно недоступен", "Не удалось загрузить каталог. Пожалуйста, попробуйте позже.")
+		h.renderUnavailable(w, r, "Не удалось загрузить каталог. Пожалуйста, попробуйте позже.")
 		logger.Error("Failed to fetch catalog: %v", err)
 		return
 	}
@@ -1104,7 +1143,7 @@ func (h *Handler) UserProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		logger.Error("Failed to load user profile %s: %v", id, err)
-		h.renderError(w, r, http.StatusServiceUnavailable, "Сервис временно недоступен", "Не удалось загрузить профиль. Пожалуйста, попробуйте позже.")
+		h.renderUnavailable(w, r, "Не удалось загрузить профиль. Пожалуйста, попробуйте позже.")
 		return
 	}
 
@@ -1140,22 +1179,25 @@ type matchedNovelAddition struct {
 func buildFeed(ctx context.Context, isHome bool) ([]models.HomeUpdateItem, *models.AppUpdate, error) {
 	chapterUpdates, err := data.GetLatestUpdates(ctx, 0)
 	if err != nil {
-		chapterUpdates = nil
+		return nil, nil, err
 	}
 
 	appUpdates, err := data.GetAppUpdates(ctx, 0)
 	if err != nil {
+		logger.Warn("Failed to fetch app updates for feed: %v", err)
 		appUpdates = nil
 	}
 
 	novelAdditions, err := data.GetRecentlyAddedNovels(ctx, 0)
 	if err != nil {
-		novelAdditions = nil
+		return nil, nil, err
 	}
 
 	top12 := make(map[string]bool)
 	popNovels, err := data.GetNovels(ctx, 1, "popular")
-	if err == nil && popNovels != nil {
+	if err != nil {
+		logger.Warn("Failed to fetch popular novels for feed: %v", err)
+	} else {
 		for _, n := range popNovels.Novels {
 			top12[n.ID] = true
 		}
