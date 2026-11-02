@@ -14,7 +14,7 @@ templ OfflineBadge() {
 
 templ Downloads(props BaseProps) {
 	@Base(props) {
-		<div class="history-page downloads-page" id="downloads-page">
+		<div class="history-page downloads-page offline-pending" id="downloads-page">
 			<div id="downloads-library">
 				<div class="chapters-header" style="margin-bottom: 1.5rem;">
 					<h2 style="margin: 0;">Загрузки</h2>
@@ -139,7 +139,7 @@ templ offlineReadingActions() {
 
 templ OfflineReader(props BaseProps) {
 	@Base(props) {
-		<div class="chapter-reader" id="offline-reader"></div>
+		<div class="chapter-reader offline-pending" id="offline-reader"></div>
 		<template id="tpl-offline-chapter">
 			<div id="reading-tracker" style="display: none;"></div>
 			<h1 data-field="heading"></h1>

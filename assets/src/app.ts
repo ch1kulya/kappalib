@@ -8,7 +8,7 @@ import Dropdown from "./modules/dropdown";
 import { initHistoryPage } from "./modules/history";
 import { initImageViewer } from "./modules/image-viewer";
 import { initListPage, initNovelListDropdown } from "./modules/list";
-import { initOffline, renderOfflinePage } from "./modules/offline";
+import { initOffline, renderOfflinePage, revealOfflinePage } from "./modules/offline";
 import { initProfile, initProfileModal } from "./modules/profile";
 import { initReadingProgressSaver, refreshLastReadTotalChapters } from "./modules/progress";
 import { initSearch } from "./modules/search";
@@ -87,5 +87,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.info("All modules initialized successfully");
   } catch (err) {
     console.error("Critical error during module initialization", err);
+    revealOfflinePage();
   }
 });
