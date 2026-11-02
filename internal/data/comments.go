@@ -494,8 +494,8 @@ func getVisibleTargetComments(ctx context.Context, queries commentTargetQueries,
 			&c.UserDisplayName, &c.UserAvatarSeed, &c.UserHasCustomAvatar, &avatarUpdatedAt,
 			&c.Score, &c.UserVote,
 		); err != nil {
-			logger.Warn("Comment row scan error: %v", err)
-			continue
+			logger.Error("Comment row scan error: %v", err)
+			return nil, err
 		}
 		c.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
 		c.IsNew = unseenSince != nil && isUnseenComment(c, viewerID, approvedAt, *unseenSince)
@@ -535,8 +535,8 @@ func loadVisibleAnswers(ctx context.Context, commentIDs []string, viewerID strin
 			&a.ID, &a.CommentID, &a.UserID, &a.ContentHTML, &a.Status, &a.EditedAt, &a.CreatedAt, &approvedAt,
 			&a.UserDisplayName, &a.UserAvatarSeed, &a.UserHasCustomAvatar, &avatarUpdatedAt,
 		); err != nil {
-			logger.Warn("Answer row scan error: %v", err)
-			continue
+			logger.Error("Answer row scan error: %v", err)
+			return nil, err
 		}
 		a.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
 		a.IsNew = unseenSince != nil && isUnseenAnswer(a, viewerID, approvedAt, *unseenSince)
@@ -580,8 +580,8 @@ func GetVisibleComments(ctx context.Context, chapterID, userID string, page int,
 
 	answers, err := loadVisibleAnswers(dbCtx, commentIDs, userID, nil)
 	if err != nil {
-		logger.Warn("Failed to batch-load comment answers: %v", err)
-		return result, nil
+		logger.Error("Failed to batch-load comment answers: %v", err)
+		return nil, err
 	}
 	for i := range result.Comments {
 		result.Comments[i].Answers = answers[result.Comments[i].ID]
@@ -613,10 +613,14 @@ func GetUserComments(ctx context.Context, userID string, page int, seenBefore, p
 	for rows.Next() {
 		var item idWithDate
 		if err := rows.Scan(&item.ID, &item.CreatedAt); err != nil {
-			logger.Warn("Thread row scan error: %v", err)
-			continue
+			logger.Error("Thread row scan error: %v", err)
+			return nil, err
 		}
 		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		logger.Error("Failed to iterate user comment threads: %v", err)
+		return nil, err
 	}
 
 	if len(items) == 0 {
@@ -670,17 +674,22 @@ func GetUserComments(ctx context.Context, userID string, page int, seenBefore, p
 			&c.ChapterNum, &c.NovelID, &c.NovelTitle,
 			&c.ProfileID, &c.ProfileDisplayName, &approvedAt,
 		); err != nil {
-			logger.Warn("Comment row scan error: %v", err)
-			continue
+			logger.Error("Comment row scan error: %v", err)
+			return nil, err
 		}
 		c.UserAvatarUpdatedAt = avatarUpdatedAt.Unix()
 		c.IsNew = c.ProfileID == userID && isUnseenComment(c, userID, approvedAt, profileThreshold)
 		commentsByID[c.ID] = &c
 	}
+	if err := commentRows.Err(); err != nil {
+		logger.Error("Failed to iterate user thread comments: %v", err)
+		return nil, err
+	}
 
 	answers, err := loadVisibleAnswers(dbCtx, commentIDs, userID, &notifyThreshold)
 	if err != nil {
-		logger.Warn("Failed to batch-load answers for user threads: %v", err)
+		logger.Error("Failed to batch-load answers for user threads: %v", err)
+		return nil, err
 	}
 	for commentID, list := range answers {
 		if c, ok := commentsByID[commentID]; ok {
@@ -699,7 +708,7 @@ func GetUserComments(ctx context.Context, userID string, page int, seenBefore, p
 	err = database.DB.QueryRow(dbCtx, queryUserCommentThreadsCount, userID).Scan(&totalCount)
 	if err != nil {
 		logger.Error("Failed to count user threads: %v", err)
-		totalCount = len(comments)
+		return nil, err
 	}
 
 	totalPages := (totalCount + pageSize - 1) / pageSize
@@ -1736,11 +1745,15 @@ func GetUserCommentStats(ctx context.Context, userID string) (*models.UserCommen
 	for rows.Next() {
 		var d models.CommentStatDay
 		if err := rows.Scan(&d.Day, &d.Rating, &d.Replies); err != nil {
-			continue
+			return nil, err
 		}
 		rating += d.Rating
 		replies += d.Replies
 		days = append(days, d)
+	}
+	if err := rows.Err(); err != nil {
+		logger.Error("Failed to iterate user comment stats: %v", err)
+		return nil, err
 	}
 
 	return &models.UserCommentStats{

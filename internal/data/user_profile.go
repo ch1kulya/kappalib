@@ -244,8 +244,8 @@ func getUserBadges(ctx context.Context, userID string) ([]models.UserBadge, erro
 	for rows.Next() {
 		var b models.UserBadge
 		if err := rows.Scan(&b.ID, &b.Title, &b.Description, &b.Icon, &b.AwardedAt); err != nil {
-			logger.Warn("Badge row scan error: %v", err)
-			continue
+			logger.Error("Badge row scan error: %v", err)
+			return nil, err
 		}
 		badges = append(badges, b)
 	}
@@ -268,8 +268,8 @@ func getUserActivityYear(ctx context.Context, userID string) ([]models.ActivityD
 	for rows.Next() {
 		var d models.ActivityDay
 		if err := rows.Scan(&d.Date, &d.Seconds); err != nil {
-			logger.Warn("Activity row scan error: %v", err)
-			continue
+			logger.Error("Activity row scan error: %v", err)
+			return nil, err
 		}
 		days = append(days, d)
 	}

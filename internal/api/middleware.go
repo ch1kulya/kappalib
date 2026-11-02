@@ -172,6 +172,42 @@ func hasAuth(r *http.Request) bool {
 	return false
 }
 
+const noStoreCacheControl = "no-store"
+
+type cacheStatusWriter struct {
+	http.ResponseWriter
+	cacheControl string
+	headerSet    bool
+}
+
+func (w *cacheStatusWriter) setCacheControl(code int) {
+	if w.headerSet {
+		return
+	}
+	w.headerSet = true
+	if code >= http.StatusInternalServerError || code == http.StatusTooManyRequests {
+		w.Header().Set("Cache-Control", noStoreCacheControl)
+		return
+	}
+	if w.Header().Get("Cache-Control") == "" {
+		w.Header().Set("Cache-Control", w.cacheControl)
+	}
+}
+
+func (w *cacheStatusWriter) WriteHeader(code int) {
+	w.setCacheControl(code)
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w *cacheStatusWriter) Write(b []byte) (int, error) {
+	w.setCacheControl(http.StatusOK)
+	return w.ResponseWriter.Write(b)
+}
+
+func (w *cacheStatusWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
 func CacheMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -190,11 +226,14 @@ func CacheMiddleware(next http.Handler) http.Handler {
 			w.Header().Set("Expires", "0")
 		} else if r.Method == http.MethodGet {
 			w.Header().Set("Vary", "Cookie")
+			cacheControl := "public, max-age=6000"
 			if hasAuth(r) {
-				w.Header().Set("Cache-Control", "private, max-age=60")
-			} else {
-				w.Header().Set("Cache-Control", "public, max-age=6000")
+				cacheControl = "private, max-age=60"
 			}
+			writer := &cacheStatusWriter{ResponseWriter: w, cacheControl: cacheControl}
+			next.ServeHTTP(writer, r)
+			writer.setCacheControl(http.StatusOK)
+			return
 		}
 
 		next.ServeHTTP(w, r)

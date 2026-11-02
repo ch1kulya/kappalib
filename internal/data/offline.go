@@ -11,7 +11,6 @@ import (
 	"github.com/ch1kulya/kappalib/internal/models"
 
 	"github.com/ch1kulya/logger"
-	"github.com/jackc/pgx/v5"
 	"golang.org/x/time/rate"
 )
 
@@ -74,7 +73,7 @@ func GetOfflineChapters(ctx context.Context, userID, novelID string, after, limi
 	}
 
 	if _, err := GetNovel(ctx, novelID); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, ErrNovelNotFound) {
 			return nil, ErrNovelNotFound
 		}
 		logger.Error("GetOfflineChapters: Failed to load novel %s: %v", novelID, err)

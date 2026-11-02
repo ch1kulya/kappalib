@@ -3,7 +3,9 @@ package data
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/ch1kulya/kappalib/internal/cache"
@@ -11,6 +13,7 @@ import (
 	"github.com/ch1kulya/kappalib/internal/models"
 
 	"github.com/ch1kulya/logger"
+	"github.com/jackc/pgx/v5"
 )
 
 //go:embed sql/chapters_get_list.sql
@@ -29,7 +32,7 @@ func GetChapters(ctx context.Context, novelID string) (*models.ChaptersList, err
 	key := fmt.Sprintf("chapters:%s", novelID)
 
 	value, err := cache.C.GetOrFetch(key, 5*time.Minute, func() (any, error) {
-		dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		dbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 
 		rows, err := database.DB.Query(dbCtx, queryChaptersGetList, novelID)
@@ -43,9 +46,13 @@ func GetChapters(ctx context.Context, novelID string) (*models.ChaptersList, err
 		for rows.Next() {
 			var c models.ChapterSummary
 			if err := rows.Scan(&c.ID, &c.ChapterNum, &c.Title, &c.TitleEn); err != nil {
-				continue
+				return nil, err
 			}
 			chapters = append(chapters, c)
+		}
+		if err := rows.Err(); err != nil {
+			logger.Error("GetChapters: Failed to read chapters for novel %q: %v", novelID, err)
+			return nil, err
 		}
 
 		return &models.ChaptersList{
@@ -57,14 +64,20 @@ func GetChapters(ctx context.Context, novelID string) (*models.ChaptersList, err
 	if err != nil {
 		return nil, err
 	}
-	return value.(*models.ChaptersList), nil
+	list := *value.(*models.ChaptersList)
+	list.Chapters = slices.Clone(list.Chapters)
+	return &list, nil
 }
 
 func GetChapter(ctx context.Context, id string) (*models.Chapter, error) {
+	if !isQueryableText(id) {
+		return nil, ErrChapterNotFound
+	}
+
 	key := fmt.Sprintf("chapter:%s", id)
 
 	value, err := cache.C.GetOrFetch(key, 30*time.Minute, func() (any, error) {
-		dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		dbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 
 		var c models.Chapter
@@ -76,6 +89,9 @@ func GetChapter(ctx context.Context, id string) (*models.Chapter, error) {
 			&sourceName, &sourceLogo, &sourceLabel,
 		)
 		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, ErrChapterNotFound
+			}
 			return nil, err
 		}
 
@@ -106,8 +122,8 @@ func GetLatestUpdates(ctx context.Context, limit int) ([]models.NovelUpdate, err
 	}
 	key := fmt.Sprintf("updates:latest:%d", limit)
 
-	value, err := cache.C.GetOrFetch(key, 3*time.Minute, func() (any, error) {
-		dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	value, err := cache.C.GetOrFetchWhen(key, 3*time.Minute, func() (any, error) {
+		dbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 
 		rows, err := database.DB.Query(dbCtx, queryUpdatesLatest, limit)
@@ -134,12 +150,18 @@ func GetLatestUpdates(ctx context.Context, limit int) ([]models.NovelUpdate, err
 				&u.UpdatedAt,
 			); err != nil {
 				logger.Error("GetLatestUpdates: Failed to scan row: %v", err)
-				continue
+				return nil, err
 			}
 			updates = append(updates, u)
 		}
+		if err := rows.Err(); err != nil {
+			logger.Error("GetLatestUpdates: Failed to read updates: %v", err)
+			return nil, err
+		}
 
 		return updates, nil
+	}, func(v any) bool {
+		return len(v.([]models.NovelUpdate)) > 0
 	})
 	if err != nil {
 		return nil, err
@@ -153,8 +175,8 @@ func GetRecentlyAddedNovels(ctx context.Context, limit int) ([]models.NovelAddit
 	}
 	key := fmt.Sprintf("novels:recent:%d", limit)
 
-	value, err := cache.C.GetOrFetch(key, 3*time.Minute, func() (any, error) {
-		dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	value, err := cache.C.GetOrFetchWhen(key, 3*time.Minute, func() (any, error) {
+		dbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 
 		rows, err := database.DB.Query(dbCtx, queryNovelsRecent, limit)
@@ -178,12 +200,18 @@ func GetRecentlyAddedNovels(ctx context.Context, limit int) ([]models.NovelAddit
 				&n.CreatedAt,
 			); err != nil {
 				logger.Error("GetRecentlyAddedNovels: Failed to scan row: %v", err)
-				continue
+				return nil, err
 			}
 			novels = append(novels, n)
 		}
+		if err := rows.Err(); err != nil {
+			logger.Error("GetRecentlyAddedNovels: Failed to read novels: %v", err)
+			return nil, err
+		}
 
 		return novels, nil
+	}, func(v any) bool {
+		return len(v.([]models.NovelAddition)) > 0
 	})
 	if err != nil {
 		return nil, err

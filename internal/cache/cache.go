@@ -81,6 +81,10 @@ func (c *Cache) Delete(key string) {
 }
 
 func (c *Cache) GetOrFetch(key string, duration time.Duration, fetch func() (any, error)) (any, error) {
+	return c.GetOrFetchWhen(key, duration, fetch, func(any) bool { return true })
+}
+
+func (c *Cache) GetOrFetchWhen(key string, duration time.Duration, fetch func() (any, error), cacheable func(any) bool) (any, error) {
 	if value, found := c.Get(key); found {
 		return value, nil
 	}
@@ -95,7 +99,9 @@ func (c *Cache) GetOrFetch(key string, duration time.Duration, fetch func() (any
 			return nil, err
 		}
 
-		c.Set(key, value, duration)
+		if cacheable(value) {
+			c.Set(key, value, duration)
+		}
 		return value, nil
 	})
 	if err != nil {
