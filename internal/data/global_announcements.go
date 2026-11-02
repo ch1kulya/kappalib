@@ -25,7 +25,7 @@ func GetGlobalAnnouncement(ctx context.Context) (*models.GlobalAnnouncement, err
 			return (*models.GlobalAnnouncement)(nil), nil
 		}
 
-		dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		dbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 
 		var a models.GlobalAnnouncement

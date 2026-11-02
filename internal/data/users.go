@@ -17,6 +17,7 @@ import (
 
 	"github.com/ch1kulya/kappalib/internal/database"
 	"github.com/ch1kulya/kappalib/internal/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/minio/minio-go/v7"
 	"golang.org/x/image/draw"
@@ -242,7 +243,11 @@ func GetProfile(ctx context.Context, profileID string) (*models.ProfilePublic, e
 		&profile.HasCustomAvatar, &avatarUpdatedAt, &profile.CreatedAt,
 	)
 	if err != nil {
-		return nil, ErrProfileNotFound
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrProfileNotFound
+		}
+		logger.Error("Failed to get profile: %v", err)
+		return nil, err
 	}
 
 	profile.AvatarUpdatedAt = avatarUpdatedAt.Unix()

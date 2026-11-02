@@ -17,7 +17,7 @@ var queryAnnouncementsGetRandom string
 
 func GetRandomAnnouncement(ctx context.Context) (*models.Announcement, error) {
 	value, err := cache.C.GetOrFetch("announcement:random", 3*time.Minute, func() (any, error) {
-		dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		dbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 
 		var a models.Announcement

@@ -288,3 +288,31 @@ func TestGetOrFetch_SingleflightDistinctKeys(t *testing.T) {
 		t.Errorf("fetch called %d times, want %d", count, len(keys))
 	}
 }
+
+func TestGetOrFetchWhen_SkipsCacheWhenNotCacheable(t *testing.T) {
+	c := newTestCache()
+	calls := 0
+	fetch := func() (any, error) {
+		calls++
+		return calls, nil
+	}
+	cacheable := func(v any) bool { return v.(int) > 1 }
+
+	for want := 1; want <= 2; want++ {
+		got, err := c.GetOrFetchWhen("key", time.Minute, fetch, cacheable)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != want {
+			t.Fatalf("got %v, want %d", got, want)
+		}
+	}
+
+	got, err := c.GetOrFetchWhen("key", time.Minute, fetch, cacheable)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != 2 || calls != 2 {
+		t.Fatalf("got %v after %d calls, want cached 2 after 2 calls", got, calls)
+	}
+}

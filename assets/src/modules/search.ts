@@ -25,6 +25,7 @@ export function initSearch(): void {
 
   let timeout: number | undefined;
   let firstResultUrl: string | null = null;
+  let latestRequestId = 0;
   const API_URL = process.env.API_URL;
 
   const PLACEHOLDER_IMG =
@@ -74,11 +75,13 @@ export function initSearch(): void {
     uiManager.openSearch();
 
     timeout = window.setTimeout(async () => {
+      const requestId = ++latestRequestId;
+      let loadingTimeout: number | null = null;
       try {
         console.info(`Searching for: "${query}"`);
         results.style.display = "block";
 
-        let loadingTimeout: number | null = setTimeout(() => {
+        loadingTimeout = setTimeout(() => {
           if (!uiManager.isSearchActive()) return;
           loadingTimeout = null;
           results.innerHTML = "";
@@ -91,11 +94,14 @@ export function initSearch(): void {
         const res = await fetch(
           `${API_URL}/novels/search?q=${encodeURIComponent(query)}`,
         );
-        const data: SearchResponse = await res.json();
-
         if (loadingTimeout !== null) {
           clearTimeout(loadingTimeout);
         }
+
+        if (requestId !== latestRequestId) return;
+
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data: SearchResponse = await res.json();
 
         results.innerHTML = "";
         firstResultUrl = null;
@@ -194,6 +200,10 @@ export function initSearch(): void {
         results.appendChild(fragment);
       } catch (err) {
         console.error("Search API request failed", err);
+        if (loadingTimeout !== null) {
+          clearTimeout(loadingTimeout);
+        }
+        if (requestId !== latestRequestId) return;
         if (!uiManager.isSearchActive()) return;
         results.innerHTML = "";
         firstResultUrl = null;
