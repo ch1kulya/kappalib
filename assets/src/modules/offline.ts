@@ -414,6 +414,10 @@ function closeDropdown(root: HTMLElement): void {
   root.querySelector(".dropdown-btn")?.setAttribute("aria-expanded", "false");
 }
 
+export function revealOfflinePage(): void {
+  document.querySelector(".offline-pending")?.classList.remove("offline-pending");
+}
+
 export async function renderOfflinePage(): Promise<void> {
   try {
     const reader = document.getElementById("offline-reader");
@@ -426,6 +430,9 @@ export async function renderOfflinePage(): Promise<void> {
     }
   } catch (err) {
     console.error("Failed to render offline page", err);
+    if (document.getElementById("offline-reader")) {
+      window.location.replace("/downloads");
+    }
   }
 }
 
@@ -464,6 +471,7 @@ async function renderOfflineReader(root: HTMLElement): Promise<void> {
   fillChapterNavigation(fragment, novel.id, prev, next);
 
   root.appendChild(fragment);
+  revealOfflinePage();
 
   const backLink = document.querySelector<HTMLAnchorElement>("#main-header .header-left");
   if (backLink) backLink.href = `/${novel.id}`;
@@ -579,6 +587,7 @@ async function renderOfflineNovel(novel: OfflineNovel): Promise<void> {
   container.replaceChildren(fragment);
   container.style.display = "";
   library.style.display = "none";
+  revealOfflinePage();
   document.title = `${novel.title} — kappalib`;
   if (novel.ageRating === "18+") window.isAdultContent = true;
 }
@@ -943,6 +952,7 @@ function initDownloadsPage(): void {
   if (!isOfflineSupported()) {
     unsupported.style.display = "";
     help.style.display = "none";
+    revealOfflinePage();
     return;
   }
 
@@ -1073,6 +1083,7 @@ function initDownloadsPage(): void {
   });
 
   refresh()
+    .finally(revealOfflinePage)
     .then(checkUpdates)
     .catch((err) => console.error("Failed to load downloads", err));
 }

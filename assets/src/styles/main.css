@@ -1954,7 +1954,7 @@ html {
   padding: 4rem 1rem;
   text-align: center;
   min-height: 65vh;
-  min-height: 65dvh;
+  min-height: 65svh;
 }
 
 .error-code {
@@ -2475,7 +2475,7 @@ html {
 /* History Page */
 .history-page {
   min-height: 65vh;
-  min-height: 65dvh;
+  min-height: 65svh;
 }
 
 .history-list {
@@ -3782,7 +3782,7 @@ a.update-log-item:active {
 /* Bookmarks page */
 .bookmarks-page {
   min-height: 65vh;
-  min-height: 65dvh;
+  min-height: 65svh;
 }
 
 .bm-categories {
@@ -4018,7 +4018,7 @@ a.update-log-item:active {
 /* My Comments Page */
 .my-comments-page {
   min-height: 65vh;
-  min-height: 65dvh;
+  min-height: 65svh;
 }
 
 .mc-empty {
@@ -5385,7 +5385,7 @@ td:first-child {
 /* Catalog Content */
 .catalog-page {
   min-height: 65vh;
-  min-height: 65dvh;
+  min-height: 65svh;
 }
 
 #catalog-content.is-loading {
@@ -5621,6 +5621,14 @@ td:first-child {
 }
 
 /* Offline Downloads */
+.offline-pending #downloads-library {
+  display: none;
+}
+
+body:has(.offline-pending) .footer {
+  display: none;
+}
+
 .novel-offline-dropdown .dropdown-btn {
   width: 32px;
   padding: 0;
@@ -5789,7 +5797,7 @@ td:first-child {
 /* User Profile */
 .user-profile-page {
   min-height: 65vh;
-  min-height: 65dvh;
+  min-height: 65svh;
   display: flex;
   flex-direction: column;
   gap: 2rem;
