@@ -45,7 +45,7 @@ func parseUpdateTag(body string) string {
 	return strings.TrimSpace(body[start : start+end])
 }
 
-const appUpdatesFailureCooldown = time.Minute
+const appUpdatesFailureCooldown = 5 * time.Minute
 
 func GetAppUpdates(ctx context.Context, limit int) ([]models.AppUpdate, error) {
 	if limit < 0 {

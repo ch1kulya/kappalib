@@ -47,12 +47,12 @@ var queryCatalogTags string
 
 const novelsCountCacheKey = "novels:count"
 
-func isQueryableID(id string) bool {
-	return utf8.ValidString(id) && !strings.ContainsRune(id, 0)
+func isQueryableText(text string) bool {
+	return utf8.ValidString(text) && !strings.ContainsRune(text, 0)
 }
 
 func GetNovel(ctx context.Context, id string) (*models.Novel, error) {
-	if !isQueryableID(id) {
+	if !isQueryableText(id) {
 		return nil, ErrNovelNotFound
 	}
 
@@ -204,6 +204,11 @@ func getNovelsCount(ctx context.Context) (int, error) {
 func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, error) {
 	sort = normalizeNovelsSort(sort)
 	pageSize := 12
+	key := fmt.Sprintf("novels:page:%d:sort:%s", page, sort)
+
+	if cached, found := cache.C.Get(key); found {
+		return cached.(*models.NovelsPage), nil
+	}
 
 	totalCount, err := getNovelsCount(ctx)
 	if err != nil {
@@ -221,7 +226,6 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 		}, nil
 	}
 
-	key := fmt.Sprintf("novels:page:%d:sort:%s", page, sort)
 	offset := (page - 1) * pageSize
 
 	value, err := cache.C.GetOrFetchWhen(key, 5*time.Minute, func() (any, error) {
@@ -294,7 +298,7 @@ func GetNovels(ctx context.Context, page int, sort string) (*models.NovelsPage, 
 
 func SearchNovels(ctx context.Context, query string) ([]models.NovelSummary, error) {
 	query = strings.TrimSpace(query)
-	if query == "" {
+	if query == "" || !isQueryableText(query) {
 		return []models.NovelSummary{}, nil
 	}
 
@@ -435,6 +439,14 @@ func catalogFilterArgs(filter models.CatalogFilter) []any {
 
 func GetCatalogNovels(ctx context.Context, page int, sort string, search string, filter models.CatalogFilter) (*models.CatalogPage, error) {
 	pageSize := 24
+
+	if !isQueryableText(search) {
+		return &models.CatalogPage{
+			Novels:   []models.NovelSummary{},
+			Page:     page,
+			PageSize: pageSize,
+		}, nil
+	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()

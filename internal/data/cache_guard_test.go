@@ -200,3 +200,41 @@ func TestGetChapters_ReturnsCopyOfCachedList(t *testing.T) {
 		t.Errorf("cached order changed: first chapter = %q", second.Chapters[0].ID)
 	}
 }
+
+func TestGetNovels_ServesCachedPageWithoutCount(t *testing.T) {
+	originalDB := database.DB
+	database.DB = nil
+	key := "novels:page:7:sort:newest"
+	cached := &models.NovelsPage{Novels: []models.NovelSummary{{ID: "nvl_cached"}}, Page: 7}
+	cache.C.Delete(novelsCountCacheKey)
+	cache.C.Set(key, cached, time.Minute)
+	t.Cleanup(func() {
+		database.DB = originalDB
+		cache.C.Delete(key)
+	})
+
+	got, err := GetNovels(context.Background(), 7, "newest")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != cached {
+		t.Errorf("got %+v, want cached page", got)
+	}
+}
+
+func TestSearchRejectsUnqueryableText(t *testing.T) {
+	originalDB := database.DB
+	database.DB = nil
+	t.Cleanup(func() { database.DB = originalDB })
+
+	for _, query := range []string{"a\x00b", "a\xffb"} {
+		novels, err := SearchNovels(context.Background(), query)
+		if err != nil || len(novels) != 0 {
+			t.Errorf("SearchNovels(%q) = %v, %v", query, novels, err)
+		}
+		page, err := GetCatalogNovels(context.Background(), 1, "popular", query, models.CatalogFilter{})
+		if err != nil || len(page.Novels) != 0 {
+			t.Errorf("GetCatalogNovels(%q) = %+v, %v", query, page, err)
+		}
+	}
+}

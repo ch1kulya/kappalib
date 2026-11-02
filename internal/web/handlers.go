@@ -659,7 +659,7 @@ func (h *Handler) Chapter(w http.ResponseWriter, r *http.Request) {
 	}
 	var prevID, nextID string
 
-	if allChapters != nil && len(allChapters.Chapters) > 0 {
+	if len(allChapters.Chapters) > 0 {
 		sort.Slice(allChapters.Chapters, func(i, j int) bool {
 			return allChapters.Chapters[i].ChapterNum < allChapters.Chapters[j].ChapterNum
 		})

@@ -25,6 +25,7 @@ export function initSearch(): void {
 
   let timeout: number | undefined;
   let firstResultUrl: string | null = null;
+  let latestRequestId = 0;
   const API_URL = process.env.API_URL;
 
   const PLACEHOLDER_IMG =
@@ -74,6 +75,7 @@ export function initSearch(): void {
     uiManager.openSearch();
 
     timeout = window.setTimeout(async () => {
+      const requestId = ++latestRequestId;
       let loadingTimeout: number | null = null;
       try {
         console.info(`Searching for: "${query}"`);
@@ -95,6 +97,8 @@ export function initSearch(): void {
         if (loadingTimeout !== null) {
           clearTimeout(loadingTimeout);
         }
+
+        if (requestId !== latestRequestId) return;
 
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         const data: SearchResponse = await res.json();
@@ -199,6 +203,7 @@ export function initSearch(): void {
         if (loadingTimeout !== null) {
           clearTimeout(loadingTimeout);
         }
+        if (requestId !== latestRequestId) return;
         if (!uiManager.isSearchActive()) return;
         results.innerHTML = "";
         firstResultUrl = null;

@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/ch1kulya/kappalib/internal/cache"
 	"github.com/ch1kulya/kappalib/internal/data"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
@@ -794,5 +796,43 @@ func TestCacheMiddleware_ImplicitSuccessKeepsCacheHeader(t *testing.T) {
 		if got := rec.Header().Get("Cache-Control"); got != "public, max-age=6000" {
 			t.Errorf("%s: Cache-Control = %q", name, got)
 		}
+	}
+}
+
+func TestCacheMiddleware_KeepsHandlerCacheControl(t *testing.T) {
+	handler := CacheMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", noStoreCacheControl)
+		w.WriteHeader(http.StatusOK)
+	}))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/novels", nil))
+
+	if got := rec.Header().Get("Cache-Control"); got != noStoreCacheControl {
+		t.Errorf("Cache-Control = %q, want %q", got, noStoreCacheControl)
+	}
+}
+
+func TestEmptyNovelListIsNotPubliclyCacheable(t *testing.T) {
+	cache.C.Set("novels:count", 0, time.Minute)
+	t.Cleanup(func() { cache.C.Delete("novels:count") })
+
+	_, api := humatest.New(t)
+	huma.Get(api, "/novels", HandleGetNovels)
+
+	resp := api.Get("/novels")
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d", resp.Code)
+	}
+	if got := resp.Header().Get("Cache-Control"); got != noStoreCacheControl {
+		t.Errorf("Cache-Control = %q, want %q", got, noStoreCacheControl)
+	}
+}
+
+func TestEmptyListCacheControl(t *testing.T) {
+	if got := emptyListCacheControl(0); got != noStoreCacheControl {
+		t.Errorf("empty list = %q", got)
+	}
+	if got := emptyListCacheControl(1); got != "" {
+		t.Errorf("populated list = %q", got)
 	}
 }

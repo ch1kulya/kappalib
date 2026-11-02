@@ -70,7 +70,7 @@ func GetChapters(ctx context.Context, novelID string) (*models.ChaptersList, err
 }
 
 func GetChapter(ctx context.Context, id string) (*models.Chapter, error) {
-	if !isQueryableID(id) {
+	if !isQueryableText(id) {
 		return nil, ErrChapterNotFound
 	}
 

@@ -172,6 +172,8 @@ func hasAuth(r *http.Request) bool {
 	return false
 }
 
+const noStoreCacheControl = "no-store"
+
 type cacheStatusWriter struct {
 	http.ResponseWriter
 	cacheControl string
@@ -184,10 +186,12 @@ func (w *cacheStatusWriter) setCacheControl(code int) {
 	}
 	w.headerSet = true
 	if code >= http.StatusInternalServerError || code == http.StatusTooManyRequests {
-		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Cache-Control", noStoreCacheControl)
 		return
 	}
-	w.Header().Set("Cache-Control", w.cacheControl)
+	if w.Header().Get("Cache-Control") == "" {
+		w.Header().Set("Cache-Control", w.cacheControl)
+	}
 }
 
 func (w *cacheStatusWriter) WriteHeader(code int) {

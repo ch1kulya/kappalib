@@ -249,7 +249,8 @@ type NovelResponse struct {
 }
 
 type NovelsPageResponse struct {
-	Body models.NovelsPage
+	CacheControl string `header:"Cache-Control"`
+	Body         models.NovelsPage
 }
 
 type ChapterResponse struct {
@@ -257,7 +258,8 @@ type ChapterResponse struct {
 }
 
 type ChaptersListResponse struct {
-	Body models.ChaptersList
+	CacheControl string `header:"Cache-Control"`
+	Body         models.ChaptersList
 }
 
 type OfflineChaptersResponse struct {
@@ -310,7 +312,8 @@ type CommentStatsResponse struct {
 }
 
 type SitemapResponse struct {
-	Body []models.SitemapItem
+	CacheControl string `header:"Cache-Control"`
+	Body         []models.SitemapItem
 }
 
 type SearchNovelsResponse struct {
@@ -359,12 +362,19 @@ func HandleStatus(ctx context.Context, input *struct{}) (*StatusResponse, error)
 	}, nil
 }
 
+func emptyListCacheControl(length int) string {
+	if length == 0 {
+		return noStoreCacheControl
+	}
+	return ""
+}
+
 func HandleGetSitemapData(ctx context.Context, input *struct{}) (*SitemapResponse, error) {
 	items, err := data.GetSitemapData(ctx)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch data")
 	}
-	return &SitemapResponse{Body: items}, nil
+	return &SitemapResponse{CacheControl: emptyListCacheControl(len(items)), Body: items}, nil
 }
 
 func HandleGetNovels(ctx context.Context, input *GetNovelsInput) (*NovelsPageResponse, error) {
@@ -372,7 +382,7 @@ func HandleGetNovels(ctx context.Context, input *GetNovelsInput) (*NovelsPageRes
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Database error")
 	}
-	return &NovelsPageResponse{Body: *novels}, nil
+	return &NovelsPageResponse{CacheControl: emptyListCacheControl(len(novels.Novels)), Body: *novels}, nil
 }
 
 func HandleSearchNovels(ctx context.Context, input *SearchNovelsInput) (*SearchNovelsResponse, error) {
@@ -419,7 +429,7 @@ func HandleGetChaptersList(ctx context.Context, input *NovelIDInput) (*ChaptersL
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Failed to fetch chapters")
 	}
-	return &ChaptersListResponse{Body: *chapters}, nil
+	return &ChaptersListResponse{CacheControl: emptyListCacheControl(len(chapters.Chapters)), Body: *chapters}, nil
 }
 
 func HandleGetOfflineChapters(ctx context.Context, input *GetOfflineChaptersInput) (*OfflineChaptersResponse, error) {
