@@ -153,3 +153,8 @@ type UserProfileProps struct {
 	Heatmap ActivityHeatmap
 	IsOwner bool
 }
+
+type AboutProps struct {
+	BaseProps
+	Stats *models.AboutStats
+}

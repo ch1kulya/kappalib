@@ -1,3 +1,4 @@
+import { initAboutPage } from "./modules/about";
 import { initAgeGate } from "./modules/age";
 import { initBookmarkButton, initBookmarksPage, initChaptersBookmarks } from "./modules/bookmarks";
 import { initCatalogPage, initCatalogPagination } from "./modules/catalog";
@@ -58,6 +59,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     initReadingProgressSaver();
     initStatusBadge();
     initCatalogPagination();
+    initAboutPage();
     initCatalogPage();
     initComments();
     initHistoryPage();

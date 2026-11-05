@@ -1,0 +1,144 @@
+package views
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/ch1kulya/kappalib/internal/models"
+)
+
+func getDailyJSON(stats *models.AboutStats) string {
+	if stats == nil || len(stats.Daily) == 0 {
+		return "[]"
+	}
+	b, err := json.Marshal(stats.Daily)
+	if err != nil {
+		return "[]"
+	}
+	return string(b)
+}
+
+templ About(props AboutProps) {
+	@Base(props.BaseProps) {
+		<div class="about-container">
+			<header class="about-header">
+				<h1 class="about-title">О проекте kappalib</h1>
+				<p class="about-subtitle">
+					Открытая веб-библиотека и читалка веб-новелл. Свободный доступ, оффлайн-режим, отсутствие навязчивой рекламы и прозрачная статистика.
+				</p>
+			</header>
+			<section class="about-section">
+				<div class="about-section-header">
+					<div>
+						<h2 class="about-section-title">Активность читателей</h2>
+						<p class="about-section-desc">Динамика чтения и аудитории в реальном времени</p>
+					</div>
+					<div class="about-period-tabs" role="tablist" aria-label="Период статистики">
+						<button type="button" class="about-tab-btn active" data-period="7">7 дней</button>
+						<button type="button" class="about-tab-btn" data-period="30">30 дней</button>
+					</div>
+				</div>
+				<div class="about-charts-grid" id="about-charts-container" data-daily={ getDailyJSON(props.Stats) }>
+					<div class="about-chart-card">
+						<div class="about-chart-header">
+							<div>
+								<span class="about-chart-label">Время чтения</span>
+								<span class="about-chart-summary" id="chart-time-summary">за последние 7 дн.</span>
+							</div>
+							<span class="about-chart-value" id="chart-time-total">--</span>
+						</div>
+						<div class="about-chart-plot" id="chart-reading-time" role="img" aria-label="График времени чтения"></div>
+					</div>
+					<div class="about-chart-card">
+						<div class="about-chart-header">
+							<div>
+								<span class="about-chart-label">Активные читатели</span>
+								<span class="about-chart-summary" id="chart-users-summary">в среднем в день</span>
+							</div>
+							<span class="about-chart-value" id="chart-users-total">--</span>
+						</div>
+						<div class="about-chart-plot" id="chart-active-users" role="img" aria-label="График активных читателей"></div>
+					</div>
+				</div>
+			</section>
+			if props.Stats != nil {
+				<section class="about-section">
+					<div class="about-section-header">
+						<div>
+							<h2 class="about-section-title">Масштаб библиотеки</h2>
+							<p class="about-section-desc">Текущие объёмы каталога и сообщества</p>
+						</div>
+					</div>
+					<div class="about-metrics-grid">
+						@aboutMetricProgressCard(
+							"Новелл в каталоге",
+							FormatCompactNumber(props.Stats.NovelsCount),
+							exactCountLabel(props.Stats.NovelsCount, "новелла", "новеллы", "новелл"),
+							85,
+						)
+						@aboutMetricProgressCard(
+							"Доступно глав",
+							FormatCompactNumber(props.Stats.ChaptersCount),
+							exactCountLabel(props.Stats.ChaptersCount, "глава", "главы", "глав"),
+							92,
+						)
+						@aboutMetricProgressCard(
+							"Символов текста",
+							FormatCompactNumber(props.Stats.CharactersCount),
+							exactCountLabel(props.Stats.CharactersCount, "знак", "знака", "знаков"),
+							78,
+						)
+						@aboutMetricProgressCard(
+							"Читателей",
+							FormatCompactNumber(props.Stats.TotalUsers),
+							exactCountLabel(props.Stats.TotalUsers, "читатель", "читателя", "читателей"),
+							65,
+						)
+						@aboutMetricProgressCard(
+							"Источников / команд",
+							FormatCompactNumber(props.Stats.SourcesCount),
+							exactCountLabel(props.Stats.SourcesCount, "источник", "источника", "источников"),
+							45,
+						)
+					</div>
+				</section>
+			}
+			<section class="about-section">
+				<div class="about-open-source-card">
+					<div class="about-card-info">
+						<h3>Открытый исходный код</h3>
+						<p>kappalib разрабатывается открыто сообществом под лицензией MIT. Вы можете изучить код или предложить свои улучшения.</p>
+					</div>
+					<div class="about-card-actions">
+						<a href="https://github.com/ch1kulya/kappalib" target="_blank" rel="noopener noreferrer" class="action-btn about-btn">
+							Репозиторий GitHub
+							@IconExternalLink()
+						</a>
+						<a href="https://status.kappalib.rip" target="_blank" rel="noopener noreferrer" class="action-btn about-btn">
+							Статус систем
+							@IconExternalLink()
+						</a>
+						<a href="https://pay.cloudtips.ru/p/4a6c00ef" target="_blank" rel="noopener noreferrer" class="action-btn about-btn">
+							Поддержать проект
+							@IconExternalLink()
+						</a>
+					</div>
+				</div>
+			</section>
+		</div>
+	}
+}
+
+templ aboutMetricProgressCard(label, compactValue, exactValue string, percent int) {
+	<div class="about-metric-card" title={ exactValue }>
+		<div class="about-metric-top">
+			<span class="about-metric-label">{ label }</span>
+			<span class="about-metric-value">{ compactValue }</span>
+		</div>
+		<div class="about-progress-track">
+			<div class="about-progress-fill" style={ templ.SafeCSS(fmt.Sprintf("width: %d%%", percent)) }></div>
+		</div>
+		<div class="about-metric-bottom">
+			<span class="about-metric-exact">{ exactValue }</span>
+		</div>
+	</div>
+}
